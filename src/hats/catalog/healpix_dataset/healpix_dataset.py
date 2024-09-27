@@ -15,6 +15,7 @@ import hats.pixel_math.healpix_shim as hp
 from hats.catalog.dataset import Dataset
 from hats.catalog.dataset.table_properties import TableProperties
 from hats.catalog.partition_info import PartitionInfo
+from hats.inspection import plot_pixel_list
 from hats.io import file_io, paths
 from hats.io.file_io import read_parquet_metadata
 from hats.pixel_math import HealpixPixel
@@ -224,4 +225,12 @@ class HealpixDataset(Dataset):
         """
         return align_with_mocs(
             self.pixel_tree, other_cat.pixel_tree, self.moc, other_cat.moc, alignment_type=alignment_type
+        )
+
+    def plot_pixels(self, projection: str = "MOL", **kwargs):
+        return plot_pixel_list(
+            self.get_healpix_pixels(),
+            f"HATS HEALPix structure of {self.catalog_name}",
+            projection,
+            **kwargs,
         )

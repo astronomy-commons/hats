@@ -3,17 +3,30 @@
 NB: Testing validity of generated plots is currently not tested in our unit test suite.
 """
 
-from typing import List
+from __future__ import annotations
 
-import healpy as hp
-import matplotlib.colors as mcolors
+from typing import Dict, List, Tuple, TYPE_CHECKING
+
 import numpy as np
-from matplotlib import pyplot as plt
+from astropy.coordinates import SkyCoord, Angle, ICRS
+from astropy.visualization.wcsaxes.frame import EllipticalFrame
+from astropy.wcs.utils import skycoord_to_pixel
+import cdshealpix
+from matplotlib import pyplot as plt, colors
+from matplotlib.collections import PathCollection
+from matplotlib.path import Path
+import astropy.units as u
+from mocpy import WCS, MOC
+from mocpy.moc.plot.culling_backfacing_cells import backface_culling
+from mocpy.moc.plot.fill import compute_healpix_vertices
+from mocpy.moc.plot.utils import _set_wcs
 
-import hats.pixel_math.healpix_shim as hs
-from hats.catalog import Catalog
+
 from hats.io import file_io, paths
 from hats.pixel_math import HealpixPixel
+
+if TYPE_CHECKING:
+    from hats.catalog import Catalog
 
 
 def _read_point_map(catalog_base_dir):
@@ -29,7 +42,7 @@ def _read_point_map(catalog_base_dir):
     return file_io.read_fits_image(map_file_pointer)
 
 
-def plot_points(catalog: Catalog, projection="moll", **kwargs):
+def plot_points(catalog: Catalog, projection="MOL", **kwargs):
     """Create a visual map of the input points of an in-memory catalog.
 
     Args:
@@ -43,10 +56,10 @@ def plot_points(catalog: Catalog, projection="moll", **kwargs):
     if not catalog.on_disk:
         raise ValueError("on disk catalog required for point-wise visualization")
     point_map = _read_point_map(catalog.catalog_base_dir)
-    _plot_healpix_map(point_map, projection, f"Catalog point density map - {catalog.catalog_name}", **kwargs)
+    plot_healpix_map(point_map, projection, f"Catalog point density map - {catalog.catalog_name}", **kwargs)
 
 
-def plot_pixels(catalog: Catalog, projection="moll", **kwargs):
+def plot_pixels(catalog: Catalog, projection="MOL", **kwargs):
     """Create a visual map of the pixel density of the catalog.
 
     Args:
@@ -58,7 +71,7 @@ def plot_pixels(catalog: Catalog, projection="moll", **kwargs):
             - orth - Orthographic projection
     """
     pixels = catalog.get_healpix_pixels()
-    plot_pixel_list(
+    return plot_pixel_list(
         pixels=pixels,
         plot_title=f"Catalog pixel density map - {catalog.catalog_name}",
         projection=projection,
@@ -66,7 +79,7 @@ def plot_pixels(catalog: Catalog, projection="moll", **kwargs):
     )
 
 
-def plot_pixel_list(pixels: List[HealpixPixel], plot_title: str = "", projection="moll", **kwargs):
+def plot_pixel_list(pixels: List[HealpixPixel], plot_title: str = "", projection="MOL", **kwargs):
     """Create a visual map of the pixel density of a list of pixels.
 
     Args:
@@ -78,69 +91,151 @@ def plot_pixel_list(pixels: List[HealpixPixel], plot_title: str = "", projection
             - cart - Cartesian projection
             - orth - Orthographic projection
     """
-    max_order = np.max(pixels).order
-    min_order = np.min(pixels).order
-
-    if max_order == min_order:
-        colors = [plt.cm.viridis(0.0), plt.cm.viridis(0.1)]  # pylint: disable=no-member
-        cmap = mcolors.LinearSegmentedColormap.from_list("my_colormap", colors, 1)
-        kwargs["cbar"] = False
-        plot_title = f"Norder {max_order} {plot_title}"
-    else:
-        num_colors = max_order - min_order + 1
-        colors = plt.cm.viridis(np.linspace(0, 1, num_colors))  # pylint: disable=no-member
-        cmap = mcolors.LinearSegmentedColormap.from_list("my_colormap", colors, num_colors)
-
-    order_map = np.full(hs.order2npix(max_order), hs.unseen_pixel())
-
-    for pixel in pixels:
-        explosion_factor = 4 ** (max_order - pixel.order)
-        exploded_pixels = [
-            *range(
-                pixel.pixel * explosion_factor,
-                (pixel.pixel + 1) * explosion_factor,
-            )
-        ]
-        order_map[exploded_pixels] = pixel.order
-    _plot_healpix_map(order_map, projection, plot_title, cmap=cmap, **kwargs)
+    orders = np.array([p.order for p in pixels])
+    ipix = np.array([p.pixel for p in pixels])
+    order_map = orders.copy()
+    plt, ax = plot_healpix_map(order_map, projection, plot_title, ipix=ipix, depth=orders, cbar=False)
+    col = ax.collections[0]
+    plt.colorbar(
+        col,
+        boundaries=np.arange(np.min(order_map) - 0.5, np.max(order_map) + 0.6, 1),
+        ticks=np.arange(np.min(order_map), np.max(order_map) + 1),
+        label="order",
+    )
+    return plt, ax
 
 
-def get_projection_method(projection):
-    """Get the healpy plotting method for a specified projection string
+def cull_from_pixel_map(depth_ipix_d: Dict[int, Tuple[np.ndarray, np.ndarray]], wcs):
+    """Modified from mocpy.moc.plot.culling_backfacing_cells.from_moc
 
-    Args:
-        projection (str):  The map projection to use. Valid values include:
-            - moll - Molleweide projection (default)
-            - gnom - Gnomonic projection
-            - cart - Cartesian projection
-            - orth - Orthographic projection
+    Create a new MOC that do not contain the HEALPix cells that are backfacing the projection."""
+    depths = list(depth_ipix_d.keys())
+    min_depth = min(depths)
+    max_depth = max(depths)
+    ipixels, vals = depth_ipix_d[min_depth]
 
-    Returns:
-        The healpy method that plots a HEALPix map with the specified projection
-    """
-    if projection == "moll":
-        projection_method = hp.mollview
-    elif projection == "gnom":
-        projection_method = hp.gnomview
-    elif projection == "cart":
-        projection_method = hp.cartview
-    elif projection == "orth":
-        projection_method = hp.orthview
-    else:
-        raise NotImplementedError(f"unknown projection: {projection}")
-    return projection_method
+    # Split the cells located at the border of the projection
+    # until at least the depth 7
+    max_split_depth = max(7, max_depth)
+
+    ipix_d = {}
+    for depth in range(min_depth, max_split_depth + 1):
+        if depth < 3:
+            too_large_ipix = ipixels
+            too_large_vals = vals
+        else:
+            ipix_lon, ipix_lat = cdshealpix.vertices(ipixels, depth)
+
+            ipix_lon = ipix_lon[:, [2, 3, 0, 1]]
+            ipix_lat = ipix_lat[:, [2, 3, 0, 1]]
+            ipix_vertices = SkyCoord(ipix_lon, ipix_lat, frame=ICRS())
+
+            # Projection on the given WCS
+            xp, yp = skycoord_to_pixel(coords=ipix_vertices, wcs=wcs)
+            _, _, frontface_id = backface_culling(xp, yp)
+
+            # Get the pixels which are backfacing the projection
+            backfacing_ipix = ipixels[~frontface_id]  # backfacing
+            backfacing_vals = vals[~frontface_id]
+            frontface_ipix = ipixels[frontface_id]
+            frontface_vals = vals[frontface_id]
+
+            ipix_d.update({depth: (frontface_ipix, frontface_vals)})
+
+            too_large_ipix = backfacing_ipix
+            too_large_vals = backfacing_vals
+
+        next_depth = depth + 1
+        ipixels = np.array([], dtype=ipixels.dtype)
+        vals = np.array([], dtype=vals.dtype)
+
+        if next_depth in depth_ipix_d:
+            ipixels, vals = depth_ipix_d[next_depth]
+
+        # split too large ipix into next order, with each child getting the same map value as parent
+
+        too_large_child_ipix = np.repeat(too_large_ipix << 2, 4) + np.tile(
+            np.array([0, 1, 2, 3]), len(too_large_ipix)
+        )
+        too_large_child_vals = np.repeat(too_large_vals, 4)
+
+        ipixels = np.concatenate((ipixels, too_large_child_ipix))
+        vals = np.concatenate((vals, too_large_child_vals))
+
+    return ipix_d
 
 
-def _plot_healpix_map(healpix_map, projection, title, cmap="viridis", **kwargs):
-    """Perform the plotting of a healpix pixel map.
+def plot_healpix_map(
+    healpix_map,
+    projection="MOL",
+    title="",
+    cmap="viridis",
+    ipix=None,
+    depth=None,
+    cbar=True,
+    label=None,
+    fov=None,
+    center=None,
+):
+    if ipix is None or depth is None:
+        order = int(np.ceil(np.log2(len(healpix_map) / 12) / 2))
+        ipix = np.arange(len(healpix_map))
+        depth = np.full(len(healpix_map), fill_value=order)
+    fig = plt.figure(figsize=(10, 5))
+    if fov is None:
+        fov = (320 * u.deg, 160 * u.deg)
+    if center is None:
+        center = SkyCoord(0, 0, unit="deg", frame="icrs")
+    with WCS(
+        fig,
+        fov=fov,
+        center=center,
+        coordsys="icrs",
+        rotation=Angle(0, u.degree),
+        projection=projection,
+    ) as wcs:
+        ax = fig.add_subplot(1, 1, 1, projection=wcs, frame_class=EllipticalFrame)
+        _plot_healpix_value_map(ipix, depth, healpix_map, ax, wcs, cmap=cmap, cbar=cbar, label=label)
+    plt.grid()
+    plt.ylabel("dec")
+    plt.xlabel("ra")
+    plt.title(title)
+    return plt, ax
 
-    Args:
-        healpix_map: array containing the map
-        projection: projection type to display
-        title: title used in image plot
-        cmap: matplotlib colormap to use
-    """
-    projection_method = get_projection_method(projection)
 
-    projection_method(healpix_map, title=title, nest=True, cmap=cmap, **kwargs)
-    plt.plot()
+def _plot_healpix_value_map(ipix, depth, values, ax, wcs, cmap="viridis", norm=None, cbar=True, label=None):
+    """Perform the plotting of a healpix pixel map."""
+    if norm is None:
+        norm = colors.Normalize()
+    cmap = plt.get_cmap(cmap)
+
+    # create dict mapping depth to ipix and values
+    depth_ipix_d = {}
+
+    for d in np.unique(depth):
+        mask = depth == d
+        depth_ipix_d[d] = (ipix[mask], values[mask])
+
+    # cull backfacing cells
+    culled_d = cull_from_pixel_map(depth_ipix_d, wcs)
+
+    # Generate Paths for each pixel and add to ax
+    paths = []
+    cum_vals = []
+    for d, (ip, vals) in culled_d.items():
+        vertices, codes = compute_healpix_vertices(depth=d, ipix=ip, wcs=wcs)
+        for i in range(len(ip)):
+            paths.append(Path(vertices[5 * i : 5 * (i + 1)], codes[5 * i : 5 * (i + 1)]))
+        cum_vals.append(vals)
+    col = PathCollection(paths, cmap=cmap, norm=norm, label=label)
+    col.set_array(np.concatenate(cum_vals))
+    ax.add_collection(col)
+
+    # Add color bar
+    if cbar:
+        plt.colorbar(col, label=label)
+
+    # Set projection
+    _set_wcs(ax, wcs)
+
+    return ax

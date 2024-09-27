@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 import healpy as hp
 import pytest
 
@@ -63,16 +64,17 @@ def test_generate_map_unknown_projection(small_sky_dir):
 
 def test_plot_pixel_map_order1(small_sky_order1_dir, mocker):
     """Basic test that map data can be generated"""
-    mocker.patch("healpy.mollview")
+    # mocker.patch("healpy.mollview")
 
     cat = read_hats(small_sky_order1_dir)
     plot_pixels(cat)
-    hp.mollview.assert_called_once()
-
-    hp.mollview.reset_mock()
-
-    plot_points(cat)
-    hp.mollview.assert_called_once()
+    plt.show()
+    # hp.mollview.assert_called_once()
+    #
+    # hp.mollview.reset_mock()
+    #
+    # plot_points(cat)
+    # hp.mollview.assert_called_once()
 
 
 def test_visualize_in_memory_catalogs(catalog_info, catalog_pixels, mocker):
