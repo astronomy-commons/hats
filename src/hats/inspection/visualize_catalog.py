@@ -56,7 +56,9 @@ def plot_points(catalog: Catalog, projection="MOL", **kwargs):
     if not catalog.on_disk:
         raise ValueError("on disk catalog required for point-wise visualization")
     point_map = _read_point_map(catalog.catalog_base_dir)
-    plot_healpix_map(point_map, projection, f"Catalog point density map - {catalog.catalog_name}", **kwargs)
+    return plot_healpix_map(
+        point_map, projection, f"Catalog point density map - {catalog.catalog_name}", **kwargs
+    )
 
 
 def plot_pixels(catalog: Catalog, projection="MOL", **kwargs):
@@ -94,7 +96,9 @@ def plot_pixel_list(pixels: List[HealpixPixel], plot_title: str = "", projection
     orders = np.array([p.order for p in pixels])
     ipix = np.array([p.pixel for p in pixels])
     order_map = orders.copy()
-    plt, ax = plot_healpix_map(order_map, projection, plot_title, ipix=ipix, depth=orders, cbar=False)
+    fig, ax = plot_healpix_map(
+        order_map, projection, plot_title, ipix=ipix, depth=orders, cbar=False, **kwargs
+    )
     col = ax.collections[0]
     plt.colorbar(
         col,
@@ -102,10 +106,10 @@ def plot_pixel_list(pixels: List[HealpixPixel], plot_title: str = "", projection
         ticks=np.arange(np.min(order_map), np.max(order_map) + 1),
         label="order",
     )
-    return plt, ax
+    return fig, ax
 
 
-def cull_from_pixel_map(depth_ipix_d: Dict[int, Tuple[np.ndarray, np.ndarray]], wcs):
+def cull_from_pixel_map(depth_ipix_d: Dict[int, Tuple[np.ndarray, np.ndarray]], wcs, max_split_depth=7):
     """Modified from mocpy.moc.plot.culling_backfacing_cells.from_moc
 
     Create a new MOC that do not contain the HEALPix cells that are backfacing the projection."""
@@ -115,8 +119,8 @@ def cull_from_pixel_map(depth_ipix_d: Dict[int, Tuple[np.ndarray, np.ndarray]], 
     ipixels, vals = depth_ipix_d[min_depth]
 
     # Split the cells located at the border of the projection
-    # until at least the depth 7
-    max_split_depth = max(7, max_depth)
+    # until at least the max_split_depth
+    max_split_depth = max(max_split_depth, max_depth)
 
     ipix_d = {}
     for depth in range(min_depth, max_split_depth + 1):
@@ -173,9 +177,11 @@ def plot_healpix_map(
     ipix=None,
     depth=None,
     cbar=True,
-    label=None,
     fov=None,
     center=None,
+    wcs=None,
+    ax=None,
+    **kwargs,
 ):
     if ipix is None or depth is None:
         order = int(np.ceil(np.log2(len(healpix_map) / 12) / 2))
@@ -186,28 +192,31 @@ def plot_healpix_map(
         fov = (320 * u.deg, 160 * u.deg)
     if center is None:
         center = SkyCoord(0, 0, unit="deg", frame="icrs")
-    with WCS(
-        fig,
-        fov=fov,
-        center=center,
-        coordsys="icrs",
-        rotation=Angle(0, u.degree),
-        projection=projection,
-    ) as wcs:
+    if ax is None:
+        if wcs is None:
+            wcs = WCS(
+                fig,
+                fov=fov,
+                center=center,
+                coordsys="icrs",
+                rotation=Angle(0, u.degree),
+                projection=projection,
+            ).w
         ax = fig.add_subplot(1, 1, 1, projection=wcs, frame_class=EllipticalFrame)
-        _plot_healpix_value_map(ipix, depth, healpix_map, ax, wcs, cmap=cmap, cbar=cbar, label=label)
+    elif wcs is None:
+        raise ValueError(
+            "if ax is provided, wcs must also be provided with the projection used in initializing ax"
+        )
+    _plot_healpix_value_map(ipix, depth, healpix_map, ax, wcs, cmap=cmap, cbar=cbar, **kwargs)
     plt.grid()
     plt.ylabel("dec")
     plt.xlabel("ra")
     plt.title(title)
-    return plt, ax
+    return fig, ax
 
 
-def _plot_healpix_value_map(ipix, depth, values, ax, wcs, cmap="viridis", norm=None, cbar=True, label=None):
+def _plot_healpix_value_map(ipix, depth, values, ax, wcs, cmap="viridis", norm=None, cbar=True, **kwargs):
     """Perform the plotting of a healpix pixel map."""
-    if norm is None:
-        norm = colors.Normalize()
-    cmap = plt.get_cmap(cmap)
 
     # create dict mapping depth to ipix and values
     depth_ipix_d = {}
@@ -227,13 +236,13 @@ def _plot_healpix_value_map(ipix, depth, values, ax, wcs, cmap="viridis", norm=N
         for i in range(len(ip)):
             paths.append(Path(vertices[5 * i : 5 * (i + 1)], codes[5 * i : 5 * (i + 1)]))
         cum_vals.append(vals)
-    col = PathCollection(paths, cmap=cmap, norm=norm, label=label)
+    col = PathCollection(paths, cmap=cmap, norm=norm, **kwargs)
     col.set_array(np.concatenate(cum_vals))
     ax.add_collection(col)
 
     # Add color bar
     if cbar:
-        plt.colorbar(col, label=label)
+        plt.colorbar(col)
 
     # Set projection
     _set_wcs(ax, wcs)
