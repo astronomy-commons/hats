@@ -50,7 +50,7 @@ def test_plot_healpix_pixels():
         rotation=DEFAULT_ROTATION,
         projection=DEFAULT_PROJECTION,
     ).w
-    for path, ipix in zip(paths, np.arange(len(map))):
+    for path, ipix in zip(paths, ipix):
         verts, codes = compute_healpix_vertices(order, np.array([ipix]), wcs)
         np.testing.assert_array_equal(path.vertices, verts)
         np.testing.assert_array_equal(path.codes, codes)
@@ -76,8 +76,10 @@ def test_plot_healpix_pixels_different_order():
         rotation=DEFAULT_ROTATION,
         projection=DEFAULT_PROJECTION,
     ).w
-    for path, ipix in zip(paths, np.arange(len(map))):
-        verts, codes = compute_healpix_vertices(order, np.array([ipix]), wcs)
+
+    all_verts, all_codes = compute_healpix_vertices(order, ipix, wcs)
+    for i, (path, ipix) in enumerate(zip(paths, ipix)):
+        verts, codes = all_verts[i * 5 : (i + 1) * 5], all_codes[i * 5 : (i + 1) * 5]
         np.testing.assert_array_equal(path.vertices, verts)
         np.testing.assert_array_equal(path.codes, codes)
     np.testing.assert_array_equal(col.get_array(), map)
@@ -104,8 +106,9 @@ def test_order_0_pixels_split_to_order_3():
         rotation=DEFAULT_ROTATION,
         projection=DEFAULT_PROJECTION,
     ).w
-    for path, ipix in zip(paths, order3_ipix):
-        verts, codes = compute_healpix_vertices(3, np.array([ipix]), wcs)
+    all_verts, all_codes = compute_healpix_vertices(3, order3_ipix, wcs)
+    for i, (path, ipix) in enumerate(zip(paths, order3_ipix)):
+        verts, codes = all_verts[i * 5 : (i + 1) * 5], all_codes[i * 5 : (i + 1) * 5]
         np.testing.assert_array_equal(path.vertices, verts)
         np.testing.assert_array_equal(path.codes, codes)
     np.testing.assert_array_equal(col.get_array(), np.full(length, fill_value=map_value))
