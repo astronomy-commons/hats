@@ -196,7 +196,7 @@ def test_plot_healpix_map():
     start_i = 0
     for o, (pixels, m) in culled_dict.items():
         all_verts, all_codes = compute_healpix_vertices(o, pixels, wcs)
-        for i, pix in enumerate(pixels):
+        for i, _ in enumerate(pixels):
             verts, codes = all_verts[i * 5 : (i + 1) * 5], all_codes[i * 5 : (i + 1) * 5]
             path = paths[start_i + i]
             np.testing.assert_array_equal(path.vertices, verts)
