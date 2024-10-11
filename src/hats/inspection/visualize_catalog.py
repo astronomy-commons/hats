@@ -71,7 +71,8 @@ def plot_pixels(catalog: HealpixDataset, **kwargs):
     pixels = catalog.get_healpix_pixels()
     return plot_pixel_list(
         pixels=pixels,
-        plot_title=f"Catalog pixel density map - {catalog.catalog_name}" ** kwargs,
+        plot_title=f"Catalog pixel density map - {catalog.catalog_name}",
+        **kwargs,
     )
 
 
