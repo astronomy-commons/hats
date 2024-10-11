@@ -48,42 +48,30 @@ def _read_point_map(catalog_base_dir):
     return file_io.read_fits_image(map_file_pointer)
 
 
-def plot_points(catalog: Catalog, projection="MOL", **kwargs):
+def plot_points(catalog: Catalog, **kwargs):
     """Create a visual map of the input points of an in-memory catalog.
 
     Args:
         catalog (`hats.catalog.Catalog`) Catalog to display
-        projection (str) The map projection to use. Valid values include:
-            - moll - Molleweide projection (default)
-            - gnom - Gnomonic projection
-            - cart - Cartesian projection
-            - orth - Orthographic projection
+        kwargs: Additional args to pass to `plot_healpix_map`
     """
     if not catalog.on_disk:
         raise ValueError("on disk catalog required for point-wise visualization")
     point_map = _read_point_map(catalog.catalog_base_dir)
-    return plot_healpix_map(
-        point_map, projection, f"Catalog point density map - {catalog.catalog_name}", **kwargs
-    )
+    return plot_healpix_map(point_map, f"Catalog point density map - {catalog.catalog_name}", **kwargs)
 
 
-def plot_pixels(catalog: HealpixDataset, projection="MOL", **kwargs):
+def plot_pixels(catalog: HealpixDataset, **kwargs):
     """Create a visual map of the pixel density of the catalog.
 
     Args:
         catalog (`hats.catalog.Catalog`) Catalog to display
-        projection (str) The map projection to use. Valid values include:
-            - moll - Molleweide projection (default)
-            - gnom - Gnomonic projection
-            - cart - Cartesian projection
-            - orth - Orthographic projection
+        kwargs: Additional args to pass to `plot_healpix_map`
     """
     pixels = catalog.get_healpix_pixels()
     return plot_pixel_list(
         pixels=pixels,
-        plot_title=f"Catalog pixel density map - {catalog.catalog_name}",
-        projection=projection,
-        **kwargs,
+        plot_title=f"Catalog pixel density map - {catalog.catalog_name}" ** kwargs,
     )
 
 
@@ -93,11 +81,7 @@ def plot_pixel_list(pixels: List[HealpixPixel], plot_title: str = "", projection
     Args:
         pixels: healpix pixels (order and pixel number) to visualize
         plot_title (str): heading for the plot
-        projection (str) The map projection to use. Valid values include:
-            - moll - Molleweide projection (default)
-            - gnom - Gnomonic projection
-            - cart - Cartesian projection
-            - orth - Orthographic projection
+        kwargs:
     """
     orders = np.array([p.order for p in pixels])
     ipix = np.array([p.pixel for p in pixels])
@@ -287,14 +271,14 @@ def _plot_healpix_value_map(ipix, depth, values, ax, wcs, cmap="viridis", norm=N
     culled_d = cull_from_pixel_map(depth_ipix_d, wcs)
 
     # Generate Paths for each pixel and add to ax
-    paths = []
+    plt_paths = []
     cum_vals = []
     for d, (ip, vals) in culled_d.items():
         vertices, codes = compute_healpix_vertices(depth=d, ipix=ip, wcs=wcs)
         for i in range(len(ip)):
-            paths.append(Path(vertices[5 * i : 5 * (i + 1)], codes[5 * i : 5 * (i + 1)]))
+            plt_paths.append(Path(vertices[5 * i : 5 * (i + 1)], codes[5 * i : 5 * (i + 1)]))
         cum_vals.append(vals)
-    col = PathCollection(paths, cmap=cmap, norm=norm, **kwargs)
+    col = PathCollection(plt_paths, cmap=cmap, norm=norm, **kwargs)
     col.set_array(np.concatenate(cum_vals))
     ax.add_collection(col)
 
