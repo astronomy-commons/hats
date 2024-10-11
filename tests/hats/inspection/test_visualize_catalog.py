@@ -28,17 +28,17 @@ def test_plot_healpix_pixels():
     order = 3
     length = 10
     ipix = np.arange(length)
-    map = np.arange(length)
+    pix_map = np.arange(length)
     depth = np.full(length, fill_value=order)
-    fig, ax = plot_healpix_map(map, ipix=ipix, depth=depth)
+    fig, ax = plot_healpix_map(pix_map, ipix=ipix, depth=depth)
     assert len(ax.collections) == 1
     col = ax.collections[0]
     paths = col.get_paths()
     assert len(paths) == length
     assert col.get_cmap() == get_cmap(DEFAULT_CMAP_NAME)
     assert isinstance(col.norm, Normalize)
-    assert col.norm.vmin == min(map)
-    assert col.norm.vmax == max(map)
+    assert col.norm.vmin == min(pix_map)
+    assert col.norm.vmax == max(pix_map)
     assert col.colorbar is not None
     assert col.colorbar.cmap == get_cmap(DEFAULT_CMAP_NAME)
     assert col.colorbar.norm == col.norm
@@ -54,16 +54,16 @@ def test_plot_healpix_pixels():
         verts, codes = compute_healpix_vertices(order, np.array([ipix]), wcs)
         np.testing.assert_array_equal(path.vertices, verts)
         np.testing.assert_array_equal(path.codes, codes)
-    np.testing.assert_array_equal(col.get_array(), map)
+    np.testing.assert_array_equal(col.get_array(), pix_map)
 
 
 def test_plot_healpix_pixels_different_order():
     order = 6
     length = 1000
     ipix = np.arange(length)
-    map = np.arange(length)
+    pix_map = np.arange(length)
     depth = np.full(length, fill_value=order)
-    fig, ax = plot_healpix_map(map, ipix=ipix, depth=depth)
+    fig, ax = plot_healpix_map(pix_map, ipix=ipix, depth=depth)
     assert len(ax.collections) == 1
     col = ax.collections[0]
     paths = col.get_paths()
@@ -82,16 +82,16 @@ def test_plot_healpix_pixels_different_order():
         verts, codes = all_verts[i * 5 : (i + 1) * 5], all_codes[i * 5 : (i + 1) * 5]
         np.testing.assert_array_equal(path.vertices, verts)
         np.testing.assert_array_equal(path.codes, codes)
-    np.testing.assert_array_equal(col.get_array(), map)
+    np.testing.assert_array_equal(col.get_array(), pix_map)
 
 
 def test_order_0_pixels_split_to_order_3():
     map_value = 0.5
     order_0_pix = 4
     ipix = np.array([order_0_pix])
-    map = np.array([map_value])
+    pix_map = np.array([map_value])
     depth = np.array([0])
-    fig, ax = plot_healpix_map(map, ipix=ipix, depth=depth)
+    fig, ax = plot_healpix_map(pix_map, ipix=ipix, depth=depth)
     assert len(ax.collections) == 1
     col = ax.collections[0]
     paths = col.get_paths()
@@ -118,9 +118,9 @@ def test_edge_pixels_split_to_order_7():
     map_value = 0.5
     order_0_pix = 2
     ipix = np.array([order_0_pix])
-    map = np.array([map_value])
+    pix_map = np.array([map_value])
     depth = np.array([0])
-    fig, ax = plot_healpix_map(map, ipix=ipix, depth=depth)
+    fig, ax = plot_healpix_map(pix_map, ipix=ipix, depth=depth)
     assert len(ax.collections) == 1
     edge_pixels = {0: [order_0_pix]}
     for o in range(1, 8):
@@ -155,8 +155,8 @@ def test_edge_pixels_split_to_order_7():
 def test_cull_from_pixel_map():
     order = 1
     ipix = np.arange(12 * 4**order)
-    map = np.arange(12 * 4**order)
-    map_dict = {order: (ipix, map)}
+    pix_map = np.arange(12 * 4**order)
+    map_dict = {order: (ipix, pix_map)}
     fig = plt.figure(figsize=(10, 5))
     wcs = WCS(
         fig,
@@ -171,14 +171,14 @@ def test_cull_from_pixel_map():
     for o, (pixels, m) in culled_dict.items():
         np.testing.assert_array_equal(pixels, mocpy_culled[str(o)])
         map_indices = pixels >> (2 * (o - order))
-        np.testing.assert_array_equal(m, map[map_indices])
+        np.testing.assert_array_equal(m, pix_map[map_indices])
 
 
 def test_plot_healpix_map():
     order = 1
     ipix = np.arange(12 * 4**order)
-    map = np.arange(12 * 4**order)
-    fig, ax = plot_healpix_map(map)
+    pix_map = np.arange(12 * 4**order)
+    fig, ax = plot_healpix_map(pix_map)
     assert len(ax.collections) == 1
     col = ax.collections[0]
     paths = col.get_paths()
@@ -190,7 +190,7 @@ def test_plot_healpix_map():
         rotation=DEFAULT_ROTATION,
         projection=DEFAULT_PROJECTION,
     ).w
-    map_dict = {order: (ipix, map)}
+    map_dict = {order: (ipix, pix_map)}
     culled_dict = cull_from_pixel_map(map_dict, wcs)
     all_vals = []
     start_i = 0
@@ -210,10 +210,10 @@ def test_plot_wcs_params():
     order = 3
     length = 10
     ipix = np.arange(length)
-    map = np.arange(length)
+    pix_map = np.arange(length)
     depth = np.full(length, fill_value=order)
     fig, ax = plot_healpix_map(
-        map,
+        pix_map,
         ipix=ipix,
         depth=depth,
         fov=(100 * u.deg, 50 * u.deg),
@@ -232,11 +232,11 @@ def test_plot_wcs_params():
         rotation=DEFAULT_ROTATION,
         projection="AIT",
     ).w
-    for path, ipix in zip(paths, np.arange(len(map))):
+    for path, ipix in zip(paths, np.arange(len(pix_map))):
         verts, codes = compute_healpix_vertices(order, np.array([ipix]), wcs)
         np.testing.assert_array_equal(path.vertices, verts)
         np.testing.assert_array_equal(path.codes, codes)
-    np.testing.assert_array_equal(col.get_array(), map)
+    np.testing.assert_array_equal(col.get_array(), pix_map)
     assert ax.get_transform("icrs") is not None
 
 
@@ -244,7 +244,7 @@ def test_plot_wcs():
     order = 3
     length = 10
     ipix = np.arange(length)
-    map = np.arange(length)
+    pix_map = np.arange(length)
     depth = np.full(length, fill_value=order)
     fig = plt.figure(figsize=(10, 5))
     wcs = WCS(
@@ -255,17 +255,17 @@ def test_plot_wcs():
         rotation=DEFAULT_ROTATION,
         projection="AIT",
     ).w
-    fig2, ax = plot_healpix_map(map, ipix=ipix, depth=depth, fig=fig, wcs=wcs)
+    fig2, ax = plot_healpix_map(pix_map, ipix=ipix, depth=depth, fig=fig, wcs=wcs)
     assert fig2 is fig
     assert len(ax.collections) == 1
     col = ax.collections[0]
     paths = col.get_paths()
     assert len(paths) == length
-    for path, ipix in zip(paths, np.arange(len(map))):
+    for path, ipix in zip(paths, np.arange(len(pix_map))):
         verts, codes = compute_healpix_vertices(order, np.array([ipix]), wcs)
         np.testing.assert_array_equal(path.vertices, verts)
         np.testing.assert_array_equal(path.codes, codes)
-    np.testing.assert_array_equal(col.get_array(), map)
+    np.testing.assert_array_equal(col.get_array(), pix_map)
     assert ax.get_transform("icrs") is not None
 
 
@@ -273,7 +273,7 @@ def test_plot_wcs_and_ax():
     order = 3
     length = 10
     ipix = np.arange(length)
-    map = np.arange(length)
+    pix_map = np.arange(length)
     depth = np.full(length, fill_value=order)
     fig = plt.figure(figsize=(10, 5))
     wcs = WCS(
@@ -286,18 +286,18 @@ def test_plot_wcs_and_ax():
     ).w
     ax = fig.add_subplot(1, 1, 1, projection=wcs, frame_class=EllipticalFrame)
     assert len(ax.collections) == 0
-    fig2, ax2 = plot_healpix_map(map, ipix=ipix, depth=depth, fig=fig, wcs=wcs, ax=ax)
+    fig2, ax2 = plot_healpix_map(pix_map, ipix=ipix, depth=depth, fig=fig, wcs=wcs, ax=ax)
     assert fig2 is fig
     assert ax2 is ax
     assert len(ax.collections) == 1
     col = ax.collections[0]
     paths = col.get_paths()
     assert len(paths) == length
-    for path, ipix in zip(paths, np.arange(len(map))):
+    for path, ipix in zip(paths, np.arange(len(pix_map))):
         verts, codes = compute_healpix_vertices(order, np.array([ipix]), wcs)
         np.testing.assert_array_equal(path.vertices, verts)
         np.testing.assert_array_equal(path.codes, codes)
-    np.testing.assert_array_equal(col.get_array(), map)
+    np.testing.assert_array_equal(col.get_array(), pix_map)
     assert ax.get_transform("icrs") is not None
 
 
@@ -305,7 +305,7 @@ def test_plot_ax_no_wcs():
     order = 3
     length = 10
     ipix = np.arange(length)
-    map = np.arange(length)
+    pix_map = np.arange(length)
     depth = np.full(length, fill_value=order)
     fig = plt.figure(figsize=(10, 5))
     wcs = WCS(
@@ -318,7 +318,7 @@ def test_plot_ax_no_wcs():
     ).w
     ax = fig.add_subplot(1, 1, 1, projection=wcs, frame_class=EllipticalFrame)
     with pytest.raises(ValueError):
-        plot_healpix_map(map, ipix=ipix, depth=depth, fig=fig, ax=ax)
+        plot_healpix_map(pix_map, ipix=ipix, depth=depth, fig=fig, ax=ax)
 
 
 def test_plot_cmaps():
@@ -326,9 +326,9 @@ def test_plot_cmaps():
     length = 10
     cmap_name = "plasma"
     ipix = np.arange(length)
-    map = np.arange(length)
+    pix_map = np.arange(length)
     depth = np.full(length, fill_value=order)
-    fig, ax = plot_healpix_map(map, ipix=ipix, depth=depth, cmap=cmap_name)
+    fig, ax = plot_healpix_map(pix_map, ipix=ipix, depth=depth, cmap=cmap_name)
     assert len(ax.collections) == 1
     col = ax.collections[0]
     paths = col.get_paths()
@@ -344,16 +344,16 @@ def test_plot_cmaps():
         rotation=DEFAULT_ROTATION,
         projection=DEFAULT_PROJECTION,
     ).w
-    for path, ipix in zip(paths, np.arange(len(map))):
+    for path, ipix in zip(paths, np.arange(len(pix_map))):
         verts, codes = compute_healpix_vertices(order, np.array([ipix]), wcs)
         np.testing.assert_array_equal(path.vertices, verts)
         np.testing.assert_array_equal(path.codes, codes)
-    np.testing.assert_array_equal(col.get_array(), map)
+    np.testing.assert_array_equal(col.get_array(), pix_map)
 
     ipix = np.arange(length)
-    map = np.arange(length)
+    pix_map = np.arange(length)
     depth = np.full(length, fill_value=order)
-    fig, ax = plot_healpix_map(map, ipix=ipix, depth=depth, cmap=get_cmap(cmap_name))
+    fig, ax = plot_healpix_map(pix_map, ipix=ipix, depth=depth, cmap=get_cmap(cmap_name))
     assert len(ax.collections) == 1
     col = ax.collections[0]
     paths = col.get_paths()
@@ -361,11 +361,11 @@ def test_plot_cmaps():
     assert col.colorbar is not None
     assert col.colorbar.cmap == get_cmap(cmap_name)
     assert len(paths) == length
-    for path, ipix in zip(paths, np.arange(len(map))):
+    for path, ipix in zip(paths, np.arange(len(pix_map))):
         verts, codes = compute_healpix_vertices(order, np.array([ipix]), wcs)
         np.testing.assert_array_equal(path.vertices, verts)
         np.testing.assert_array_equal(path.codes, codes)
-    np.testing.assert_array_equal(col.get_array(), map)
+    np.testing.assert_array_equal(col.get_array(), pix_map)
 
 
 def test_plot_norm():
@@ -373,9 +373,9 @@ def test_plot_norm():
     length = 10
     norm = LogNorm()
     ipix = np.arange(length)
-    map = np.arange(length)
+    pix_map = np.arange(length)
     depth = np.full(length, fill_value=order)
-    fig, ax = plot_healpix_map(map, ipix=ipix, depth=depth, norm=norm)
+    fig, ax = plot_healpix_map(pix_map, ipix=ipix, depth=depth, norm=norm)
     assert len(ax.collections) == 1
     col = ax.collections[0]
     paths = col.get_paths()
@@ -391,20 +391,20 @@ def test_plot_norm():
         rotation=DEFAULT_ROTATION,
         projection=DEFAULT_PROJECTION,
     ).w
-    for path, ipix in zip(paths, np.arange(len(map))):
+    for path, ipix in zip(paths, np.arange(len(pix_map))):
         verts, codes = compute_healpix_vertices(order, np.array([ipix]), wcs)
         np.testing.assert_array_equal(path.vertices, verts)
         np.testing.assert_array_equal(path.codes, codes)
-    np.testing.assert_array_equal(col.get_array(), map)
+    np.testing.assert_array_equal(col.get_array(), pix_map)
 
 
 def test_plot_no_cbar():
     order = 3
     length = 10
     ipix = np.arange(length)
-    map = np.arange(length)
+    pix_map = np.arange(length)
     depth = np.full(length, fill_value=order)
-    fig, ax = plot_healpix_map(map, ipix=ipix, depth=depth, cbar=False)
+    fig, ax = plot_healpix_map(pix_map, ipix=ipix, depth=depth, cbar=False)
     assert len(ax.collections) == 1
     col = ax.collections[0]
     assert col.colorbar is None
@@ -418,11 +418,11 @@ def test_plot_no_cbar():
         rotation=DEFAULT_ROTATION,
         projection=DEFAULT_PROJECTION,
     ).w
-    for path, ipix in zip(paths, np.arange(len(map))):
+    for path, ipix in zip(paths, np.arange(len(pix_map))):
         verts, codes = compute_healpix_vertices(order, np.array([ipix]), wcs)
         np.testing.assert_array_equal(path.vertices, verts)
         np.testing.assert_array_equal(path.codes, codes)
-    np.testing.assert_array_equal(col.get_array(), map)
+    np.testing.assert_array_equal(col.get_array(), pix_map)
 
 
 def test_plot_kwargs():
@@ -430,9 +430,9 @@ def test_plot_kwargs():
     length = 10
     label = "test"
     ipix = np.arange(length)
-    map = np.arange(length)
+    pix_map = np.arange(length)
     depth = np.full(length, fill_value=order)
-    fig, ax = plot_healpix_map(map, ipix=ipix, depth=depth, label=label)
+    fig, ax = plot_healpix_map(pix_map, ipix=ipix, depth=depth, label=label)
     assert len(ax.collections) == 1
     col = ax.collections[0]
     assert col.get_label() == label
@@ -446,11 +446,11 @@ def test_plot_kwargs():
         rotation=DEFAULT_ROTATION,
         projection=DEFAULT_PROJECTION,
     ).w
-    for path, ipix in zip(paths, np.arange(len(map))):
+    for path, ipix in zip(paths, np.arange(len(pix_map))):
         verts, codes = compute_healpix_vertices(order, np.array([ipix]), wcs)
         np.testing.assert_array_equal(path.vertices, verts)
         np.testing.assert_array_equal(path.codes, codes)
-    np.testing.assert_array_equal(col.get_array(), map)
+    np.testing.assert_array_equal(col.get_array(), pix_map)
 
 
 def test_catalog_plot(small_sky_order1_catalog):
