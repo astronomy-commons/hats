@@ -281,7 +281,7 @@ ignored-parents=
 max-args=15
 
 # Maximum number of positional arguments.
-max-positional-arguments=13
+max-positional-arguments=8
 
 # Maximum number of attributes for a class (see R0902).
 max-attributes=25

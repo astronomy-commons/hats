@@ -58,7 +58,7 @@ def plot_points(catalog: Catalog, **kwargs):
     if not catalog.on_disk:
         raise ValueError("on disk catalog required for point-wise visualization")
     point_map = _read_point_map(catalog.catalog_base_dir)
-    return plot_healpix_map(point_map, f"Catalog point density map - {catalog.catalog_name}", **kwargs)
+    return plot_healpix_map(point_map, title=f"Catalog point density map - {catalog.catalog_name}", **kwargs)
 
 
 def plot_pixels(catalog: HealpixDataset, **kwargs):
@@ -88,7 +88,7 @@ def plot_pixel_list(pixels: List[HealpixPixel], plot_title: str = "", projection
     ipix = np.array([p.pixel for p in pixels])
     order_map = orders.copy()
     fig, ax = plot_healpix_map(
-        order_map, projection, plot_title, ipix=ipix, depth=orders, cbar=False, **kwargs
+        order_map, projection=projection, title=plot_title, ipix=ipix, depth=orders, cbar=False, **kwargs
     )
     col = ax.collections[0]
     plt.colorbar(
@@ -162,6 +162,7 @@ def cull_from_pixel_map(depth_ipix_d: Dict[int, Tuple[np.ndarray, np.ndarray]], 
 
 def plot_healpix_map(
     healpix_map: np.ndarray,
+    *,
     projection: str = "MOL",
     title: str = "",
     cmap: str | Colormap = "viridis",
