@@ -3,17 +3,24 @@
 NB: Testing validity of generated plots is currently not tested in our unit test suite.
 """
 
+import astropy.wcs
+import matplotlib.pyplot as plt
+
 from __future__ import annotations
 
 from typing import Dict, List, Tuple, TYPE_CHECKING
 
 import numpy as np
 from astropy.coordinates import SkyCoord, Angle, ICRS
+from astropy.units import Quantity
 from astropy.visualization.wcsaxes.frame import EllipticalFrame
 from astropy.wcs.utils import skycoord_to_pixel
 import cdshealpix
 from matplotlib import pyplot as plt, colors
+from matplotlib.axes import Axes
 from matplotlib.collections import PathCollection
+from matplotlib.colors import Colormap, Normalize
+from matplotlib.figure import Figure
 from matplotlib.path import Path
 import astropy.units as u
 from mocpy import WCS, MOC
@@ -170,24 +177,76 @@ def cull_from_pixel_map(depth_ipix_d: Dict[int, Tuple[np.ndarray, np.ndarray]], 
 
 
 def plot_healpix_map(
-    healpix_map,
-    projection="MOL",
-    title="",
-    cmap="viridis",
-    ipix=None,
-    depth=None,
-    cbar=True,
-    fov=None,
-    center=None,
-    wcs=None,
-    ax=None,
+    healpix_map: np.ndarray,
+    projection: str = "MOL",
+    title: str = "",
+    cmap: str | Colormap = "viridis",
+    norm: Normalize | None = None,
+    ipix: np.ndarray | None = None,
+    depth: np.ndarray | None = None,
+    cbar: bool = True,
+    fov: Quantity | Tuple[Quantity, Quantity] = None,
+    center: SkyCoord | None = None,
+    wcs: astropy.wcs.WCS = None,
+    ax: Axes | None = None,
+    fig: Figure | None = None,
     **kwargs,
 ):
+    """Plot a map of HEALPix pixels to values as a colormap across a projection of the sky
+
+    Plots the given healpix pixels on a spherical projection defined by a WCS. Colors each pixel based on the
+    corresponding value in a map.
+
+    The map can be across all healpix pixels at a given order, or specify a subset of healpix pixels with the
+    `ipix` and `depth` parameters.
+
+    By default, a new matplotlib figure and axis will be created, and the projection will be a Molleweide
+    projection across the whole sky.
+
+    Additional kwargs will be passed to the creation of a matplotlib `PathCollection` object, which is the
+    artist that draws the tiles.
+
+    Args:
+        healpix_map (np.ndarray): Array of map values for the healpix tiles. If ipix and depth are not
+            specified, the length of this array will be used to determine the healpix order, and will plot
+            healpix pixels with pixel index corresponding to the array index in NESTED ordering. If ipix and
+            depth are specified, all arrays must be of the same length, and the pixels specified by the
+            ipix and depth arrays will be plotted with their values specified in the healpix_map array.
+        projection (str): The projection to use in the WCS. Available projections listed at
+            https://docs.astropy.org/en/stable/wcs/supported_projections.html
+        title (str): The title of the plot
+        cmap (str | Colormap): The matplotlib colormap to plot with
+        norm (Normalize | None): The matplotlib normalization to plot with
+        ipix (np.ndarray | None): Array of HEALPix NESTED pixel indices. Must be used with depth, and arrays
+            must be the same length
+        depth (np.ndarray | None): Array of HEALPix pixel orders. Must be used with ipix, and arrays
+            must be the same length
+        cbar (bool): If True, includes a color bar in the plot (Default: True)
+        fov (Quantity or Sequence[Quantity, Quantity] | None): The Field of View of the WCS. Must be an
+            astropy Quantity with an angular unit, or a tuple of quantities for different longitude and \
+            latitude FOVs
+        center (SkyCoord | None): The center of the projection in the WCS
+        wcs (WCS | None): The WCS to specify the projection of the plot. If used, all other WCS parameters
+            are ignored and the parameters from the WCS object is used.
+        ax (Axes | None): The matplotlib axes to plot onto. If None, an axes will be created to be used. If
+            specified, the axes must be initialized with a WCS for the projection, and passed to the method
+            with the WCS parameter. (Default: None)
+        fig (Figure | None): The matplotlib figure to add the axes to. If None, one will be created, unless
+            ax is specified (Default: None)
+        **kwargs: Additional kwargs to pass to creating the matplotlib `PathCollection` artist
+
+    Returns:
+        Tuple[Figure, Axes] - The figure and axes used to plot the healpix map
+    """
     if ipix is None or depth is None:
         order = int(np.ceil(np.log2(len(healpix_map) / 12) / 2))
         ipix = np.arange(len(healpix_map))
         depth = np.full(len(healpix_map), fill_value=order)
-    fig = plt.figure(figsize=(10, 5))
+    if fig is None:
+        if ax is not None:
+            fig = ax.get_figure()
+        else:
+            fig = plt.figure(figsize=(10, 5))
     if fov is None:
         fov = (320 * u.deg, 160 * u.deg)
     if center is None:
@@ -207,7 +266,7 @@ def plot_healpix_map(
         raise ValueError(
             "if ax is provided, wcs must also be provided with the projection used in initializing ax"
         )
-    _plot_healpix_value_map(ipix, depth, healpix_map, ax, wcs, cmap=cmap, cbar=cbar, **kwargs)
+    _plot_healpix_value_map(ipix, depth, healpix_map, ax, wcs, cmap=cmap, norm=norm, cbar=cbar, **kwargs)
     plt.grid()
     plt.ylabel("dec")
     plt.xlabel("ra")
