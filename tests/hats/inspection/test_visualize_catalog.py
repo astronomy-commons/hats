@@ -133,7 +133,7 @@ def test_edge_pixels_split_to_order_7():
         non_edge_pixels[o] = pixels_ord[~np.isin(pixels_ord, edge_pixels[o])]
     col = ax.collections[0]
     paths = col.get_paths()
-    length = sum([len(x) for x in non_edge_pixels.values()])
+    length = sum(len(x) for x in non_edge_pixels.values())
     assert len(paths) == length
     wcs = WCS(
         fig,
