@@ -3,27 +3,25 @@
 NB: Testing validity of generated plots is currently not tested in our unit test suite.
 """
 
-import astropy.wcs
-import matplotlib.pyplot as plt
-
 from __future__ import annotations
 
-from typing import Dict, List, Tuple, TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict, List, Tuple
 
+import astropy.units as u
+import astropy.wcs
+import cdshealpix
 import numpy as np
-from astropy.coordinates import SkyCoord, Angle, ICRS
+from astropy.coordinates import ICRS, Angle, SkyCoord
 from astropy.units import Quantity
 from astropy.visualization.wcsaxes.frame import EllipticalFrame
 from astropy.wcs.utils import skycoord_to_pixel
-import cdshealpix
-from matplotlib import pyplot as plt, colors
+from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.collections import PathCollection
 from matplotlib.colors import Colormap, Normalize
 from matplotlib.figure import Figure
 from matplotlib.path import Path
-import astropy.units as u
-from mocpy import WCS, MOC
+from mocpy import WCS
 from mocpy.moc.plot.culling_backfacing_cells import backface_culling
 from mocpy.moc.plot.fill import compute_healpix_vertices
 from mocpy.moc.plot.utils import _set_wcs

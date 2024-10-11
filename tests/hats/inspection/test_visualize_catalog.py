@@ -1,6 +1,6 @@
-import numpy as np
 import astropy.units as u
 import matplotlib.pyplot as plt
+import numpy as np
 import pytest
 from astropy.coordinates import Angle, SkyCoord
 from astropy.visualization.wcsaxes.frame import EllipticalFrame
@@ -11,7 +11,7 @@ from mocpy.moc.plot.culling_backfacing_cells import from_moc
 from mocpy.moc.plot.fill import compute_healpix_vertices
 
 from hats.inspection import plot_pixels
-from hats.inspection.visualize_catalog import plot_healpix_map, cull_from_pixel_map
+from hats.inspection.visualize_catalog import cull_from_pixel_map, plot_healpix_map
 
 # pylint: disable=no-member
 
