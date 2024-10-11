@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 from astropy.coordinates import Angle, SkyCoord
 from astropy.visualization.wcsaxes.frame import EllipticalFrame
-from matplotlib.cm import get_cmap
+from matplotlib.pyplot import get_cmap
 from matplotlib.colors import LogNorm, Normalize
 from mocpy import WCS
 from mocpy.moc.plot.culling_backfacing_cells import from_moc
