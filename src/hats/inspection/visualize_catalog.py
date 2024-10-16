@@ -82,7 +82,9 @@ def plot_pixel_list(pixels: List[HealpixPixel], plot_title: str = "", projection
     Args:
         pixels: healpix pixels (order and pixel number) to visualize
         plot_title (str): heading for the plot
-        kwargs:
+        projection (str): The projection to use. Available projections listed at
+            https://docs.astropy.org/en/stable/wcs/supported_projections.html
+        kwargs: Additional args to pass to `plot_healpix_map`
     """
     orders = np.array([p.order for p in pixels])
     ipix = np.array([p.pixel for p in pixels])
@@ -115,6 +117,8 @@ def cull_from_pixel_map(depth_ipix_d: Dict[int, Tuple[np.ndarray, np.ndarray]], 
 
     ipix_d = {}
     for depth in range(min_depth, max_split_depth + 1):
+        # for each depth, check if pixels are too large, or wrap around projection, and split into pixels at
+        # higher order
         if depth < 3:
             too_large_ipix = ipixels
             too_large_vals = vals
@@ -141,6 +145,8 @@ def cull_from_pixel_map(depth_ipix_d: Dict[int, Tuple[np.ndarray, np.ndarray]], 
             too_large_vals = backfacing_vals
 
         next_depth = depth + 1
+
+        # get next depth if there is one, or use empty array as default
         ipixels = np.array([], dtype=ipixels.dtype)
         vals = np.array([], dtype=vals.dtype)
 
