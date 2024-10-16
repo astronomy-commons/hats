@@ -259,8 +259,8 @@ def plot_healpix_map(
         )
     _plot_healpix_value_map(ipix, depth, healpix_map, ax, wcs, cmap=cmap, norm=norm, cbar=cbar, **kwargs)
     plt.grid()
-    plt.ylabel("dec")
-    plt.xlabel("ra")
+    plt.ylabel("Dec")
+    plt.xlabel("RA")
     plt.title(title)
     return fig, ax
 
