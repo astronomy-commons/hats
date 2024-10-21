@@ -1,4 +1,4 @@
-catalog_path: $HIPSCAT_DEFAULT_DIR/small_sky_order1_margin
+catalog_path: $HATS_DEFAULT_DIR/small_sky_order1_margin
 catalog_name: small_sky_order1_margin
 catalog_type: margin
 creators: []
@@ -7,7 +7,6 @@ catalog_info:
   catalog_name: small_sky_order1_margin
   catalog_type: margin
   total_rows: 28
-  epoch: J2000
   ra_column: ra
   dec_column: dec
   primary_catalog: small_sky_order1

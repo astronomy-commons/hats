@@ -1,8 +1,0 @@
-{
-  "catalog_name": "catalog",
-  "catalog_type": "object",
-  "epoch": "J2000",
-  "ra_column": "ra",
-  "dec_column": "dec",
-  "total_rows": 10
-}

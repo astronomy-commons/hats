@@ -7,15 +7,14 @@ import os
 
 import numpy as np
 
-import hipscat.pixel_math as hist
-import hipscat.pixel_math.healpix_shim as hp
-from hipscat.catalog import Catalog, PartitionInfo
-from hipscat.catalog.association_catalog.partition_join_info import PartitionJoinInfo
-from hipscat.catalog.catalog_info import CatalogInfo
-from hipscat.io.paths import pixel_catalog_files
-from hipscat.pixel_math import HealpixPixel
-from hipscat.pixel_tree import PixelAlignment, align_trees
-from hipscat.pixel_tree.pixel_tree import PixelTree
+import hats.pixel_math as hist
+import hats.pixel_math.healpix_shim as hp
+from hats.catalog import Catalog, PartitionInfo, TableProperties
+from hats.catalog.association_catalog.partition_join_info import PartitionJoinInfo
+from hats.io.paths import pixel_catalog_files
+from hats.pixel_math import HealpixPixel
+from hats.pixel_tree import PixelAlignment, align_trees
+from hats.pixel_tree.pixel_tree import PixelTree
 
 
 def time_test_alignment_even_sky():
@@ -29,12 +28,11 @@ def time_test_alignment_even_sky():
 
 def time_test_cone_filter_multiple_order():
     """Create a catalog cone filter where we have multiple orders in the catalog"""
-    catalog_info = CatalogInfo(
+    catalog_info = TableProperties(
         **{
             "catalog_name": "test_name",
             "catalog_type": "object",
             "total_rows": 10,
-            "epoch": "J2000",
             "ra_column": "ra",
             "dec_column": "dec",
         }

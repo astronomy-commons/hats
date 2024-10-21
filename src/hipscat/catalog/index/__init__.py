@@ -1,1 +1,0 @@
-from .index_catalog_info import IndexCatalogInfo

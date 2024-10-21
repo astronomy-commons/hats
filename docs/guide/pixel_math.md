@@ -1,10 +1,10 @@
 # Pixel Math Appendix
-A reference document for the various utility functions of `hipscat/pixel_math`.
+A reference document for the various utility functions of `hats/pixel_math`.
 
 ## Pixel Margins
 The functions made to find the pixels that make up the border region of a given 
 healpixel. Primarly used as a way to speed up the neighbor/margin caching code 
-for [hipscat-import](https://github.com/astronomy-commons/hipscat-import/). Code 
+for [hats-import](https://github.com/astronomy-commons/hats-import/). Code 
 originally created by Mario Juric for HIPS, found 
 [here](https://github.com/mjuric/HIPS/blob/feature/multiprocess/hipscat/healpix.py).
 
@@ -192,82 +192,3 @@ Given a set of ra and dec coordinates as well as the healpixel, healpix order, m
 We take a chunk of our points and generate a set matrix of points with a shape (size_of_chunk, number_of_boundary_points) with all of our data points repeated along the first axis. Then, we generate a matrix of the same shape with the boundary points repeated as well and then put both of those matrices into a `SkyCoord` so that we can calculate the separations between all of them. We also find all of the distances between adjacent boundary points, so that we can find know the distance of each boundary segment. For each data point, we find the boundary point with the minimum separation, and then find which of the two adjacent boundary points has the smaller separation from the datapoint. From there, we can do the above calculations to get the perpendicular bisector and compare this against the `margin_threshold`. For checking around the corners of the healpixel, where the data point may not actually form a neat triangle with it's closest boundary points, we check to see if the minimum distance is less than the margin threshold and return True if it is. This way, we'll keep any data points that fall within the margin threshold but would return NaN with our perpendicular bisector calculations.
 
 To speed up our calculations, the inner loops of calculations is compiled with the `numba` JIT compiler.
-
-## HiPSCat ID
-
-This index is defined as a 64-bit integer which has two parts:
-
-* healpix pixel (at order 19)
-* incrementing counter (within same healpix, for uniqueness)
-
-Visually, in bits:
-
-```
-|------------------------------------------|-------------------|
-|<-----    healpixel at order 19    ------>|<--   counter   -->|
-```
-
-This provides us with an increasing index, that will not overlap
-between spatially partitioned data files.
-
-### compute_hipscat_id
-
-For a given list of coordinates, compute the HiPSCat ID s.t. coordinates in the
-same order 19 pixel are appended with a counter to make a unique hipscat_id.
-
-For the example, we'll work with the following simplified hex numbers to help 
-illustrate: `[0xbeee, 0xbeef, 0xbeee, 0xfeed, 0xbeef]`
-
-#### Counter construction
-
-To construct our counters we sort the pixel numbers, call 
-[numpy.unique](https://numpy.org/doc/stable/reference/generated/numpy.unique.html),
-then do some silly arithmetic with the results.
-
-The sorted representation of the above is `[beee, beee, beef, beef, feed]`. What 
-we're looking for at this point is a counter that indicates if the value is being
-repeated and how many times we've seen this value so far. e.g. `[0, 1, 0, 1, 0]`.
-
-The `np.unique` call will yield three outputs:
-
-* `unique_values` (ignored) `[beee, beef, feed]`
-* `unique_indices` - the index of the *first* occurrence of each unique value.
-    `[0, 2, 4]`
-* `unique_inverse` - the indices of *all* occurrences of the unique values 
-    (using indexes from that `unique_values`), used to reconstruct the 
-    original array. `[0, 0, 1, 1, 2]`
-
-By indexing into `unique_indexes` by the `unique_inverse`, we get an array with the 
-index of the first time that healpix pixel was seen, which provides an step-like 
-offset. e.g. `[0, 0, 2, 2, 4]`. This jumps up to the current index each time the
-pixel changes. We subtract this from the actual index value (e.g. `[0, 1, 2, 3, 4]`)
-to get the desired counter. e.g. 
-
-```
-[0, 1, 2, 3, 4]
--
-[0, 0, 2, 2, 4]
-=
-[0, 1, 0, 1, 0]
-```
-
-#### Putting it together
-
-After mapping our coordinates into order 19 healpix pixels, we bit-shift them to make room for our counters. Then we add the counters to the end.
-
-e.g.
-
-```
-[     0xbeee,      0xbeee,      0xbeef,      0xbeef,      0xfeed]
-           << shifted <<
-[0x5F7700000, 0x5F7700000, 0x5F7780000, 0x5F7780000, 0x7F7680000]
-+
-[          0,           1,            0,          1,           0]
-=
-[0x5F7700000, 0x5F7700001, 0x5F7780000, 0x5F7780001, 0x7F7680000]
-```
-
-And finally, we unsort the array to get back the hipscat ids in the order the 
-coordinates were provided.
-
-`[0x5F7700000, 0x5F7780000, 0x5F7700001, 0x7F7680000, 0x5F7780001]`

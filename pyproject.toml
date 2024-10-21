@@ -1,7 +1,7 @@
 [project]
-name = "hipscat"
+name = "hats"
 license = {file = "LICENSE"}
-description = "Hierarchical Progressive Survey Catalog"
+description = "Hierarchical Adaptive Tiling Scheme Catalog"
 readme = "README.md"
 authors = [
     { name = "LINCC Frameworks", email = "lincc-frameworks-team@lists.lsst.org" }
@@ -19,22 +19,24 @@ dynamic = ["version"]
 requires-python = ">=3.9"
 dependencies = [
     "aiohttp", # http filesystem support
-    "astropy",
+    "astropy<6.1",
     "fsspec>=2023.10.0", # Used for abstract filesystems
     "healpy",
+    "jproperties",
     "matplotlib>=3.3,<3.9",
     "mocpy",
     "numba>=0.58",
     "numpy<3", 
     "pandas",
     "pyarrow>=14.0.1",
+    "pydantic",
     "scipy",
     "typing-extensions>=4.3.0",
     "universal-pathlib",
 ]
 
 [project.urls]
-"Source Code" = "https://github.com/astronomy-commons/hipscat"
+"Source Code" = "https://github.com/astronomy-commons/hats"
 
 # On a mac, install optional dependencies with `pip install '.[dev]'` (include the single quotes)
 [project.optional-dependencies]
@@ -61,7 +63,7 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools_scm]
-write_to = "src/hipscat/_version.py"
+write_to = "src/hats/_version.py"
 
 [tool.pytest.ini_options]
 timeout = 1
@@ -70,7 +72,7 @@ testpaths = [
 ]
 
 [tool.coverage.run]
-omit=["src/hipscat/_version.py"]
+omit=["src/hats/_version.py"]
 
 [tool.black]
 line-length = 110

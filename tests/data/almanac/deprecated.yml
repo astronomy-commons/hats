@@ -1,4 +1,4 @@
 catalog_name: deprecated
 catalog_type: object
-catalog_path: $HIPSCAT_DEFAULT_DIR/deprecated
+catalog_path: $HATS_DEFAULT_DIR/deprecated
 deprecated: Use `catalog` instead

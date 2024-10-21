@@ -1,0 +1,9 @@
+#HATS catalog
+obs_collection=catalog
+dataproduct_type=object
+hats_nrows=10
+hats_col_ra=ra
+hats_col_dec=dec
+hats_cols_default=psf mean_mag_r
+hats_max_rows=1000
+hats_order=0

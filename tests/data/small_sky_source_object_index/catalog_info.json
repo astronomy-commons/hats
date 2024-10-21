@@ -1,8 +1,0 @@
-{
-    "catalog_name": "small_sky_source_object_index",
-    "catalog_type": "index",
-    "total_rows": 148,
-    "primary_catalog": "small_sky_source",
-    "indexing_column": "object_id",
-    "extra_columns": []
-}

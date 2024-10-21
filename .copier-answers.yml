@@ -15,9 +15,9 @@ include_benchmarks: true
 include_docs: true
 include_notebooks: true
 mypy_type_checking: none
-package_name: hipscat
+package_name: hats
 project_license: BSD
-project_name: hipscat
+project_name: hats
 project_organization: astronomy-commons
 python_versions:
 - '3.9'

@@ -1,0 +1,10 @@
+#HATS catalog
+obs_collection=margin_cache
+dataproduct_type=margin
+hats_nrows=100
+hats_col_ra=ra
+hats_col_dec=dec
+hats_primary_table_url=catalog
+hats_margin_threshold=0.5
+hats_max_rows=1000
+hats_order=0

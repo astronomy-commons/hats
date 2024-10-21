@@ -1,4 +1,4 @@
-catalog_path: $HIPSCAT_DEFAULT_DIR/small_sky_order1_id_index
+catalog_path: $HATS_DEFAULT_DIR/small_sky_order1_id_index
 catalog_name: small_sky_order1_id_index
 catalog_type: index
 creators: []

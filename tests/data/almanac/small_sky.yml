@@ -1,10 +1,9 @@
 catalog_name: small_sky
 catalog_type: object
-catalog_path: $HIPSCAT_DEFAULT_DIR/small_sky
+catalog_path: $HATS_DEFAULT_DIR/small_sky
 catalog_info:
   catalog_name: small_sky
   catalog_type: object
-  epoch: J2000
   ra_column: ra
   dec_column: dec
   total_rows: 131

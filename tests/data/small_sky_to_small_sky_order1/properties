@@ -1,0 +1,10 @@
+obs_collection = small_sky_to_small_sky_order1
+dataproduct_type = association
+hats_nrows = 131
+hats_assn_join_table_url=small_sky_order1
+hats_assn_leaf_files=false
+hats_col_assn_join=id
+hats_col_assn_join_assn=id_small_sky_order1
+hats_col_assn_primary=id
+hats_col_assn_primary_assn=id_small_sky
+hats_primary_table_url=small_sky

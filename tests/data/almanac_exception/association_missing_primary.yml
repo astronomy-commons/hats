@@ -2,4 +2,4 @@ catalog_name: bad_links
 catalog_type: association
 primary: NOT_A_CATALOG
 join: small_sky_order1
-catalog_path: $HIPSCAT_DEFAULT_DIR/small_sky_to_small_sky_order1
+catalog_path: $HATS_DEFAULT_DIR/small_sky_to_small_sky_order1
