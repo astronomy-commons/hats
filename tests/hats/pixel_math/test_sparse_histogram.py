@@ -6,8 +6,8 @@ import pytest
 from numpy import frombuffer
 from scipy.sparse import csr_array
 
-import hipscat.pixel_math.healpix_shim as hp
-from hipscat.pixel_math.sparse_histogram import SparseHistogram
+import hats.pixel_math.healpix_shim as hp
+from hats.pixel_math.sparse_histogram import SparseHistogram
 
 
 def test_make_empty():

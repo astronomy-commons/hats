@@ -3,7 +3,7 @@
 import numpy as np
 from scipy.sparse import csc_array, load_npz, save_npz, sparray
 
-import hipscat.pixel_math.healpix_shim as hp
+import hats.pixel_math.healpix_shim as hp
 
 
 class SparseHistogram:
