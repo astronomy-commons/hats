@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 from astropy.coordinates import Angle, SkyCoord
-from astropy.visualization.wcsaxes.frame import EllipticalFrame
+from astropy.visualization.wcsaxes.frame import EllipticalFrame, RectangularFrame
 from matplotlib.colors import LogNorm, Normalize
 from matplotlib.pyplot import get_cmap
 from mocpy import WCS
@@ -55,6 +55,7 @@ def test_plot_healpix_pixels():
         np.testing.assert_array_equal(path.vertices, verts)
         np.testing.assert_array_equal(path.codes, codes)
     np.testing.assert_array_equal(col.get_array(), pix_map)
+    assert ax.frame_class == EllipticalFrame
 
 
 def test_plot_healpix_pixels_different_order():
@@ -123,14 +124,14 @@ def test_edge_pixels_split_to_order_7():
     fig, ax = plot_healpix_map(pix_map, ipix=ipix, depth=depth)
     assert len(ax.collections) == 1
     edge_pixels = {0: [order_0_pix]}
-    for o in range(1, 8):
-        edge_pixels[o] = [p * 4 + i for p in edge_pixels[o - 1] for i in (2, 3)]
+    for iter_ord in range(1, 8):
+        edge_pixels[iter_ord] = [p * 4 + i for p in edge_pixels[iter_ord - 1] for i in (2, 3)]
     non_edge_pixels = {}
     pixels_ord3 = np.arange(4**3 * order_0_pix, 4**3 * (order_0_pix + 1))
     non_edge_pixels[3] = pixels_ord3[~np.isin(pixels_ord3, edge_pixels[3])]
-    for o in range(4, 8):
-        pixels_ord = np.concatenate([np.arange(4 * pix, 4 * (pix + 1)) for pix in edge_pixels[o - 1]])
-        non_edge_pixels[o] = pixels_ord[~np.isin(pixels_ord, edge_pixels[o])]
+    for iter_ord in range(4, 8):
+        pixels_ord = np.concatenate([np.arange(4 * pix, 4 * (pix + 1)) for pix in edge_pixels[iter_ord - 1]])
+        non_edge_pixels[iter_ord] = pixels_ord[~np.isin(pixels_ord, edge_pixels[iter_ord])]
     col = ax.collections[0]
     paths = col.get_paths()
     length = sum(len(x) for x in non_edge_pixels.values())
@@ -145,8 +146,8 @@ def test_edge_pixels_split_to_order_7():
     ).w
     ords = np.concatenate([np.full(len(x), fill_value=o) for o, x in non_edge_pixels.items()])
     pixels = np.concatenate([np.array(x) for _, x in non_edge_pixels.items()])
-    for path, o, pix in zip(paths, ords, pixels):
-        verts, codes = compute_healpix_vertices(o, np.array([pix]), wcs)
+    for path, iter_ord, pix in zip(paths, ords, pixels):
+        verts, codes = compute_healpix_vertices(iter_ord, np.array([pix]), wcs)
         np.testing.assert_array_equal(path.vertices, verts)
         np.testing.assert_array_equal(path.codes, codes)
     np.testing.assert_array_equal(col.get_array(), np.full(length, fill_value=map_value))
@@ -168,9 +169,9 @@ def test_cull_from_pixel_map():
     ).w
     culled_dict = cull_from_pixel_map(map_dict, wcs)
     mocpy_culled = from_moc({str(order): ipix}, wcs)
-    for o, (pixels, m) in culled_dict.items():
-        np.testing.assert_array_equal(pixels, mocpy_culled[str(o)])
-        map_indices = pixels >> (2 * (o - order))
+    for iter_ord, (pixels, m) in culled_dict.items():
+        np.testing.assert_array_equal(pixels, mocpy_culled[str(iter_ord)])
+        map_indices = pixels >> (2 * (iter_ord - order))
         np.testing.assert_array_equal(m, pix_map[map_indices])
 
 
@@ -194,14 +195,14 @@ def test_plot_healpix_map():
     culled_dict = cull_from_pixel_map(map_dict, wcs)
     all_vals = []
     start_i = 0
-    for o, (pixels, m) in culled_dict.items():
-        all_verts, all_codes = compute_healpix_vertices(o, pixels, wcs)
+    for iter_ord, (pixels, pix_map) in culled_dict.items():
+        all_verts, all_codes = compute_healpix_vertices(iter_ord, pixels, wcs)
         for i, _ in enumerate(pixels):
             verts, codes = all_verts[i * 5 : (i + 1) * 5], all_codes[i * 5 : (i + 1) * 5]
             path = paths[start_i + i]
             np.testing.assert_array_equal(path.vertices, verts)
             np.testing.assert_array_equal(path.codes, codes)
-        all_vals.append(m)
+        all_vals.append(pix_map)
         start_i += len(pixels)
     np.testing.assert_array_equal(np.concatenate(all_vals), col.get_array())
 
@@ -238,6 +239,43 @@ def test_plot_wcs_params():
         np.testing.assert_array_equal(path.codes, codes)
     np.testing.assert_array_equal(col.get_array(), pix_map)
     assert ax.get_transform("icrs") is not None
+    assert ax.frame_class == RectangularFrame
+
+
+def test_plot_wcs_params_frame():
+    order = 3
+    length = 10
+    ipix = np.arange(length)
+    pix_map = np.arange(length)
+    depth = np.full(length, fill_value=order)
+    fig, ax = plot_healpix_map(
+        pix_map,
+        ipix=ipix,
+        depth=depth,
+        fov=(100 * u.deg, 50 * u.deg),
+        center=SkyCoord(10, 10, unit="deg", frame="icrs"),
+        projection="AIT",
+        frame_class=EllipticalFrame,
+    )
+    assert len(ax.collections) == 1
+    col = ax.collections[0]
+    paths = col.get_paths()
+    assert len(paths) == length
+    wcs = WCS(
+        fig,
+        fov=(100 * u.deg, 50 * u.deg),
+        center=SkyCoord(10, 10, unit="deg", frame="icrs"),
+        coordsys=DEFAULT_COORDSYS,
+        rotation=DEFAULT_ROTATION,
+        projection="AIT",
+    ).w
+    for path, ipix in zip(paths, np.arange(len(pix_map))):
+        verts, codes = compute_healpix_vertices(order, np.array([ipix]), wcs)
+        np.testing.assert_array_equal(path.vertices, verts)
+        np.testing.assert_array_equal(path.codes, codes)
+    np.testing.assert_array_equal(col.get_array(), pix_map)
+    assert ax.get_transform("icrs") is not None
+    assert ax.frame_class == EllipticalFrame
 
 
 def test_plot_wcs():

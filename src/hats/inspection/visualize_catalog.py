@@ -5,7 +5,7 @@ NB: Testing validity of generated plots is currently not tested in our unit test
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Dict, List, Tuple
+from typing import TYPE_CHECKING, Dict, List, Tuple, Type
 
 import astropy.units as u
 import astropy.wcs
@@ -13,7 +13,7 @@ import cdshealpix
 import numpy as np
 from astropy.coordinates import ICRS, Angle, SkyCoord
 from astropy.units import Quantity
-from astropy.visualization.wcsaxes.frame import EllipticalFrame
+from astropy.visualization.wcsaxes.frame import EllipticalFrame, BaseFrame
 from astropy.wcs.utils import skycoord_to_pixel
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
@@ -105,7 +105,17 @@ def plot_pixel_list(pixels: List[HealpixPixel], plot_title: str = "", projection
 def cull_from_pixel_map(depth_ipix_d: Dict[int, Tuple[np.ndarray, np.ndarray]], wcs, max_split_depth=7):
     """Modified from mocpy.moc.plot.culling_backfacing_cells.from_moc
 
-    Create a new MOC that do not contain the HEALPix cells that are backfacing the projection."""
+    Create a new MOC that do not contain the HEALPix cells that are backfacing the projection.
+
+    Args:
+        depth_ipix_d (Dict[int, Tuple[np.ndarray, np.ndarray]]): Map of HEALPix order to a tuple of 2 arrays
+            (the ipix array of pixel numbers in NESTED ordering, and the values of the pixels)
+        wcs (astropy.WCS): The wcs object with the plot's projection
+        max_split_depth: the max depth to split backfacing cells to
+
+    Returns:
+        A new map with the same datatype of depth_ipix_d, with backfacing cells split into higher order
+    """
     depths = list(depth_ipix_d.keys())
     min_depth = min(depths)
     max_depth = max(depths)
@@ -179,6 +189,7 @@ def plot_healpix_map(
     fov: Quantity | Tuple[Quantity, Quantity] = None,
     center: SkyCoord | None = None,
     wcs: astropy.wcs.WCS = None,
+    frame_class: Type[BaseFrame] | None = None,
     ax: Axes | None = None,
     fig: Figure | None = None,
     **kwargs,
@@ -215,10 +226,13 @@ def plot_healpix_map(
         cbar (bool): If True, includes a color bar in the plot (Default: True)
         fov (Quantity or Sequence[Quantity, Quantity] | None): The Field of View of the WCS. Must be an
             astropy Quantity with an angular unit, or a tuple of quantities for different longitude and \
-            latitude FOVs
-        center (SkyCoord | None): The center of the projection in the WCS
+            latitude FOVs (Default covers the full sky)
+        center (SkyCoord | None): The center of the projection in the WCS (Default: SkyCoord(0, 0))
         wcs (WCS | None): The WCS to specify the projection of the plot. If used, all other WCS parameters
             are ignored and the parameters from the WCS object is used.
+        frame_class (Type[BaseFrame] | None): The class of the frame for the WCSAxes to be initialized with.
+            if the `ax` kwarg is used, this value is ignored (By Default uses EllipticalFrame for full
+            sky projection. If FOV is set, RectangularFrame is used)
         ax (Axes | None): The matplotlib axes to plot onto. If None, an axes will be created to be used. If
             specified, the axes must be initialized with a WCS for the projection, and passed to the method
             with the WCS parameter. (Default: None)
@@ -238,6 +252,8 @@ def plot_healpix_map(
             fig = ax.get_figure()
         else:
             fig = plt.figure(figsize=(10, 5))
+    if frame_class is None and fov is None:
+        frame_class = EllipticalFrame
     if fov is None:
         fov = (320 * u.deg, 160 * u.deg)
     if center is None:
@@ -252,7 +268,7 @@ def plot_healpix_map(
                 rotation=Angle(0, u.degree),
                 projection=projection,
             ).w
-        ax = fig.add_subplot(1, 1, 1, projection=wcs, frame_class=EllipticalFrame)
+        ax = fig.add_subplot(1, 1, 1, projection=wcs, frame_class=frame_class)
     elif wcs is None:
         raise ValueError(
             "if ax is provided, wcs must also be provided with the projection used in initializing ax"
@@ -296,5 +312,3 @@ def _plot_healpix_value_map(ipix, depth, values, ax, wcs, cmap="viridis", norm=N
 
     # Set projection
     _set_wcs(ax, wcs)
-
-    return ax
