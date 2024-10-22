@@ -144,6 +144,18 @@ class HealpixDataset(Dataset):
                 f"_metadata or partition info file is required in catalog directory {catalog_base_dir}"
             )
 
+    def __len__(self):
+        """The number of rows in the catalog.
+
+        Returns:
+            The number of rows in the catalog, as specified in its metadata.
+            This value is undetermined when the catalog is modified, and
+            therefore an error is raised.
+        """
+        if self.catalog_info.total_rows == 0:
+            raise ValueError("The number of rows is undetermined because the catalog was modified.")
+        return self.catalog_info.total_rows
+
     def get_max_coverage_order(self) -> int:
         """Gets the maximum HEALPix order for which the coverage of the catalog is known from the pixel
         tree and moc if it exists"""

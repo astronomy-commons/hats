@@ -57,10 +57,12 @@ class PixelAlignment:
         aligned_tree: PixelTree,
         pixel_mapping: pd.DataFrame,
         alignment_type: PixelAlignmentType,
+        moc: MOC = None,
     ) -> None:
         self.pixel_tree = aligned_tree
         self.pixel_mapping = pixel_mapping
         self.alignment_type = alignment_type
+        self.moc = moc
 
 
 def align_trees(
@@ -410,7 +412,9 @@ def filter_alignment_by_moc(alignment: PixelAlignment, moc: MOC) -> PixelAlignme
     tree_29_ranges = alignment.pixel_tree.tree << (2 * (29 - alignment.pixel_tree.tree_order))
     tree_mask = perform_filter_by_moc(tree_29_ranges, moc_ranges)
     new_tree = PixelTree(alignment.pixel_tree.tree[tree_mask], alignment.pixel_tree.tree_order)
-    return PixelAlignment(new_tree, alignment.pixel_mapping.iloc[tree_mask], alignment.alignment_type)
+    return PixelAlignment(
+        new_tree, alignment.pixel_mapping.iloc[tree_mask], alignment.alignment_type, moc=moc
+    )
 
 
 def align_with_mocs(

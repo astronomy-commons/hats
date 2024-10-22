@@ -23,6 +23,7 @@ def test_catalog_load(catalog_info, catalog_pixels):
     catalog = Catalog(catalog_info, catalog_pixels)
     assert catalog.get_healpix_pixels() == catalog_pixels
     assert catalog.catalog_name == catalog_info.catalog_name
+    assert catalog_info.total_rows == len(catalog)
 
     for hp_pixel in catalog_pixels:
         assert hp_pixel in catalog.pixel_tree
@@ -562,3 +563,17 @@ def test_generate_negative_tree_pixels_multi_order(small_sky_order1_catalog):
     negative_tree = small_sky_order1_catalog.generate_negative_tree_pixels()
 
     assert negative_tree == expected_pixels
+
+
+def test_catalog_len_is_undetermined(small_sky_order1_catalog):
+    """Tests that catalogs modified by queries and spatial filters have an undetermined
+    number of rows, case in which an error is thrown"""
+    with pytest.raises(ValueError, match="undetermined"):
+        len(small_sky_order1_catalog.filter_by_cone(0, -80, 1))
+    with pytest.raises(ValueError, match="undetermined"):
+        vertices = [(300, -50), (300, -55), (272, -55), (272, -50)]
+        len(small_sky_order1_catalog.filter_by_polygon(vertices))
+    with pytest.raises(ValueError, match="undetermined"):
+        len(small_sky_order1_catalog.filter_by_box(ra=(280, 300)))
+    with pytest.raises(ValueError, match="undetermined"):
+        len(small_sky_order1_catalog.filter_from_pixel_list([HealpixPixel(0, 11)]))

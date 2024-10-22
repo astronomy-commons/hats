@@ -47,6 +47,7 @@ def test_pixel_tree_alignment_same_tree(pixel_tree_1):
     alignment = align_trees(pixel_tree_1, pixel_tree_1, "inner")
     assert_trees_equal(pixel_tree_1, alignment.pixel_tree)
     assert_mapping_matches_tree(alignment)
+    assert alignment.moc is None
 
 
 def test_pixel_tree_alignment_inner(pixel_tree_2, pixel_tree_3, aligned_trees_2_3_inner):
@@ -80,15 +81,19 @@ def test_pixel_tree_alignment_with_moc_inner(pixel_tree_2, pixel_tree_3, aligned
     alignment = align_with_mocs(pixel_tree_2, pixel_tree_3, moc, pixel_tree_3.to_moc())
     assert_trees_equal(alignment.pixel_tree, correct_aligned_tree)
     assert_mapping_matches_tree(alignment)
+    assert moc == alignment.moc
     alignment = align_with_mocs(pixel_tree_2, pixel_tree_3, pixel_tree_2.to_moc(), moc)
     assert_trees_equal(alignment.pixel_tree, correct_aligned_tree)
     assert_mapping_matches_tree(alignment)
+    assert alignment.moc is not None
+    assert moc == alignment.moc
 
 
 def test_pixel_tree_alignment_with_moc_same(pixel_tree_2, pixel_tree_3, aligned_trees_2_3_inner):
     alignment = align_with_mocs(pixel_tree_2, pixel_tree_3, pixel_tree_2.to_moc(), pixel_tree_3.to_moc())
     assert_trees_equal(alignment.pixel_tree, aligned_trees_2_3_inner)
     assert_mapping_matches_tree(alignment)
+    assert alignment.moc == pixel_tree_2.to_moc().intersection(pixel_tree_3.to_moc())
 
 
 def test_pixel_tree_alignment_with_moc_left(pixel_tree_2, pixel_tree_3, aligned_trees_2_3_left):
@@ -99,10 +104,12 @@ def test_pixel_tree_alignment_with_moc_left(pixel_tree_2, pixel_tree_3, aligned_
     alignment = align_with_mocs(pixel_tree_2, pixel_tree_3, moc, pixel_tree_3.to_moc(), alignment_type="left")
     assert_trees_equal(alignment.pixel_tree, correct_aligned_tree)
     assert_mapping_matches_tree(alignment)
+    assert alignment.moc == moc
 
     alignment = align_with_mocs(pixel_tree_2, pixel_tree_3, pixel_tree_2.to_moc(), moc, alignment_type="left")
     assert_trees_equal(alignment.pixel_tree, aligned_trees_2_3_left)
     assert_mapping_matches_tree(alignment)
+    assert alignment.moc == pixel_tree_2.to_moc()
 
 
 def test_pixel_tree_alignment_with_moc_right(pixel_tree_2, pixel_tree_3, aligned_trees_2_3_right):
@@ -115,12 +122,14 @@ def test_pixel_tree_alignment_with_moc_right(pixel_tree_2, pixel_tree_3, aligned
     )
     assert_trees_equal(alignment.pixel_tree, aligned_trees_2_3_right)
     assert_mapping_matches_tree(alignment)
+    assert alignment.moc == pixel_tree_3.to_moc()
 
     alignment = align_with_mocs(
         pixel_tree_2, pixel_tree_3, pixel_tree_2.to_moc(), moc, alignment_type="right"
     )
     assert_trees_equal(alignment.pixel_tree, correct_aligned_tree)
     assert_mapping_matches_tree(alignment)
+    assert alignment.moc == moc
 
 
 def test_pixel_tree_alignment_with_moc_outer(pixel_tree_2, pixel_tree_3, aligned_trees_2_3_outer):
@@ -134,6 +143,7 @@ def test_pixel_tree_alignment_with_moc_outer(pixel_tree_2, pixel_tree_3, aligned
     )
     assert_trees_equal(alignment.pixel_tree, left_moc_correct_tree)
     assert_mapping_matches_tree(alignment)
+    assert alignment.moc == moc.union(pixel_tree_3.to_moc())
 
     # moc doesn't include pixels (1,45), (1,46), (1,47). Outer align with left tree moc includes 45 and 46
     # from left tree
@@ -143,11 +153,13 @@ def test_pixel_tree_alignment_with_moc_outer(pixel_tree_2, pixel_tree_3, aligned
     )
     assert_trees_equal(alignment.pixel_tree, right_moc_correct_tree)
     assert_mapping_matches_tree(alignment)
+    assert alignment.moc == pixel_tree_2.to_moc().union(moc)
 
     both_moc_correct_tree = PixelTree.from_healpix(moc_pixels)
     alignment = align_with_mocs(pixel_tree_2, pixel_tree_3, moc, moc, alignment_type="outer")
     assert_trees_equal(alignment.pixel_tree, both_moc_correct_tree)
     assert_mapping_matches_tree(alignment)
+    assert alignment.moc == moc
 
 
 def test_catalog_align_inner(pixel_tree_2, pixel_tree_3, aligned_trees_2_3_inner, catalog_info):
@@ -156,6 +168,7 @@ def test_catalog_align_inner(pixel_tree_2, pixel_tree_3, aligned_trees_2_3_inner
     alignment = left_cat.align(right_cat)
     assert_trees_equal(alignment.pixel_tree, aligned_trees_2_3_inner)
     assert_mapping_matches_tree(alignment)
+    assert alignment.moc == pixel_tree_2.to_moc().intersection(pixel_tree_3.to_moc())
 
     moc_pixels = aligned_trees_2_3_inner.get_healpix_pixels()[:-3]
     correct_aligned_tree = PixelTree.from_healpix(moc_pixels)
@@ -165,11 +178,13 @@ def test_catalog_align_inner(pixel_tree_2, pixel_tree_3, aligned_trees_2_3_inner
     alignment = left_cat_with_moc.align(right_cat)
     assert_trees_equal(alignment.pixel_tree, correct_aligned_tree)
     assert_mapping_matches_tree(alignment)
+    assert alignment.moc == moc.intersection(right_cat.pixel_tree.to_moc())
 
     right_cat_with_moc = Catalog(catalog_info, pixel_tree_3, moc=moc)
     alignment = left_cat.align(right_cat_with_moc)
     assert_trees_equal(alignment.pixel_tree, correct_aligned_tree)
     assert_mapping_matches_tree(alignment)
+    assert alignment.moc == left_cat.pixel_tree.to_moc().intersection(moc)
 
 
 def test_catalog_align_left(pixel_tree_2, pixel_tree_3, aligned_trees_2_3_left, catalog_info):
@@ -178,6 +193,7 @@ def test_catalog_align_left(pixel_tree_2, pixel_tree_3, aligned_trees_2_3_left, 
     alignment = left_cat.align(right_cat, alignment_type="left")
     assert_trees_equal(alignment.pixel_tree, aligned_trees_2_3_left)
     assert_mapping_matches_tree(alignment)
+    assert alignment.moc == pixel_tree_2.to_moc()
 
     moc_pixels = aligned_trees_2_3_left.get_healpix_pixels()[:-3]
     correct_aligned_tree = PixelTree.from_healpix(moc_pixels)
@@ -187,11 +203,13 @@ def test_catalog_align_left(pixel_tree_2, pixel_tree_3, aligned_trees_2_3_left, 
     alignment = left_cat_with_moc.align(right_cat, alignment_type="left")
     assert_trees_equal(alignment.pixel_tree, correct_aligned_tree)
     assert_mapping_matches_tree(alignment)
+    assert alignment.moc == moc
 
     right_cat_with_moc = Catalog(catalog_info, pixel_tree_3, moc=moc)
     alignment = left_cat.align(right_cat_with_moc, alignment_type="left")
     assert_trees_equal(alignment.pixel_tree, aligned_trees_2_3_left)
     assert_mapping_matches_tree(alignment)
+    assert alignment.moc == pixel_tree_2.to_moc()
 
 
 def test_catalog_align_right(pixel_tree_2, pixel_tree_3, aligned_trees_2_3_right, catalog_info):
@@ -200,6 +218,7 @@ def test_catalog_align_right(pixel_tree_2, pixel_tree_3, aligned_trees_2_3_right
     alignment = left_cat.align(right_cat, alignment_type="right")
     assert_trees_equal(alignment.pixel_tree, aligned_trees_2_3_right)
     assert_mapping_matches_tree(alignment)
+    assert alignment.moc == right_cat.pixel_tree.to_moc()
 
     moc_pixels = aligned_trees_2_3_right.get_healpix_pixels()[:-3]
     correct_aligned_tree = PixelTree.from_healpix(moc_pixels)
@@ -209,11 +228,13 @@ def test_catalog_align_right(pixel_tree_2, pixel_tree_3, aligned_trees_2_3_right
     alignment = left_cat_with_moc.align(right_cat, alignment_type="right")
     assert_trees_equal(alignment.pixel_tree, aligned_trees_2_3_right)
     assert_mapping_matches_tree(alignment)
+    assert alignment.moc == right_cat.pixel_tree.to_moc()
 
     right_cat_with_moc = Catalog(catalog_info, pixel_tree_3, moc=moc)
     alignment = left_cat.align(right_cat_with_moc, alignment_type="right")
     assert_trees_equal(alignment.pixel_tree, correct_aligned_tree)
     assert_mapping_matches_tree(alignment)
+    assert alignment.moc == moc
 
 
 def test_catalog_align_outer(pixel_tree_2, pixel_tree_3, aligned_trees_2_3_outer, catalog_info):
@@ -222,6 +243,7 @@ def test_catalog_align_outer(pixel_tree_2, pixel_tree_3, aligned_trees_2_3_outer
     alignment = left_cat.align(right_cat, alignment_type="outer")
     assert_trees_equal(alignment.pixel_tree, aligned_trees_2_3_outer)
     assert_mapping_matches_tree(alignment)
+    assert alignment.moc == left_cat.pixel_tree.to_moc().union(right_cat.pixel_tree.to_moc())
 
     moc_pixels = aligned_trees_2_3_outer.get_healpix_pixels()[:-3]
     moc = PixelTree.from_healpix(moc_pixels).to_moc()
@@ -231,17 +253,20 @@ def test_catalog_align_outer(pixel_tree_2, pixel_tree_3, aligned_trees_2_3_outer
     alignment = left_cat_with_moc.align(right_cat, alignment_type="outer")
     assert_trees_equal(alignment.pixel_tree, left_moc_correct_tree)
     assert_mapping_matches_tree(alignment)
+    assert alignment.moc == moc.union(right_cat.pixel_tree.to_moc())
 
     right_moc_correct_tree = PixelTree.from_healpix(moc_pixels + [HealpixPixel(1, 45), HealpixPixel(1, 46)])
     right_cat_with_moc = Catalog(catalog_info, pixel_tree_3, moc=moc)
     alignment = left_cat.align(right_cat_with_moc, alignment_type="outer")
     assert_trees_equal(alignment.pixel_tree, right_moc_correct_tree)
     assert_mapping_matches_tree(alignment)
+    assert alignment.moc == left_cat.pixel_tree.to_moc().union(moc)
 
     both_moc_correct_tree = PixelTree.from_healpix(moc_pixels)
     alignment = left_cat_with_moc.align(right_cat_with_moc, alignment_type="outer")
     assert_trees_equal(alignment.pixel_tree, both_moc_correct_tree)
     assert_mapping_matches_tree(alignment)
+    assert alignment.moc == moc
 
 
 def test_outer_align_start_0():

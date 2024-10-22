@@ -30,6 +30,7 @@ dependencies = [
     "pandas",
     "pyarrow>=14.0.1",
     "pydantic",
+    "scipy",
     "typing-extensions>=4.3.0",
     "universal-pathlib",
 ]
