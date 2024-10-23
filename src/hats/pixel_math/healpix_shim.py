@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import healpy as hp
 import numpy as np
 
@@ -187,3 +189,25 @@ def margin2order(margin_thr_arcmin: np.ndarray) -> np.ndarray:
     """
     avg_size_arcmin = mindist2avgsize(margin_thr_arcmin)
     return avgsize2order(avg_size_arcmin)
+
+
+def order2mindist(order: np.ndarray | int) -> np.ndarray | float:
+    """Get the estimated minimum distance between pixels at a given order.
+
+    We don't have the precise geometry of the healpix grid yet,
+    we are using average_size / mininimum_distance = 1.6
+    as a rough estimate.
+
+    Parameters
+    ----------
+    order : np.ndarray of int or a single scalar int
+        The healpix order
+
+    Returns
+    -------
+    np.ndarray of float or a single scalar float
+        The minimum distance between pixels in arcminutes
+    """
+    pixel_nside = order2nside(order)
+    pixel_avgsize = nside2resol(pixel_nside, arcmin=True)
+    return avgsize2mindist(pixel_avgsize)
