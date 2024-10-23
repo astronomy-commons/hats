@@ -108,6 +108,8 @@ def plot_pixel_list(pixels: List[HealpixPixel], plot_title: str = "", projection
 def cull_to_fov(depth_ipix_d: Dict[int, Tuple[np.ndarray, np.ndarray]], wcs):
     """Culls a mapping of ipix to values to pixels that are inside the plot window defined by a WCS
 
+    Modified from mocpy.moc.plot.utils.build_plotting_moc
+
     Any pixels too small are merged to a lower order, with the map values within a lower order pixel being
     sampled
 
@@ -131,6 +133,7 @@ def cull_to_fov(depth_ipix_d: Dict[int, Tuple[np.ndarray, np.ndarray]], wcs):
 
     max_depth = max(depth_ipix_d.keys())
 
+    # Combine healpix pixels smaller than 1px in the plot
     if depth_res < max_depth:
         warnings.warn(
             "This plot contains HEALPix pixels smaller than a pixel of the plot. Some values may be lost"
@@ -141,11 +144,14 @@ def cull_to_fov(depth_ipix_d: Dict[int, Tuple[np.ndarray, np.ndarray]], wcs):
                 new_ipix_d[d] = (ip, vals)
             else:
                 ipix_depth_res = ip >> (2 * (d - depth_res))
+                # Get the unique pixels at the maximum depth resolution
                 unique_ipix, unique_indices = np.unique(ipix_depth_res, return_index=True)
+                # Get the first values from the map for each lower order pixel
                 vals_depth_res = vals[unique_indices]
                 if depth_res not in new_ipix_d:
                     new_ipix_d[depth_res] = (unique_ipix, vals_depth_res)
                 else:
+                    # combine with existing pixels if they exist
                     ipix_depth_res = np.concatenate([new_ipix_d[depth_res][0], unique_ipix])
                     vals_depth_res = np.concatenate([new_ipix_d[depth_res][1], vals_depth_res])
                     ip_argsort = np.argsort(ipix_depth_res)
