@@ -1,3 +1,4 @@
+
 [project]
 name = "hats"
 license = {file = "LICENSE"}
@@ -41,18 +42,15 @@ dependencies = [
 # On a mac, install optional dependencies with `pip install '.[dev]'` (include the single quotes)
 [project.optional-dependencies]
 dev = [
-    "adlfs", # ablfs filesytem support
     "asv==0.6.4", # Used to compute performance benchmarks
-    "black", # auto-formatter
-    "jupyter", # clear notebook result cells
-    "mypy", # Used for static type checking of files
+    "black", # Used for static linting of files
+    "jupyter", # Clears output from Jupyter notebooks
     "pre-commit", # Used to run checks before finalizing a git commit
     "pylint", # Used for static linting of files
     "pytest",
     "pytest-cov", # Used to report total code coverage
     "pytest-mock", # Used to mock objects in tests
     "pytest-timeout", # Used to test for code efficiency
-    "s3fs", # s3 filesystem support
 ]
 
 [build-system]
@@ -114,7 +112,8 @@ select = [
     "D300",
     "D417",
     "D419",
-
+    # Numpy v2.0 compatibility
+    "NPY201",
 ]
 
 ignore = [
