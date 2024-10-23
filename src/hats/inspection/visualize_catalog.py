@@ -5,6 +5,7 @@ NB: Testing validity of generated plots is currently not tested in our unit test
 
 from __future__ import annotations
 
+import warnings
 from typing import TYPE_CHECKING, Dict, List, Tuple, Type
 
 import astropy.units as u
@@ -14,21 +15,22 @@ import numpy as np
 from astropy.coordinates import ICRS, Angle, SkyCoord
 from astropy.units import Quantity
 from astropy.visualization.wcsaxes.frame import EllipticalFrame, BaseFrame
-from astropy.wcs.utils import skycoord_to_pixel
+from astropy.wcs.utils import skycoord_to_pixel, pixel_to_skycoord
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.collections import PathCollection
 from matplotlib.colors import Colormap, Normalize
 from matplotlib.figure import Figure
 from matplotlib.path import Path
-from mocpy import WCS
+from mocpy import WCS, MOC
 from mocpy.moc.plot.culling_backfacing_cells import backface_culling
 from mocpy.moc.plot.fill import compute_healpix_vertices
 from mocpy.moc.plot.utils import _set_wcs
 
-
 from hats.io import file_io, paths
 from hats.pixel_math import HealpixPixel
+from hats.pixel_tree.moc_filter import perform_filter_by_moc
+from hats.pixel_tree.pixel_tree import PixelTree
 
 if TYPE_CHECKING:
     from hats.catalog import Catalog
@@ -100,6 +102,57 @@ def plot_pixel_list(pixels: List[HealpixPixel], plot_title: str = "", projection
         label="order",
     )
     return fig, ax
+
+
+def cull_to_fov(depth_ipix_d: Dict[int, Tuple[np.ndarray, np.ndarray]], wcs):
+    """Plot a moc."""
+
+    # Get the MOC delimiting the FOV polygon
+    width_px = int(wcs.wcs.crpix[0] * 2.0)  # Supposing the wcs is centered in the axis
+    heigth_px = int(wcs.wcs.crpix[1] * 2.0)
+
+    # Compute the sky coordinate path delimiting the viewport.
+    # It consists of a closed polygon of (4 - 1)*4 = 12 vertices
+    x_px = np.linspace(0, width_px, 4)
+    y_px = np.linspace(0, heigth_px, 4)
+
+    X, Y = np.meshgrid(x_px, y_px)
+
+    X_px = np.append(X[0, :-1], X[:-1, -1])
+    X_px = np.append(X_px, X[-1, 1:][::-1])
+    X_px = np.append(X_px, X[:-1, 0])
+
+    Y_px = np.append(Y[0, :-1], Y[:-1, -1])
+    Y_px = np.append(Y_px, Y[-1, :-1])
+    Y_px = np.append(Y_px, Y[1:, 0][::-1])
+
+    # Disable the output of warnings when encoutering NaNs.
+    warnings.filterwarnings("ignore")
+    # Inverse projection from pixel coordinate space to the world coordinate space
+    viewport = pixel_to_skycoord(X_px, Y_px, wcs)
+    # If one coordinate is a NaN we exit the function and do not go further
+    ra_deg, dec_deg = viewport.icrs.ra.deg, viewport.icrs.dec.deg
+    warnings.filterwarnings("default")
+
+    if np.isnan(ra_deg).any() or np.isnan(dec_deg).any():
+        return depth_ipix_d
+
+    # Create a rough MOC (depth=3 is sufficient) from the viewport
+    moc_viewport = MOC.from_polygon_skycoord(viewport, max_depth=3)
+
+    output_dict = {}
+
+    # The moc to plot is the INPUT_MOC & MOC_VIEWPORT. For small FOVs this can reduce
+    # a lot the time to draw the MOC along with its borders.
+    for d, (ip, vals) in depth_ipix_d.items():
+        ip_argsort = np.argsort(ip)
+        ip_sorted = ip[ip_argsort]
+        pixel_tree = PixelTree(np.vstack([ip_sorted, ip_sorted + 1]).T, order=d)
+        ip_viewport_mask = perform_filter_by_moc(
+            pixel_tree.to_depth29_ranges(), moc_viewport.to_depth29_ranges
+        )
+        output_dict[d] = (ip_sorted[ip_viewport_mask], vals[ip_argsort][ip_viewport_mask])
+    return output_dict
 
 
 def cull_from_pixel_map(depth_ipix_d: Dict[int, Tuple[np.ndarray, np.ndarray]], wcs, max_split_depth=7):
@@ -252,7 +305,7 @@ def plot_healpix_map(
             fig = ax.get_figure()
         else:
             fig = plt.figure(figsize=(10, 5))
-    if frame_class is None and fov is None:
+    if frame_class is None and fov is None and wcs is None:
         frame_class = EllipticalFrame
     if fov is None:
         fov = (320 * u.deg, 160 * u.deg)
@@ -291,8 +344,9 @@ def _plot_healpix_value_map(ipix, depth, values, ax, wcs, cmap="viridis", norm=N
         mask = depth == d
         depth_ipix_d[d] = (ipix[mask], values[mask])
 
-    # cull backfacing cells
-    culled_d = cull_from_pixel_map(depth_ipix_d, wcs)
+    # cull backfacing and out of fov cells
+    fov_culled_d = cull_to_fov(depth_ipix_d, wcs)
+    culled_d = cull_from_pixel_map(fov_culled_d, wcs)
 
     # Generate Paths for each pixel and add to ax
     plt_paths = []

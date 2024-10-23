@@ -6,12 +6,13 @@ from astropy.coordinates import Angle, SkyCoord
 from astropy.visualization.wcsaxes.frame import EllipticalFrame, RectangularFrame
 from matplotlib.colors import LogNorm, Normalize
 from matplotlib.pyplot import get_cmap
-from mocpy import WCS
+from mocpy import WCS, MOC
 from mocpy.moc.plot.culling_backfacing_cells import from_moc
 from mocpy.moc.plot.fill import compute_healpix_vertices
+from mocpy.moc.plot.utils import build_plotting_moc
 
 from hats.inspection import plot_pixels
-from hats.inspection.visualize_catalog import cull_from_pixel_map, plot_healpix_map
+from hats.inspection.visualize_catalog import cull_from_pixel_map, plot_healpix_map, cull_to_fov
 
 # pylint: disable=no-member
 
@@ -175,6 +176,48 @@ def test_cull_from_pixel_map():
         np.testing.assert_array_equal(m, pix_map[map_indices])
 
 
+def test_cull_to_fov():
+    order = 4
+    ipix = np.arange(12 * 4**order)
+    pix_map = np.arange(12 * 4**order)
+    map_dict = {order: (ipix, pix_map)}
+    fig = plt.figure(figsize=(10, 5))
+    wcs = WCS(
+        fig,
+        fov=(20 * u.deg, 10 * u.deg),
+        center=DEFAULT_CENTER,
+        coordsys=DEFAULT_COORDSYS,
+        rotation=DEFAULT_ROTATION,
+        projection=DEFAULT_PROJECTION,
+    ).w
+    culled_dict = cull_to_fov(map_dict, wcs)
+    moc = MOC.from_healpix_cells(ipix, np.full(ipix.shape, fill_value=order), max_depth=order)
+    mocpy_culled = build_plotting_moc(moc, wcs)
+    for iter_ord, (pixels, m) in culled_dict.items():
+        for p in pixels:
+            assert (
+                len(
+                    MOC.from_healpix_cells(np.array([p]), np.array([iter_ord]), max_depth=iter_ord)
+                    .intersection(mocpy_culled)
+                    .to_depth29_ranges
+                )
+                > 0
+            )
+        ord_ipix = np.arange(12 * 4**iter_ord)
+        ord_non_pixels = ord_ipix[~np.isin(ord_ipix, pixels)]
+        for p in ord_non_pixels:
+            assert (
+                len(
+                    MOC.from_healpix_cells(np.array([p]), np.array([iter_ord]), max_depth=iter_ord)
+                    .intersection(mocpy_culled)
+                    .to_depth29_ranges
+                )
+                == 0
+            )
+        map_indices = pixels >> (2 * (iter_ord - order))
+        np.testing.assert_array_equal(m, pix_map[map_indices])
+
+
 def test_plot_healpix_map():
     order = 1
     ipix = np.arange(12 * 4**order)
@@ -204,6 +247,7 @@ def test_plot_healpix_map():
             np.testing.assert_array_equal(path.codes, codes)
         all_vals.append(pix_map)
         start_i += len(pixels)
+    assert start_i == len(paths)
     np.testing.assert_array_equal(np.concatenate(all_vals), col.get_array())
 
 
@@ -276,6 +320,50 @@ def test_plot_wcs_params_frame():
     np.testing.assert_array_equal(col.get_array(), pix_map)
     assert ax.get_transform("icrs") is not None
     assert ax.frame_class == EllipticalFrame
+
+
+def test_plot_fov_culling():
+    order = 3
+    length = 10
+    ipix = np.arange(length)
+    pix_map = np.arange(length)
+    depth = np.full(length, fill_value=order)
+    fig, ax = plot_healpix_map(
+        pix_map,
+        ipix=ipix,
+        depth=depth,
+        fov=(30 * u.deg, 20 * u.deg),
+        center=SkyCoord(10, 10, unit="deg", frame="icrs"),
+        projection="AIT",
+    )
+    assert len(ax.collections) == 1
+    col = ax.collections[0]
+    paths = col.get_paths()
+    wcs = WCS(
+        fig,
+        fov=(30 * u.deg, 20 * u.deg),
+        center=SkyCoord(10, 10, unit="deg", frame="icrs"),
+        coordsys=DEFAULT_COORDSYS,
+        rotation=DEFAULT_ROTATION,
+        projection="AIT",
+    ).w
+    map_dict = {order: (ipix, pix_map)}
+    culled_dict = cull_to_fov(map_dict, wcs)
+    all_vals = []
+    start_i = 0
+    for iter_ord, (pixels, pix_map) in culled_dict.items():
+        all_verts, all_codes = compute_healpix_vertices(iter_ord, pixels, wcs)
+        for i, _ in enumerate(pixels):
+            verts, codes = all_verts[i * 5 : (i + 1) * 5], all_codes[i * 5 : (i + 1) * 5]
+            path = paths[start_i + i]
+            np.testing.assert_array_equal(path.vertices, verts)
+            np.testing.assert_array_equal(path.codes, codes)
+        all_vals.append(pix_map)
+        start_i += len(pixels)
+    assert start_i == len(paths)
+    np.testing.assert_array_equal(np.concatenate(all_vals), col.get_array())
+    assert ax.get_transform("icrs") is not None
+    assert ax.frame_class == RectangularFrame
 
 
 def test_plot_wcs():
