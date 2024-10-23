@@ -95,10 +95,11 @@ def plot_pixel_list(pixels: List[HealpixPixel], plot_title: str = "", projection
         order_map, projection=projection, title=plot_title, ipix=ipix, depth=orders, cbar=False, **kwargs
     )
     col = ax.collections[0]
+    col_array = col.get_array()
     plt.colorbar(
         col,
-        boundaries=np.arange(np.min(order_map) - 0.5, np.max(order_map) + 0.6, 1),
-        ticks=np.arange(np.min(order_map), np.max(order_map) + 1),
+        boundaries=np.arange(np.min(col_array) - 0.5, np.max(col_array) + 0.6, 1),
+        ticks=np.arange(np.min(col_array), np.max(col_array) + 1),
         label="order",
     )
     return fig, ax
