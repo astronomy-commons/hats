@@ -279,7 +279,7 @@ def test_cull_to_fov_subsamples_multiple_orders():
 
     assert culled_dict[0] == (np.array([10]), np.array([1]))
     assert culled_dict[5] == (np.array([5]), np.array([2]))
-    small_pixels, small_pixels_map = ipix[2:], pix_map[2:]
+    small_pixels_map = pix_map[2:]
     small_pixels_converted = ipix[2:] >> (2 * (depth[2:] - depth_res))
     small_pixels_argsort = np.argsort(small_pixels_converted)
     assert np.all(culled_dict[depth_res][0] == small_pixels_converted[small_pixels_argsort])
