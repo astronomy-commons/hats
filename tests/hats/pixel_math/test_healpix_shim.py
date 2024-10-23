@@ -28,3 +28,12 @@ def test_margin2order():
     margin_thr_arcmin = np.array([1 / 60, 10 / 60, 1, 5, 60])
     orders = np.array([17, 13, 11, 8, 5])
     assert_array_equal(hps.margin2order(margin_thr_arcmin), orders)
+
+
+def test_order2mindist():
+    """Test order2mindist for some pre-computed values"""
+    orders = np.array([17, 13, 11, 8, 5])
+    min_distances = np.array([0.01677, 0.268, 1.07, 8.588, 68.7])
+    assert_allclose(hps.order2mindist(orders), min_distances, rtol=1e-2)
+
+    assert_allclose(hps.order2mindist(17), 0.01677, rtol=1e-2)
