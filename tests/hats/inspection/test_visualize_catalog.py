@@ -6,14 +6,13 @@ from astropy.coordinates import Angle, SkyCoord
 from astropy.visualization.wcsaxes.frame import EllipticalFrame, RectangularFrame
 from matplotlib.colors import LogNorm, Normalize
 from matplotlib.pyplot import get_cmap
-from mocpy import WCS, MOC
+from mocpy import MOC, WCS
 from mocpy.moc.plot.culling_backfacing_cells import from_moc
 from mocpy.moc.plot.fill import compute_healpix_vertices
 from mocpy.moc.plot.utils import build_plotting_moc
-from pathspec import iter_tree
 
 from hats.inspection import plot_pixels
-from hats.inspection.visualize_catalog import cull_from_pixel_map, plot_healpix_map, cull_to_fov
+from hats.inspection.visualize_catalog import cull_from_pixel_map, cull_to_fov, plot_healpix_map
 
 # pylint: disable=no-member
 
@@ -249,6 +248,42 @@ def test_cull_to_fov_subsamples_high_order():
         assert np.all(np.isin(ipix >> (2 * (order - depth_res)), pixels))
         map_indices = pixels << (2 * (order - depth_res))
         np.testing.assert_array_equal(m, pix_map[map_indices])
+
+
+def test_cull_to_fov_subsamples_multiple_orders():
+    depth = np.array([0, 5, 8, 10])
+    ipix = np.array([10, 5, 4, 2])
+    pix_map = np.array([1, 2, 3, 4])
+    map_dict = {depth[i]: (ipix[[i]], pix_map[[i]]) for i in range(len(depth))}
+    fig = plt.figure(figsize=(10, 5))
+    wcs = WCS(
+        fig,
+        fov=DEFAULT_FOV,
+        center=DEFAULT_CENTER,
+        coordsys=DEFAULT_COORDSYS,
+        rotation=DEFAULT_ROTATION,
+        projection=DEFAULT_PROJECTION,
+    ).w
+    with pytest.warns(match="smaller"):
+        culled_dict = cull_to_fov(map_dict, wcs)
+    # Get the WCS cdelt giving the deg.px^(-1) resolution.
+    cdelt = wcs.wcs.cdelt
+    # Convert in rad.px^(-1)
+    cdelt = np.abs((2 * np.pi / 360) * cdelt[0])
+    # Get the minimum depth such as the resolution of a cell is contained in 1px.
+    depth_res = int(np.floor(np.log2(np.sqrt(np.pi / 3) / cdelt)))
+    depth_res = max(depth_res, 0)
+    assert depth_res < max(depth)
+
+    assert list(culled_dict.keys()) == [0, 5, depth_res]
+
+    assert culled_dict[0] == (np.array([10]), np.array([1]))
+    assert culled_dict[5] == (np.array([5]), np.array([2]))
+    small_pixels, small_pixels_map = ipix[2:], pix_map[2:]
+    small_pixels_converted = ipix[2:] >> (2 * (depth[2:] - depth_res))
+    small_pixels_argsort = np.argsort(small_pixels_converted)
+    assert np.all(culled_dict[depth_res][0] == small_pixels_converted[small_pixels_argsort])
+    assert np.all(culled_dict[depth_res][1] == small_pixels_map[small_pixels_argsort])
 
 
 def test_plot_healpix_map():

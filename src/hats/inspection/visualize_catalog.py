@@ -14,15 +14,15 @@ import cdshealpix
 import numpy as np
 from astropy.coordinates import ICRS, Angle, SkyCoord
 from astropy.units import Quantity
-from astropy.visualization.wcsaxes.frame import EllipticalFrame, BaseFrame
-from astropy.wcs.utils import skycoord_to_pixel, pixel_to_skycoord
+from astropy.visualization.wcsaxes.frame import BaseFrame, EllipticalFrame
+from astropy.wcs.utils import pixel_to_skycoord, skycoord_to_pixel
 from matplotlib import pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.collections import PathCollection
 from matplotlib.colors import Colormap, Normalize
 from matplotlib.figure import Figure
 from matplotlib.path import Path
-from mocpy import WCS, MOC
+from mocpy import MOC, WCS
 from mocpy.moc.plot.culling_backfacing_cells import backface_culling
 from mocpy.moc.plot.fill import compute_healpix_vertices
 from mocpy.moc.plot.utils import _set_wcs
@@ -123,64 +123,31 @@ def cull_to_fov(depth_ipix_d: Dict[int, Tuple[np.ndarray, np.ndarray]], wcs):
         and any pixels too small merged with their map values subsampled.
     """
 
-    # Get the WCS cdelt giving the deg.px^(-1) resolution.
-    cdelt = wcs.wcs.cdelt
-    # Convert in rad.px^(-1)
-    cdelt = np.abs((2 * np.pi / 360) * cdelt[0])
-    # Get the minimum depth such as the resolution of a cell is contained in 1px.
-    depth_res = int(np.floor(np.log2(np.sqrt(np.pi / 3) / cdelt)))
-    depth_res = max(depth_res, 0)
-
-    max_depth = max(depth_ipix_d.keys())
-
-    # Combine healpix pixels smaller than 1px in the plot
-    if depth_res < max_depth:
-        warnings.warn(
-            "This plot contains HEALPix pixels smaller than a pixel of the plot. Some values may be lost"
-        )
-        new_ipix_d = {}
-        for d, (ip, vals) in depth_ipix_d.items():
-            if d <= depth_res:
-                new_ipix_d[d] = (ip, vals)
-            else:
-                ipix_depth_res = ip >> (2 * (d - depth_res))
-                # Get the unique pixels at the maximum depth resolution
-                unique_ipix, unique_indices = np.unique(ipix_depth_res, return_index=True)
-                # Get the first values from the map for each lower order pixel
-                vals_depth_res = vals[unique_indices]
-                if depth_res not in new_ipix_d:
-                    new_ipix_d[depth_res] = (unique_ipix, vals_depth_res)
-                else:
-                    # combine with existing pixels if they exist
-                    ipix_depth_res = np.concatenate([new_ipix_d[depth_res][0], unique_ipix])
-                    vals_depth_res = np.concatenate([new_ipix_d[depth_res][1], vals_depth_res])
-                    ip_argsort = np.argsort(ipix_depth_res)
-                    new_ipix_d[depth_res] = (ipix_depth_res[ip_argsort], vals_depth_res[ip_argsort])
-        depth_ipix_d = new_ipix_d
+    depth_ipix_d = _merge_too_small_pixels(depth_ipix_d, wcs)
 
     # Get the MOC delimiting the FOV polygon
     width_px = int(wcs.wcs.crpix[0] * 2.0)  # Supposing the wcs is centered in the axis
-    heigth_px = int(wcs.wcs.crpix[1] * 2.0)
+    height_px = int(wcs.wcs.crpix[1] * 2.0)
 
     # Compute the sky coordinate path delimiting the viewport.
     # It consists of a closed polygon of (4 - 1)*4 = 12 vertices
     x_px = np.linspace(0, width_px, 4)
-    y_px = np.linspace(0, heigth_px, 4)
+    y_px = np.linspace(0, height_px, 4)
 
-    X, Y = np.meshgrid(x_px, y_px)
+    x, y = np.meshgrid(x_px, y_px)
 
-    X_px = np.append(X[0, :-1], X[:-1, -1])
-    X_px = np.append(X_px, X[-1, 1:][::-1])
-    X_px = np.append(X_px, X[:-1, 0])
+    x_px = np.append(x[0, :-1], x[:-1, -1])
+    x_px = np.append(x_px, x[-1, 1:][::-1])
+    x_px = np.append(x_px, x[:-1, 0])
 
-    Y_px = np.append(Y[0, :-1], Y[:-1, -1])
-    Y_px = np.append(Y_px, Y[-1, :-1])
-    Y_px = np.append(Y_px, Y[1:, 0][::-1])
+    y_px = np.append(y[0, :-1], y[:-1, -1])
+    y_px = np.append(y_px, y[-1, :-1])
+    y_px = np.append(y_px, y[1:, 0][::-1])
 
     # Disable the output of warnings when encoutering NaNs.
     warnings.filterwarnings("ignore")
     # Inverse projection from pixel coordinate space to the world coordinate space
-    viewport = pixel_to_skycoord(X_px, Y_px, wcs)
+    viewport = pixel_to_skycoord(x_px, y_px, wcs)
     # If one coordinate is a NaN we exit the function and do not go further
     ra_deg, dec_deg = viewport.icrs.ra.deg, viewport.icrs.dec.deg
     warnings.filterwarnings("default")
@@ -204,6 +171,46 @@ def cull_to_fov(depth_ipix_d: Dict[int, Tuple[np.ndarray, np.ndarray]], wcs):
         )
         output_dict[d] = (ip_sorted[ip_viewport_mask], vals[ip_argsort][ip_viewport_mask])
     return output_dict
+
+
+def _merge_too_small_pixels(depth_ipix_d: Dict[int, Tuple[np.ndarray, np.ndarray]], wcs):
+    """Merges any pixels too small in a map to a lower order, with the map values within a lower order pixel
+    being sampled"""
+    # Get the WCS cdelt giving the deg.px^(-1) resolution.
+    cdelt = wcs.wcs.cdelt
+    # Convert in rad.px^(-1)
+    cdelt = np.abs((2 * np.pi / 360) * cdelt[0])
+    # Get the minimum depth such as the resolution of a cell is contained in 1px.
+    depth_res = int(np.floor(np.log2(np.sqrt(np.pi / 3) / cdelt)))
+    depth_res = max(depth_res, 0)
+
+    max_depth = max(depth_ipix_d.keys())
+
+    # Combine healpix pixels smaller than 1px in the plot
+    if max_depth > depth_res:
+        warnings.warn(
+            "This plot contains HEALPix pixels smaller than a pixel of the plot. Some values may be lost"
+        )
+        new_ipix_d = {}
+        for d, (ip, vals) in depth_ipix_d.items():
+            if d <= depth_res:
+                new_ipix_d[d] = (ip, vals)
+            else:
+                ipix_depth_res = ip >> (2 * (d - depth_res))
+                # Get the unique pixels at the maximum depth resolution
+                unique_ipix, unique_indices = np.unique(ipix_depth_res, return_index=True)
+                # Get the first values from the map for each lower order pixel
+                vals_depth_res = vals[unique_indices]
+                if depth_res not in new_ipix_d:
+                    new_ipix_d[depth_res] = (unique_ipix, vals_depth_res)
+                else:
+                    # combine with existing pixels if they exist
+                    ipix_depth_res = np.concatenate([new_ipix_d[depth_res][0], unique_ipix])
+                    vals_depth_res = np.concatenate([new_ipix_d[depth_res][1], vals_depth_res])
+                    ip_argsort = np.argsort(ipix_depth_res)
+                    new_ipix_d[depth_res] = (ipix_depth_res[ip_argsort], vals_depth_res[ip_argsort])
+        depth_ipix_d = new_ipix_d
+    return depth_ipix_d
 
 
 def cull_from_pixel_map(depth_ipix_d: Dict[int, Tuple[np.ndarray, np.ndarray]], wcs, max_split_depth=7):
