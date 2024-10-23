@@ -105,7 +105,20 @@ def plot_pixel_list(pixels: List[HealpixPixel], plot_title: str = "", projection
 
 
 def cull_to_fov(depth_ipix_d: Dict[int, Tuple[np.ndarray, np.ndarray]], wcs):
-    """Plot a moc."""
+    """Culls a mapping of ipix to values to pixels that are inside the plot window defined by a WCS
+
+    Any pixels too small are merged to a lower order, with the map values within a lower order pixel being
+    sampled
+
+    Args:
+        depth_ipix_d (Dict[int, Tuple[np.ndarray, np.ndarray]]): Map of HEALPix order to a tuple of 2 arrays
+            (the ipix array of pixel numbers in NESTED ordering, and the values of the pixels)
+        wcs (astropy.WCS): The wcs object with the plot's projection
+
+    Returns:
+        A new map with the same datatype of depth_ipix_d, with any pixels outside the plot's FOV removed,
+        and any pixels too small merged with their map values subsampled.
+    """
 
     # Get the WCS cdelt giving the deg.px^(-1) resolution.
     cdelt = wcs.wcs.cdelt
