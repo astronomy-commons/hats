@@ -43,6 +43,12 @@ def test_pixel_tree_to_moc(pixel_tree_2):
     assert np.all(moc.flatten() == moc_order_pixels)
 
 
+def test_pixel_tree_to_depth29_ranges(pixel_tree_2):
+    np.testing.assert_array_equal(
+        pixel_tree_2.to_depth29_ranges(), pixel_tree_2.tree << (2 * (29 - pixel_tree_2.tree_order))
+    )
+
+
 def test_pixel_tree_contains():
     tree = PixelTree.from_healpix([(0, 0)])
     assert tree.contains((0, 0))

@@ -409,7 +409,7 @@ def filter_alignment_by_moc(alignment: PixelAlignment, moc: MOC) -> PixelAlignme
         PixelAlignment object with the filtered mapping and tree
     """
     moc_ranges = moc.to_depth29_ranges
-    tree_29_ranges = alignment.pixel_tree.tree << (2 * (29 - alignment.pixel_tree.tree_order))
+    tree_29_ranges = alignment.pixel_tree.to_depth29_ranges()
     tree_mask = perform_filter_by_moc(tree_29_ranges, moc_ranges)
     new_tree = PixelTree(alignment.pixel_tree.tree[tree_mask], alignment.pixel_tree.tree_order)
     return PixelAlignment(
