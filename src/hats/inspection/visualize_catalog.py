@@ -107,6 +107,37 @@ def plot_pixel_list(pixels: List[HealpixPixel], plot_title: str = "", projection
 def cull_to_fov(depth_ipix_d: Dict[int, Tuple[np.ndarray, np.ndarray]], wcs):
     """Plot a moc."""
 
+    # Get the WCS cdelt giving the deg.px^(-1) resolution.
+    cdelt = wcs.wcs.cdelt
+    # Convert in rad.px^(-1)
+    cdelt = np.abs((2 * np.pi / 360) * cdelt[0])
+    # Get the minimum depth such as the resolution of a cell is contained in 1px.
+    depth_res = int(np.floor(np.log2(np.sqrt(np.pi / 3) / cdelt)))
+    depth_res = max(depth_res, 0)
+
+    max_depth = max(depth_ipix_d.keys())
+
+    if depth_res < max_depth:
+        warnings.warn(
+            "This plot contains HEALPix pixels smaller than a pixel of the plot. Some values may be lost"
+        )
+        new_ipix_d = {}
+        for d, (ip, vals) in depth_ipix_d.items():
+            if d <= depth_res:
+                new_ipix_d[d] = (ip, vals)
+            else:
+                ipix_depth_res = ip >> (2 * (d - depth_res))
+                unique_ipix, unique_indices = np.unique(ipix_depth_res, return_index=True)
+                vals_depth_res = vals[unique_indices]
+                if depth_res not in new_ipix_d:
+                    new_ipix_d[depth_res] = (unique_ipix, vals_depth_res)
+                else:
+                    ipix_depth_res = np.concatenate([new_ipix_d[depth_res][0], unique_ipix])
+                    vals_depth_res = np.concatenate([new_ipix_d[depth_res][1], vals_depth_res])
+                    ip_argsort = np.argsort(ipix_depth_res)
+                    new_ipix_d[depth_res] = (ipix_depth_res[ip_argsort], vals_depth_res[ip_argsort])
+        depth_ipix_d = new_ipix_d
+
     # Get the MOC delimiting the FOV polygon
     width_px = int(wcs.wcs.crpix[0] * 2.0)  # Supposing the wcs is centered in the axis
     heigth_px = int(wcs.wcs.crpix[1] * 2.0)

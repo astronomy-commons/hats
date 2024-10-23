@@ -10,6 +10,7 @@ from mocpy import WCS, MOC
 from mocpy.moc.plot.culling_backfacing_cells import from_moc
 from mocpy.moc.plot.fill import compute_healpix_vertices
 from mocpy.moc.plot.utils import build_plotting_moc
+from pathspec import iter_tree
 
 from hats.inspection import plot_pixels
 from hats.inspection.visualize_catalog import cull_from_pixel_map, plot_healpix_map, cull_to_fov
@@ -215,6 +216,38 @@ def test_cull_to_fov():
                 == 0
             )
         map_indices = pixels >> (2 * (iter_ord - order))
+        np.testing.assert_array_equal(m, pix_map[map_indices])
+
+
+def test_cull_to_fov_subsamples_high_order():
+    order = 10
+    ipix = np.arange(12 * 4**order)
+    pix_map = np.arange(12 * 4**order)
+    map_dict = {order: (ipix, pix_map)}
+    fig = plt.figure(figsize=(10, 5))
+    wcs = WCS(
+        fig,
+        fov=DEFAULT_FOV,
+        center=DEFAULT_CENTER,
+        coordsys=DEFAULT_COORDSYS,
+        rotation=DEFAULT_ROTATION,
+        projection=DEFAULT_PROJECTION,
+    ).w
+    with pytest.warns(match="smaller"):
+        culled_dict = cull_to_fov(map_dict, wcs)
+    # Get the WCS cdelt giving the deg.px^(-1) resolution.
+    cdelt = wcs.wcs.cdelt
+    # Convert in rad.px^(-1)
+    cdelt = np.abs((2 * np.pi / 360) * cdelt[0])
+    # Get the minimum depth such as the resolution of a cell is contained in 1px.
+    depth_res = int(np.floor(np.log2(np.sqrt(np.pi / 3) / cdelt)))
+    depth_res = max(depth_res, 0)
+    assert depth_res < order
+
+    for iter_ord, (pixels, m) in culled_dict.items():
+        assert iter_ord == depth_res
+        assert np.all(np.isin(ipix >> (2 * (order - depth_res)), pixels))
+        map_indices = pixels << (2 * (order - depth_res))
         np.testing.assert_array_equal(m, pix_map[map_indices])
 
 
