@@ -9,6 +9,7 @@ class CatalogType(str, Enum):
     ASSOCIATION = "association"
     INDEX = "index"
     MARGIN = "margin"
+    MAP = "map"
 
     @classmethod
     def all_types(cls):

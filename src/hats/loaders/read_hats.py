@@ -5,7 +5,7 @@ from typing import Type
 
 from upath import UPath
 
-from hats.catalog import AssociationCatalog, Catalog, CatalogType, Dataset, MarginCatalog
+from hats.catalog import AssociationCatalog, Catalog, CatalogType, Dataset, MapCatalog, MarginCatalog
 from hats.catalog.dataset.table_properties import TableProperties
 from hats.catalog.index.index_catalog import IndexCatalog
 
@@ -15,6 +15,7 @@ CATALOG_TYPE_TO_CLASS = {
     CatalogType.ASSOCIATION: AssociationCatalog,
     CatalogType.INDEX: IndexCatalog,
     CatalogType.MARGIN: MarginCatalog,
+    CatalogType.MAP: MapCatalog,
 }
 
 
