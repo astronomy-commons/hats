@@ -26,12 +26,7 @@ def filter_by_moc(
     return PixelTree(tree.tree[tree_mask], tree.tree_order)
 
 
-@njit(
-    numba.bool_[::1](
-        numba.int64[:, :],
-        numba.uint64[:, :],
-    )
-)
+@njit
 def perform_filter_by_moc(
     tree: np.ndarray,
     moc: np.ndarray,
