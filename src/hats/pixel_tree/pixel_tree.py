@@ -92,6 +92,10 @@ class PixelTree:
         """Returns the MOC object that covers the same pixels as the tree"""
         return MOC.from_healpix_cells(self.pixels.T[1], self.pixels.T[0], self.tree_order)
 
+    def to_depth29_ranges(self) -> np.ndarray:
+        """Returns the ranges of the pixels in the tree at depth 29"""
+        return self.tree << (2 * (29 - self.tree_order))
+
     @classmethod
     def from_healpix(cls, healpix_pixels: Sequence[HealpixInputTypes], tree_order=None) -> PixelTree:
         """Build a tree from a list of constituent healpix pixels

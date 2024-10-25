@@ -13,6 +13,7 @@ from upath import UPath
 from hats.catalog.dataset import Dataset
 from hats.catalog.dataset.table_properties import TableProperties
 from hats.catalog.partition_info import PartitionInfo
+from hats.inspection import plot_pixels
 from hats.pixel_math import HealpixPixel
 from hats.pixel_tree import PixelAlignment, PixelAlignmentType
 from hats.pixel_tree.moc_filter import filter_by_moc
@@ -164,3 +165,11 @@ class HealpixDataset(Dataset):
         return align_with_mocs(
             self.pixel_tree, other_cat.pixel_tree, self.moc, other_cat.moc, alignment_type=alignment_type
         )
+
+    def plot_pixels(self, **kwargs):
+        """Create a visual map of the pixel density of the catalog.
+
+        Args:
+            kwargs: Additional args to pass to `hipscat.inspection.visualize_catalog.plot_healpix_map`
+        """
+        return plot_pixels(self, **kwargs)

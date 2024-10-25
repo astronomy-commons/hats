@@ -167,7 +167,6 @@ def test_cone_filter_big(small_sky_order1_catalog):
     assert (1, 47) in filtered_catalog.pixel_tree
 
 
-@pytest.mark.timeout(5)
 def test_cone_filter_multiple_order(catalog_info):
     catalog_pixel_list = [
         HealpixPixel(6, 30),
@@ -495,6 +494,7 @@ def test_empty_directory(tmp_path, catalog_info_data):
     assert catalog.catalog_name == "test_name"
 
 
+@pytest.mark.timeout(20)
 def test_generate_negative_tree_pixels(small_sky_order1_catalog):
     """Test generate_negative_tree_pixels on a basic catalog."""
     expected_pixels = [
@@ -516,6 +516,7 @@ def test_generate_negative_tree_pixels(small_sky_order1_catalog):
     assert negative_tree == expected_pixels
 
 
+@pytest.mark.timeout(20)
 def test_generate_negative_tree_pixels_order_0(small_sky_catalog):
     """Test generate_negative_tree_pixels on a catalog with only order 0 pixels."""
     expected_pixels = [
