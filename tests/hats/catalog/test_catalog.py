@@ -495,6 +495,7 @@ def test_empty_directory(tmp_path, catalog_info_data):
     assert catalog.catalog_name == "test_name"
 
 
+@pytest.mark.timeout(5)
 def test_generate_negative_tree_pixels(small_sky_order1_catalog):
     """Test generate_negative_tree_pixels on a basic catalog."""
     expected_pixels = [
@@ -537,6 +538,7 @@ def test_generate_negative_tree_pixels_order_0(small_sky_catalog):
     assert negative_tree == expected_pixels
 
 
+@pytest.mark.timeout(5)
 def test_generate_negative_tree_pixels_multi_order(small_sky_order1_catalog):
     """Test generate_negative_tree_pixels on a catalog with
     missing pixels on multiple order.
