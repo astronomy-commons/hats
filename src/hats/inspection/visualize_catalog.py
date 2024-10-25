@@ -50,30 +50,34 @@ def _read_point_map(catalog_base_dir):
     return file_io.read_fits_image(map_file_pointer)
 
 
-def plot_points(catalog: Catalog, **kwargs):
+def plot_points(catalog: Catalog, plot_title: str | None = None, **kwargs):
     """Create a visual map of the input points of an in-memory catalog.
 
     Args:
         catalog (`hats.catalog.Catalog`) Catalog to display
+        plot_title (str): Optional title for the plot
         kwargs: Additional args to pass to `plot_healpix_map`
     """
     if not catalog.on_disk:
         raise ValueError("on disk catalog required for point-wise visualization")
     point_map = _read_point_map(catalog.catalog_base_dir)
-    return plot_healpix_map(point_map, title=f"Catalog point density map - {catalog.catalog_name}", **kwargs)
+    default_title = f"Catalog point density map - {catalog.catalog_name}"
+    return plot_healpix_map(point_map, title=default_title if plot_title is None else plot_title, **kwargs)
 
 
-def plot_pixels(catalog: HealpixDataset, **kwargs):
+def plot_pixels(catalog: HealpixDataset, plot_title: str | None = None, **kwargs):
     """Create a visual map of the pixel density of the catalog.
 
     Args:
         catalog (`hats.catalog.Catalog`) Catalog to display
+        plot_title (str): Optional title for the plot
         kwargs: Additional args to pass to `plot_healpix_map`
     """
     pixels = catalog.get_healpix_pixels()
+    default_title = f"Catalog pixel density map - {catalog.catalog_name}"
     return plot_pixel_list(
         pixels=pixels,
-        plot_title=f"Catalog pixel density map - {catalog.catalog_name}",
+        plot_title=default_title if plot_title is None else plot_title,
         **kwargs,
     )
 
