@@ -26,7 +26,7 @@ DATASET_TYPE_TO_CLASS = {
 }
 
 
-def read_hats(catalog_path: str | Path | UPath, catalog_type: CatalogType | None = None) -> Dataset:
+def read_hats(catalog_path: str | Path | UPath) -> Dataset:
     """Reads a HATS Catalog from a HATS directory
 
     Args:
@@ -43,7 +43,7 @@ def read_hats(catalog_path: str | Path | UPath, catalog_type: CatalogType | None
     catalog_path = file_io.get_upath(catalog_path)
     try:
         properties = TableProperties.read_from_dir(catalog_path)
-        dataset_type = properties.catalog_type if catalog_type is None else catalog_type
+        dataset_type = properties.catalog_type
         if dataset_type not in DATASET_TYPE_TO_CLASS:
             raise NotImplementedError(f"Cannot load catalog of type {dataset_type}")
 
