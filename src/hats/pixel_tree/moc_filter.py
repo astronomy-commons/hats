@@ -1,4 +1,3 @@
-import numba
 import numpy as np
 from mocpy import MOC
 from numba import njit
