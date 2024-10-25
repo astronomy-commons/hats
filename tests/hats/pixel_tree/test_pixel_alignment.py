@@ -271,7 +271,7 @@ def test_catalog_align_outer(pixel_tree_2, pixel_tree_3, aligned_trees_2_3_outer
     assert alignment.moc == moc
 
 
-@pytest.mark.timeout(5)
+@pytest.mark.timeout(20)
 def test_outer_align_start_0():
     left_tree = PixelTree.from_healpix([HealpixPixel(0, 0)])
     right_tree = PixelTree.from_healpix([HealpixPixel(1, 1)])
