@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Callable, Dict, List
 
-import numba
 import numpy as np
 import pandas as pd
 from mocpy import MOC
@@ -141,7 +140,7 @@ def get_pixel_mapping_df(mapping: np.ndarray, map_order: int) -> pd.DataFrame:
 
 
 # pylint: disable=too-many-statements
-@njit(numba.int64[::1, :](numba.int64[:, :], numba.int64[:, :]))
+@njit
 def perform_inner_align_trees(
     left: np.ndarray,
     right: np.ndarray,
@@ -208,15 +207,7 @@ def perform_inner_align_trees(
     return mapping[:out_index].T
 
 
-@njit(
-    numba.types.void(
-        numba.int64,
-        numba.int64,
-        numba.int64[:],
-        numba.boolean,
-        numba.types.List(numba.int64[::1]),
-    )
-)
+@njit
 def _add_pixels_until(
     add_from: int,
     add_to: int,
@@ -259,15 +250,7 @@ def _add_pixels_until(
         add_from = add_from + pixel_size
 
 
-@njit(
-    numba.types.void(
-        numba.int64,
-        numba.int64[:, :],
-        numba.int64,
-        numba.boolean,
-        numba.types.List(numba.int64[::1]),
-    )
-)
+@njit
 def _add_remaining_pixels(
     added_until: int,
     pixel_list: np.ndarray,
@@ -303,7 +286,7 @@ def _add_remaining_pixels(
 
 
 # pylint: disable=too-many-statements
-@njit(numba.types.List(numba.int64[::1])(numba.int64[:, :], numba.int64[:, :], numba.boolean, numba.boolean))
+@njit
 def perform_align_trees(
     left: np.ndarray,
     right: np.ndarray,
