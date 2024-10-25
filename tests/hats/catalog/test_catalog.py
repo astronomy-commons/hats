@@ -517,6 +517,7 @@ def test_generate_negative_tree_pixels(small_sky_order1_catalog):
     assert negative_tree == expected_pixels
 
 
+@pytest.mark.timeout(20)
 def test_generate_negative_tree_pixels_order_0(small_sky_catalog):
     """Test generate_negative_tree_pixels on a catalog with only order 0 pixels."""
     expected_pixels = [
