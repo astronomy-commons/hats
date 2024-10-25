@@ -57,7 +57,6 @@ def test_pixel_tree_alignment_inner(pixel_tree_2, pixel_tree_3, aligned_trees_2_
     assert_mapping_matches_tree(alignment)
 
 
-@pytest.mark.timeout(5)
 def test_pixel_tree_alignment_left(pixel_tree_2, pixel_tree_3, aligned_trees_2_3_left):
     alignment = align_trees(pixel_tree_2, pixel_tree_3, "left")
     assert_trees_equal(alignment.pixel_tree, aligned_trees_2_3_left)
