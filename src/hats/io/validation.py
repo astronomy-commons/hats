@@ -4,13 +4,14 @@ import warnings
 from pathlib import Path
 
 import numpy as np
+import pyarrow.dataset as pds
 from upath import UPath
 
 import hats.pixel_math.healpix_shim as hp
 from hats.catalog.dataset.table_properties import TableProperties
 from hats.catalog.partition_info import PartitionInfo
 from hats.io import get_common_metadata_pointer, get_parquet_metadata_pointer, get_partition_info_pointer
-from hats.io.file_io import read_parquet_dataset
+from hats.io.file_io import get_upath
 from hats.io.file_io.file_pointer import is_regular_file
 from hats.io.paths import get_healpix_from_path
 from hats.loaders import read_hats
@@ -40,6 +41,7 @@ def is_valid_catalog(
         True if both the properties and partition_info files are
         valid, False otherwise
     """
+    pointer = get_upath(pointer)
     if not strict:
         return is_catalog_info_valid(pointer) and (
             is_partition_info_valid(pointer) or is_metadata_valid(pointer)
@@ -110,31 +112,19 @@ def is_valid_catalog(
         handle_error("Partition pixels differ between catalog and partition_info.csv file")
 
     ## Load as parquet dataset. Allow errors, and check pixel set against _metadata
-    ignore_prefixes = [
-        "_common_metadata",
-        "_metadata",
-        "catalog_info.json",
-        "properties",
-        "provenance_info.json",
-        "partition_info.csv",
-        "point_map.fits",
-        "README",
-    ]
-
     # As a side effect, this confirms that we can load the directory as a valid dataset.
-    (dataset_path, dataset) = read_parquet_dataset(
-        pointer,
-        ignore_prefixes=ignore_prefixes,
-        exclude_invalid_files=False,
+    dataset = pds.parquet_dataset(
+        metadata_file.path,
+        filesystem=metadata_file.fs,
     )
 
     parquet_path_pixels = []
+    dataset_path = str(pointer / "dataset")
     for hats_file in dataset.files:
         relative_path = hats_file[len(dataset_path) :]
         healpix_pixel = get_healpix_from_path(relative_path)
         if healpix_pixel == INVALID_PIXEL:
             handle_error(f"Could not derive partition pixel from parquet path: {relative_path}")
-
         parquet_path_pixels.append(healpix_pixel)
 
     parquet_path_pixels = sort_pixels(parquet_path_pixels)
@@ -172,7 +162,7 @@ def is_catalog_info_valid(pointer: str | Path | UPath) -> bool:
     return True
 
 
-def is_partition_info_valid(pointer: str | Path | UPath) -> bool:
+def is_partition_info_valid(pointer: UPath) -> bool:
     """Checks if partition_info is valid for a given base catalog pointer
 
     Args:
@@ -186,7 +176,7 @@ def is_partition_info_valid(pointer: str | Path | UPath) -> bool:
     return partition_info_exists
 
 
-def is_metadata_valid(pointer: str | Path | UPath) -> bool:
+def is_metadata_valid(pointer: UPath) -> bool:
     """Checks if _metadata is valid for a given base catalog pointer
 
     Args:
@@ -200,7 +190,7 @@ def is_metadata_valid(pointer: str | Path | UPath) -> bool:
     return metadata_file_exists
 
 
-def is_common_metadata_valid(pointer: str | Path | UPath) -> bool:
+def is_common_metadata_valid(pointer: UPath) -> bool:
     """Checks if _common_metadata is valid for a given base catalog pointer
 
     Args:

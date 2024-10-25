@@ -2,7 +2,6 @@
 
 import os
 import shutil
-from pathlib import Path
 
 import pytest
 
@@ -65,10 +64,7 @@ def test_is_valid_catalog_strict(tmp_path, small_sky_catalog, small_sky_pixels, 
         assert not is_valid_catalog(tmp_path, **flags)
 
     # This outta do it! Add parquet files that match the _metadata pixels.
-    shutil.copytree(
-        Path(small_sky_catalog.catalog_path) / "dataset" / "Norder=0",
-        tmp_path / "dataset" / "Norder=0",
-    )
+    shutil.copytree(small_sky_catalog.catalog_path / "dataset", tmp_path / "dataset", dirs_exist_ok=True)
 
     assert is_valid_catalog(tmp_path, **flags)
 
@@ -102,13 +98,10 @@ def test_is_valid_catalog_fail_fast(tmp_path, small_sky_catalog, small_sky_pixel
 
     total_rows = PartitionInfo.from_healpix(small_sky_pixels).write_to_metadata_files(tmp_path)
     assert total_rows == 1
-    with pytest.raises(ValueError, match="parquet paths"):
+    with pytest.raises(ValueError, match="parquet path"):
         is_valid_catalog(tmp_path, **flags)
 
-    shutil.copytree(
-        Path(small_sky_catalog.catalog_path) / "dataset" / "Norder=0",
-        tmp_path / "dataset" / "Norder=0",
-    )
+    shutil.copytree(small_sky_catalog.catalog_path / "dataset", tmp_path / "dataset", dirs_exist_ok=True)
     assert is_valid_catalog(tmp_path, **flags)
 
 
