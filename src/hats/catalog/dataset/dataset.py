@@ -26,6 +26,7 @@ class Dataset:
             catalog_info: A TableProperties object with the catalog metadata
             catalog_path: If the catalog is stored on disk, specify the location of the catalog
                 Does not load the catalog from this path, only store as metadata
+            schema (pa.Schema): The pyarrow schema for the catalog
         """
         self.catalog_info = catalog_info
         self.catalog_name = self.catalog_info.catalog_name

@@ -31,12 +31,6 @@ def read_hats(catalog_path: str | Path | UPath) -> Dataset:
 
     Args:
         catalog_path (str): path to the root directory of the catalog
-        catalog_type (CatalogType): Default `None`. By default, the type of the catalog is loaded
-            from the catalog info and the corresponding object type is returned. Python's type hints
-            cannot allow a return type specified by a loaded value, so to use the correct return
-            type for type checking, the type of the catalog can be specified here. Use by specifying
-            the hats class for that catalog.
-
     Returns:
         The initialized catalog object
     """
@@ -48,8 +42,11 @@ def read_hats(catalog_path: str | Path | UPath) -> Dataset:
             raise NotImplementedError(f"Cannot load catalog of type {dataset_type}")
 
         loader = DATASET_TYPE_TO_CLASS[dataset_type]
-        kwargs = {"catalog_path": catalog_path, "catalog_info": properties}
-        kwargs["schema"] = _read_schema_from_metadata(catalog_path)
+        kwargs = {
+            "catalog_path": catalog_path,
+            "catalog_info": properties,
+            "schema": _read_schema_from_metadata(catalog_path),
+        }
         if _is_healpix_dataset(dataset_type):
             kwargs["pixels"] = PartitionInfo.read_from_dir(catalog_path)
             kwargs["moc"] = _read_moc_from_point_map(catalog_path)
