@@ -475,14 +475,14 @@ def test_empty_directory(tmp_path, catalog_info_data):
     os.makedirs(catalog_path, exist_ok=True)
 
     ## Path exists but there's nothing there
-    with pytest.raises(FileNotFoundError, match="properties file"):
+    with pytest.raises(FileNotFoundError):
         read_hats(catalog_path)
 
     ## catalog_info file exists - getting closer
     properties = TableProperties(**catalog_info_data)
     properties.to_properties_file(catalog_path)
 
-    with pytest.raises(FileNotFoundError, match="metadata"):
+    with pytest.raises(FileNotFoundError):
         read_hats(catalog_path)
 
     ## Now we create the needed _metadata and everything is right.

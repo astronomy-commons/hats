@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-import warnings
 from pathlib import Path
-from typing import List, Tuple, Union
+from typing import List, Union
 
 import numpy as np
 import pandas as pd
@@ -11,13 +10,10 @@ from mocpy import MOC
 from typing_extensions import Self
 from upath import UPath
 
-import hats.pixel_math.healpix_shim as hp
 from hats.catalog.dataset import Dataset
 from hats.catalog.dataset.table_properties import TableProperties
 from hats.catalog.partition_info import PartitionInfo
 from hats.inspection import plot_pixels
-from hats.io import file_io, paths
-from hats.io.file_io import read_parquet_metadata
 from hats.pixel_math import HealpixPixel
 from hats.pixel_tree import PixelAlignment, PixelAlignmentType
 from hats.pixel_tree.moc_filter import filter_by_moc
@@ -55,11 +51,10 @@ class HealpixDataset(Dataset):
             moc (mocpy.MOC): MOC object representing the coverage of the catalog
             schema (pa.Schema): The pyarrow schema for the catalog
         """
-        super().__init__(catalog_info, catalog_path=catalog_path)
+        super().__init__(catalog_info, catalog_path=catalog_path, schema=schema)
         self.partition_info = self._get_partition_info_from_pixels(pixels)
         self.pixel_tree = self._get_pixel_tree_from_pixels(pixels)
         self.moc = moc
-        self.schema = schema
 
     def get_healpix_pixels(self) -> List[HealpixPixel]:
         """Get healpix pixel objects for all pixels contained in the catalog.
@@ -88,62 +83,6 @@ class HealpixDataset(Dataset):
         if pd.api.types.is_list_like(pixels):
             return PixelTree.from_healpix(pixels)
         raise TypeError("Pixels must be of type PartitionInfo, PixelTree, or List[HealpixPixel]")
-
-    @classmethod
-    def _read_args(cls, catalog_base_dir: str | Path | UPath) -> Tuple[TableProperties, PartitionInfo]:
-        args = super()._read_args(catalog_base_dir)
-        partition_info = PartitionInfo.read_from_dir(catalog_base_dir)
-        return args + (partition_info,)
-
-    @classmethod
-    def _read_kwargs(cls, catalog_base_dir: str | Path | UPath) -> dict:
-        kwargs = super()._read_kwargs(catalog_base_dir)
-        kwargs["moc"] = cls._read_moc_from_point_map(catalog_base_dir)
-        kwargs["schema"] = cls._read_schema_from_metadata(catalog_base_dir)
-        return kwargs
-
-    @classmethod
-    def _read_moc_from_point_map(cls, catalog_base_dir: str | Path | UPath) -> MOC | None:
-        """Reads a MOC object from the `point_map.fits` file if it exists in the catalog directory"""
-        point_map_path = paths.get_point_map_file_pointer(catalog_base_dir)
-        if not file_io.does_file_or_directory_exist(point_map_path):
-            return None
-        fits_image = file_io.read_fits_image(point_map_path)
-        order = hp.nside2order(hp.npix2nside(len(fits_image)))
-        boolean_skymap = fits_image.astype(bool)
-        ipix = np.where(boolean_skymap)[0]
-        orders = np.full(ipix.shape, order)
-        return MOC.from_healpix_cells(ipix, orders, order)
-
-    @classmethod
-    def _read_schema_from_metadata(cls, catalog_base_dir: str | Path | UPath) -> pa.Schema | None:
-        """Reads the schema information stored in the _common_metadata or _metadata files."""
-        common_metadata_file = paths.get_common_metadata_pointer(catalog_base_dir)
-        common_metadata_exists = file_io.does_file_or_directory_exist(common_metadata_file)
-        metadata_file = paths.get_parquet_metadata_pointer(catalog_base_dir)
-        metadata_exists = file_io.does_file_or_directory_exist(metadata_file)
-        if not (common_metadata_exists or metadata_exists):
-            warnings.warn(
-                "_common_metadata or _metadata files not found for this catalog."
-                "The arrow schema will not be set."
-            )
-            return None
-        schema_file = common_metadata_file if common_metadata_exists else metadata_file
-        metadata = read_parquet_metadata(schema_file)
-        return metadata.schema.to_arrow_schema()
-
-    @classmethod
-    def _check_files_exist(cls, catalog_base_dir: str | Path | UPath):
-        super()._check_files_exist(catalog_base_dir)
-        partition_info_file = paths.get_partition_info_pointer(catalog_base_dir)
-        metadata_file = paths.get_parquet_metadata_pointer(catalog_base_dir)
-        if not (
-            file_io.does_file_or_directory_exist(partition_info_file)
-            or file_io.does_file_or_directory_exist(metadata_file)
-        ):
-            raise FileNotFoundError(
-                f"_metadata or partition info file is required in catalog directory {catalog_base_dir}"
-            )
 
     def __len__(self):
         """The number of rows in the catalog.

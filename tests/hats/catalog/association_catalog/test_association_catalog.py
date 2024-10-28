@@ -70,14 +70,14 @@ def test_empty_directory(tmp_path, association_catalog_info_data, association_ca
     os.makedirs(catalog_path, exist_ok=True)
 
     ## Path exists but there's nothing there
-    with pytest.raises(FileNotFoundError, match="properties file"):
-        AssociationCatalog.read_hats(catalog_path)
+    with pytest.raises(FileNotFoundError):
+        read_hats(catalog_path)
 
     ## catalog_info file exists - getting closer
     properties = TableProperties(**association_catalog_info_data)
     properties.to_properties_file(catalog_path)
 
-    with pytest.raises(FileNotFoundError, match="metadata"):
+    with pytest.raises(FileNotFoundError):
         read_hats(catalog_path)
 
     ## Now we create the needed _metadata and everything is right.
@@ -99,14 +99,14 @@ def test_csv_round_trip(tmp_path, association_catalog_info_data, association_cat
     properties = TableProperties(**association_catalog_info_data)
     properties.to_properties_file(catalog_path)
 
-    with pytest.raises(FileNotFoundError, match="partition"):
+    with pytest.raises(FileNotFoundError):
         read_hats(catalog_path)
 
     file_name = catalog_path / "partition_info.csv"
     with open(file_name, "w", encoding="utf-8") as metadata_file:
         # dump some garbage in there - just needs to exist.
         metadata_file.write("Norder,Npix")
-    with pytest.raises(FileNotFoundError, match="partition"):
+    with pytest.raises(FileNotFoundError):
         read_hats(catalog_path)
 
     part_info = PartitionJoinInfo(association_catalog_join_pixels)
