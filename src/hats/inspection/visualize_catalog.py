@@ -104,7 +104,7 @@ def plot_pixel_list(pixels: List[HealpixPixel], plot_title: str = "", projection
         col,
         boundaries=np.arange(np.min(col_array) - 0.5, np.max(col_array) + 0.6, 1),
         ticks=np.arange(np.min(col_array), np.max(col_array) + 1),
-        label="order",
+        label="HEALPix Order",
     )
     return fig, ax
 
