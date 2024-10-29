@@ -428,3 +428,5 @@ def _plot_healpix_value_map(ipix, depth, values, ax, wcs, cmap="viridis", norm=N
 
     # Set projection
     _set_wcs(ax, wcs)
+
+    ax.coords[0].set_format_unit("deg")
