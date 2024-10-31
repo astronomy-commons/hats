@@ -91,6 +91,19 @@ def test_load_catalog_small_sky_order1(small_sky_order1_dir):
     assert len(cat.get_healpix_pixels()) == 4
 
 
+def test_aggregate_column_statistics(small_sky_order1_dir):
+    cat = read_hats(small_sky_order1_dir)
+
+    result_frame = cat.aggregate_column_statistics()
+    assert len(result_frame) == 5
+
+    result_frame = cat.aggregate_column_statistics(exclude_hats_columns=False)
+    assert len(result_frame) == 9
+
+    result_frame = cat.aggregate_column_statistics(include_columns=["ra", "dec"])
+    assert len(result_frame) == 2
+
+
 def test_load_catalog_small_sky_order1_moc(small_sky_order1_dir):
     """Instantiate a catalog with 4 pixels"""
     cat = read_hats(small_sky_order1_dir)

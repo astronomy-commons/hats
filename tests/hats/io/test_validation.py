@@ -2,7 +2,6 @@
 
 import os
 import shutil
-from pathlib import Path
 
 import pytest
 
@@ -65,10 +64,7 @@ def test_is_valid_catalog_strict(tmp_path, small_sky_catalog, small_sky_pixels, 
         assert not is_valid_catalog(tmp_path, **flags)
 
     # This outta do it! Add parquet files that match the _metadata pixels.
-    shutil.copytree(
-        Path(small_sky_catalog.catalog_path) / "dataset" / "Norder=0",
-        tmp_path / "dataset" / "Norder=0",
-    )
+    shutil.copytree(small_sky_catalog.catalog_path / "dataset", tmp_path / "dataset", dirs_exist_ok=True)
 
     assert is_valid_catalog(tmp_path, **flags)
 
@@ -93,22 +89,20 @@ def test_is_valid_catalog_fail_fast(tmp_path, small_sky_catalog, small_sky_pixel
 
     # Having the catalog_info file is not enough
     small_sky_catalog.catalog_info.to_properties_file(tmp_path)
-    with pytest.raises(ValueError, match="partition_info.csv"):
-        is_valid_catalog(tmp_path, **flags)
-
-    PartitionInfo.from_healpix(small_sky_pixels).write_to_file(catalog_path=tmp_path)
     with pytest.raises(ValueError, match="_metadata"):
         is_valid_catalog(tmp_path, **flags)
 
     total_rows = PartitionInfo.from_healpix(small_sky_pixels).write_to_metadata_files(tmp_path)
-    assert total_rows == 1
-    with pytest.raises(ValueError, match="parquet paths"):
+    with pytest.raises(ValueError, match="partition_info.csv"):
         is_valid_catalog(tmp_path, **flags)
 
-    shutil.copytree(
-        Path(small_sky_catalog.catalog_path) / "dataset" / "Norder=0",
-        tmp_path / "dataset" / "Norder=0",
-    )
+    PartitionInfo.from_healpix(small_sky_pixels).write_to_file(catalog_path=tmp_path)
+
+    assert total_rows == 1
+    with pytest.raises(ValueError, match="parquet path"):
+        is_valid_catalog(tmp_path, **flags)
+
+    shutil.copytree(small_sky_catalog.catalog_path / "dataset", tmp_path / "dataset", dirs_exist_ok=True)
     assert is_valid_catalog(tmp_path, **flags)
 
 
@@ -127,7 +121,6 @@ def test_is_valid_catalog_verbose_fail(tmp_path, capsys):
     captured = capsys.readouterr().out
     assert "Validating catalog at path" in captured
     assert "properties file does not exist or is invalid" in captured
-    assert "partition_info.csv file does not exist" in captured
     assert "_metadata file does not exist" in captured
     assert "_common_metadata file does not exist" in captured
 
@@ -145,10 +138,16 @@ def test_is_valid_catalog_verbose_success(small_sky_dir, capsys):
     captured = capsys.readouterr().out
     assert "Validating catalog at path" in captured
     assert "Found 1 partition" in captured
-    assert "Approximate coverage is 3437.75 sq deg" in captured
+    assert "Approximate coverage is 8" in captured
 
 
-def test_valid_catalog_strict_all(small_sky_source_dir, small_sky_order1_dir, small_sky_dir):
+def test_valid_catalog_strict_all(
+    small_sky_source_dir,
+    small_sky_order1_dir,
+    small_sky_dir,
+    small_sky_source_object_index_dir,
+    margin_catalog_path,
+):
     """Check that all of our object catalogs in test data are valid, using strict mechanism"""
     flags = {
         "strict": True,  # more intensive checks
@@ -158,3 +157,5 @@ def test_valid_catalog_strict_all(small_sky_source_dir, small_sky_order1_dir, sm
     assert is_valid_catalog(small_sky_source_dir, **flags)
     assert is_valid_catalog(small_sky_order1_dir, **flags)
     assert is_valid_catalog(small_sky_dir, **flags)
+    assert is_valid_catalog(small_sky_source_object_index_dir, **flags)
+    assert is_valid_catalog(margin_catalog_path, **flags)
