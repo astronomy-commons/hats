@@ -117,17 +117,16 @@ def is_valid_catalog(
             handle_error("Partition pixels differ between catalog and _metadata file (non-strict)")
 
         partition_info_file = get_partition_info_pointer(pointer)
-        csv_pixels = sort_pixels(PartitionInfo.read_from_csv(partition_info_file).get_healpix_pixels())
+        partition_info = PartitionInfo.read_from_csv(partition_info_file)
+        csv_pixels = sort_pixels(partition_info.get_healpix_pixels())
         if not np.array_equal(expected_pixels, csv_pixels):
             handle_error("Partition pixels differ between catalog and partition_info.csv file")
 
         parquet_path_pixels = []
-        dataset_path = str(pointer / "dataset")
         for hats_file in dataset.files:
-            relative_path = hats_file[len(dataset_path) :]
-            healpix_pixel = get_healpix_from_path(relative_path)
+            healpix_pixel = get_healpix_from_path(hats_file)
             if healpix_pixel == INVALID_PIXEL:
-                handle_error(f"Could not derive partition pixel from parquet path: {relative_path}")
+                handle_error(f"Could not derive partition pixel from parquet path: {hats_file}")
             parquet_path_pixels.append(healpix_pixel)
 
         parquet_path_pixels = sort_pixels(parquet_path_pixels)
@@ -137,13 +136,9 @@ def is_valid_catalog(
 
         if verbose:
             # Print a few more stats
-            pixel_orders = [p.order for p in expected_pixels]
-            cov_order, cov_count = np.unique(pixel_orders, return_counts=True)
-            area_by_order = [hp.nside2pixarea(hp.order2nside(order), degrees=True) for order in cov_order]
-            total_area = (area_by_order * cov_count).sum()
             print(
-                f"Approximate coverage is {total_area:0.2f} sq deg, "
-                "or {total_area/41253*100:0.2f} % of the sky."
+                "Approximate coverage is "
+                f"{partition_info.calculate_fractional_coverage()*100:0.2f} % of the sky."
             )
 
     return is_valid

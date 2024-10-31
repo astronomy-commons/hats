@@ -277,4 +277,4 @@ class PartitionInfo:
         area_by_order = [hp.nside2pixarea(hp.order2nside(order), degrees=True) for order in cov_order]
         # 41253 is the number of square degrees in a sphere
         # https://en.wikipedia.org/wiki/Square_degree
-        return (area_by_order * cov_count).sum() / 41253
+        return (area_by_order * cov_count).sum() / (360**2 / np.pi)

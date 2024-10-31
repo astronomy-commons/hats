@@ -138,7 +138,7 @@ def test_is_valid_catalog_verbose_success(small_sky_dir, capsys):
     captured = capsys.readouterr().out
     assert "Validating catalog at path" in captured
     assert "Found 1 partition" in captured
-    assert "Approximate coverage is 3437.75 sq deg" in captured
+    assert "Approximate coverage is 8" in captured
 
 
 def test_valid_catalog_strict_all(
