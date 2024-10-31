@@ -7,7 +7,6 @@ import numpy as np
 import pyarrow.dataset as pds
 from upath import UPath
 
-import hats.pixel_math.healpix_shim as hp
 from hats.catalog.dataset.table_properties import TableProperties
 from hats.catalog.healpix_dataset.healpix_dataset import HealpixDataset
 from hats.catalog.partition_info import PartitionInfo
