@@ -142,7 +142,8 @@ def is_valid_catalog(
             area_by_order = [hp.nside2pixarea(hp.order2nside(order), degrees=True) for order in cov_order]
             total_area = (area_by_order * cov_count).sum()
             print(
-                f"Approximate coverage is {total_area:0.2f} sq deg, or {total_area/41253*100:0.2f} % of the sky."
+                f"Approximate coverage is {total_area:0.2f} sq deg, "
+                "or {total_area/41253*100:0.2f} % of the sky."
             )
 
     return is_valid
