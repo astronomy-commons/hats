@@ -9,6 +9,7 @@ from upath import UPath
 
 import hats.pixel_math.healpix_shim as hp
 from hats.catalog.dataset.table_properties import TableProperties
+from hats.catalog.healpix_dataset.healpix_dataset import HealpixDataset
 from hats.catalog.partition_info import PartitionInfo
 from hats.io import get_common_metadata_pointer, get_parquet_metadata_pointer, get_partition_info_pointer
 from hats.io.file_io import get_upath
@@ -69,9 +70,6 @@ def is_valid_catalog(
     if not is_catalog_info_valid(pointer):
         handle_error("properties file does not exist or is invalid.")
 
-    if not is_partition_info_valid(pointer):
-        handle_error("partition_info.csv file does not exist.")
-
     if not is_metadata_valid(pointer):
         handle_error("_metadata file does not exist.")
 
@@ -85,31 +83,7 @@ def is_valid_catalog(
 
     # Load as a catalog object. Confirms that the catalog info matches type.
     catalog = read_hats(pointer)
-    expected_pixels = sort_pixels(catalog.get_healpix_pixels())
-
-    if verbose:
-        print(f"Found {len(expected_pixels)} partitions.")
-
-    ## Compare the pixels in _metadata with partition_info.csv
     metadata_file = get_parquet_metadata_pointer(pointer)
-
-    # Use both strategies of reading the partition info: strict and !strict.
-    metadata_pixels = sort_pixels(
-        PartitionInfo.read_from_file(metadata_file, strict=True).get_healpix_pixels()
-    )
-    if not np.array_equal(expected_pixels, metadata_pixels):
-        handle_error("Partition pixels differ between catalog and _metadata file (strict)")
-
-    metadata_pixels = sort_pixels(
-        PartitionInfo.read_from_file(metadata_file, strict=False).get_healpix_pixels()
-    )
-    if not np.array_equal(expected_pixels, metadata_pixels):
-        handle_error("Partition pixels differ between catalog and _metadata file (non-strict)")
-
-    partition_info_file = get_partition_info_pointer(pointer)
-    csv_pixels = sort_pixels(PartitionInfo.read_from_csv(partition_info_file).get_healpix_pixels())
-    if not np.array_equal(expected_pixels, csv_pixels):
-        handle_error("Partition pixels differ between catalog and partition_info.csv file")
 
     ## Load as parquet dataset. Allow errors, and check pixel set against _metadata
     # As a side effect, this confirms that we can load the directory as a valid dataset.
@@ -118,29 +92,58 @@ def is_valid_catalog(
         filesystem=metadata_file.fs,
     )
 
-    parquet_path_pixels = []
-    dataset_path = str(pointer / "dataset")
-    for hats_file in dataset.files:
-        relative_path = hats_file[len(dataset_path) :]
-        healpix_pixel = get_healpix_from_path(relative_path)
-        if healpix_pixel == INVALID_PIXEL:
-            handle_error(f"Could not derive partition pixel from parquet path: {relative_path}")
-        parquet_path_pixels.append(healpix_pixel)
+    if isinstance(catalog, HealpixDataset):
+        if not is_partition_info_valid(pointer):
+            handle_error("partition_info.csv file does not exist.")
+            return is_valid
 
-    parquet_path_pixels = sort_pixels(parquet_path_pixels)
+        expected_pixels = sort_pixels(catalog.get_healpix_pixels())
 
-    if not np.array_equal(expected_pixels, parquet_path_pixels):
-        handle_error("Partition pixels differ between catalog and parquet paths")
+        if verbose:
+            print(f"Found {len(expected_pixels)} partitions.")
 
-    if verbose:
-        # Print a few more stats
-        pixel_orders = [p.order for p in expected_pixels]
-        cov_order, cov_count = np.unique(pixel_orders, return_counts=True)
-        area_by_order = [hp.nside2pixarea(hp.order2nside(order), degrees=True) for order in cov_order]
-        total_area = (area_by_order * cov_count).sum()
-        print(
-            f"Approximate coverage is {total_area:0.2f} sq deg, or {total_area/41253*100:0.2f} % of the sky."
+        ## Compare the pixels in _metadata with partition_info.csv
+        # Use both strategies of reading the partition info: strict and !strict.
+        metadata_pixels = sort_pixels(
+            PartitionInfo.read_from_file(metadata_file, strict=True).get_healpix_pixels()
         )
+        if not np.array_equal(expected_pixels, metadata_pixels):
+            handle_error("Partition pixels differ between catalog and _metadata file (strict)")
+
+        metadata_pixels = sort_pixels(
+            PartitionInfo.read_from_file(metadata_file, strict=False).get_healpix_pixels()
+        )
+        if not np.array_equal(expected_pixels, metadata_pixels):
+            handle_error("Partition pixels differ between catalog and _metadata file (non-strict)")
+
+        partition_info_file = get_partition_info_pointer(pointer)
+        csv_pixels = sort_pixels(PartitionInfo.read_from_csv(partition_info_file).get_healpix_pixels())
+        if not np.array_equal(expected_pixels, csv_pixels):
+            handle_error("Partition pixels differ between catalog and partition_info.csv file")
+
+        parquet_path_pixels = []
+        dataset_path = str(pointer / "dataset")
+        for hats_file in dataset.files:
+            relative_path = hats_file[len(dataset_path) :]
+            healpix_pixel = get_healpix_from_path(relative_path)
+            if healpix_pixel == INVALID_PIXEL:
+                handle_error(f"Could not derive partition pixel from parquet path: {relative_path}")
+            parquet_path_pixels.append(healpix_pixel)
+
+        parquet_path_pixels = sort_pixels(parquet_path_pixels)
+
+        if not np.array_equal(expected_pixels, parquet_path_pixels):
+            handle_error("Partition pixels differ between catalog and parquet paths")
+
+        if verbose:
+            # Print a few more stats
+            pixel_orders = [p.order for p in expected_pixels]
+            cov_order, cov_count = np.unique(pixel_orders, return_counts=True)
+            area_by_order = [hp.nside2pixarea(hp.order2nside(order), degrees=True) for order in cov_order]
+            total_area = (area_by_order * cov_count).sum()
+            print(
+                f"Approximate coverage is {total_area:0.2f} sq deg, or {total_area/41253*100:0.2f} % of the sky."
+            )
 
     return is_valid
 
