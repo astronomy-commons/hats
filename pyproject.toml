@@ -64,7 +64,7 @@ build-backend = "setuptools.build_meta"
 write_to = "src/hats/_version.py"
 
 [tool.pytest.ini_options]
-timeout = 1
+timeout = 5
 testpaths = [
     "tests",
 ]

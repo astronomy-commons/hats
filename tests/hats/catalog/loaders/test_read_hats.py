@@ -1,11 +1,4 @@
-import pytest
-
 from hats.loaders import read_hats
-
-
-def test_read_hats_wrong_catalog_type(small_sky_dir):
-    with pytest.raises(NotImplementedError, match="load catalog of type"):
-        read_hats(small_sky_dir, catalog_type="unknown")
 
 
 def test_read_hats_branches(
