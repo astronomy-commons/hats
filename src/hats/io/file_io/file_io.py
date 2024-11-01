@@ -217,7 +217,7 @@ def read_fits_image(map_file_pointer: str | Path | UPath) -> np.ndarray:
     """Read the object spatial distribution information from a healpix FITS file.
 
     Args:
-        map_file_pointer (path-like): location of file to be written
+        map_file_pointer (path-like): location of file to be read
 
     Returns:
         one-dimensional numpy array of integers where the
