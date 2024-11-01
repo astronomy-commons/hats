@@ -356,6 +356,8 @@ def cull_from_pixel_map(depth_ipix_d: Dict[int, Tuple[np.ndarray, np.ndarray]], 
 def compute_healpix_vertices(depth, ipix, wcs, step=1):
     """Compute HEALPix vertices.
 
+    Modified from mocpy.moc.plot.fill.compute_healpix_vertices
+
     Parameters
     ----------
     depth : int
