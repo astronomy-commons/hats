@@ -111,6 +111,7 @@ def plot_pixel_list(pixels: List[HealpixPixel], plot_title: str = "", projection
 
 def plot_moc(
     moc: MOC,
+    *,
     projection: str = "MOL",
     title: str = "",
     fov: Quantity | Tuple[Quantity, Quantity] = None,
@@ -161,7 +162,7 @@ def plot_moc(
         frame_class=frame_class,
         ax=ax,
         fig=fig,
-        fig_size=(9, 5),
+        figsize=(9, 5),
     )
 
     mocpy_args = {"alpha": 0.5, "fill": True, "color": "teal"}
@@ -440,6 +441,7 @@ def plot_healpix_map(
         frame_class=frame_class,
         ax=ax,
         fig=fig,
+        figsize=(10, 5),
     )
 
     _plot_healpix_value_map(ipix, depth, healpix_map, ax, wcs, cmap=cmap, norm=norm, cbar=cbar, **kwargs)
@@ -458,15 +460,34 @@ def initialize_wcs_axes(
     frame_class: Type[BaseFrame] | None = None,
     ax: WCSAxes | None = None,
     fig: Figure | None = None,
-    fig_size=None,
+    **kwargs,
 ):
+    """Initializes matplotlib Figure and WCSAxes if they do not exist
+
+    Args:
+        projection (str): The projection to use in the WCS. Available projections listed at
+            https://docs.astropy.org/en/stable/wcs/supported_projections.html
+        fov (Quantity or Sequence[Quantity, Quantity] | None): The Field of View of the WCS. Must be an
+            astropy Quantity with an angular unit, or a tuple of quantities for different longitude and \
+            latitude FOVs (Default covers the full sky)
+        center (SkyCoord | None): The center of the projection in the WCS (Default: SkyCoord(0, 0))
+        wcs (WCS | None): The WCS to specify the projection of the plot. If used, all other WCS parameters
+            are ignored and the parameters from the WCS object is used.
+        frame_class (Type[BaseFrame] | None): The class of the frame for the WCSAxes to be initialized with.
+            if the `ax` kwarg is used, this value is ignored (By Default uses EllipticalFrame for full
+            sky projection. If FOV is set, RectangularFrame is used)
+        ax (WCSAxes | None): The matplotlib axes to plot onto. If None, an axes will be created to be used. If
+            specified, the axes must be an astropy WCSAxes, and the `wcs` parameter must be set with the WCS
+            object used in the axes. (Default: None)
+        fig (Figure | None): The matplotlib figure to add the axes to. If None, one will be created, unless
+            ax is specified (Default: None)
+        kwargs: additional kwargs to pass to figure initialization
+    """
     if fig is None:
         if ax is not None:
             fig = ax.get_figure()
         else:
-            if fig_size is None:
-                fig_size = (10, 5)
-            fig = plt.figure(figsize=fig_size)
+            fig = plt.figure(**kwargs)
     if frame_class is None and fov is None and wcs is None:
         frame_class = EllipticalFrame
     if fov is None:

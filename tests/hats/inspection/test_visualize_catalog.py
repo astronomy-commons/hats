@@ -1,4 +1,4 @@
-from unittest.mock import Mock, MagicMock
+from unittest.mock import MagicMock
 
 import astropy.units as u
 import matplotlib.pyplot as plt
