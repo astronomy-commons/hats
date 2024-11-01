@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import tempfile
 from collections.abc import Generator
 from pathlib import Path
 from typing import Any, Tuple
@@ -10,10 +9,10 @@ import pandas as pd
 import pyarrow.dataset as pds
 import pyarrow.parquet as pq
 import yaml
+from cdshealpix.skymap.skymap import Skymap
 from pyarrow.dataset import Dataset
 from upath import UPath
 
-import hats.pixel_math.healpix_shim as hp
 from hats.io.file_io.file_pointer import get_upath
 
 
@@ -217,17 +216,14 @@ def read_fits_image(map_file_pointer: str | Path | UPath):
     """Read the object spatial distribution information from a healpix FITS file.
 
     Args:
-        file_pointer: location of file to be written
+        map_file_pointer: location of file to be written
+
     Returns:
-        one-dimensional numpy array of integers where the
-        value at each index corresponds to the number of objects found at the healpix pixel.
+        one-dimensional numpy array of integers where the value at each index corresponds
+        to the number of objects found at the healpix pixel.
     """
     map_file_pointer = get_upath(map_file_pointer)
-    with tempfile.NamedTemporaryFile() as _tmp_file:
-        with map_file_pointer.open("rb") as _map_file:
-            map_data = _map_file.read()
-            _tmp_file.write(map_data)
-            return hp.read_map(_tmp_file.name, nest=True)
+    return Skymap.from_fits(map_file_pointer).values
 
 
 def write_fits_image(histogram: np.ndarray, map_file_pointer: str | Path | UPath):
@@ -236,13 +232,11 @@ def write_fits_image(histogram: np.ndarray, map_file_pointer: str | Path | UPath
     Args:
         histogram (:obj:`np.ndarray`): one-dimensional numpy array of long integers where the
             value at each index corresponds to the number of objects found at the healpix pixel.
-        file_pointer: location of file to be written
+        map_file_pointer (path-like): location of file to be written
     """
     map_file_pointer = get_upath(map_file_pointer)
-    with tempfile.NamedTemporaryFile() as _tmp_file:
-        with map_file_pointer.open("wb") as _map_file:
-            hp.write_map(_tmp_file.name, histogram, overwrite=True, dtype=np.int32, nest=True, coord="CEL")
-            _map_file.write(_tmp_file.read())
+    skymap = Skymap.from_array(histogram)
+    skymap.to_fits(map_file_pointer)
 
 
 def read_yaml(file_handle: str | Path | UPath):
