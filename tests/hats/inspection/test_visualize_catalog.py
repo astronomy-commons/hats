@@ -680,3 +680,12 @@ def test_plot_moc(small_sky_order1_catalog):
     assert small_sky_order1_catalog.moc.fill.call_args[0][0] is ax
     wcs = ax.wcs
     assert small_sky_order1_catalog.moc.fill.call_args[0][1] is wcs
+
+
+def test_plot_moc_catalog(small_sky_order1_catalog):
+    small_sky_order1_catalog.moc.fill = MagicMock()
+    _, ax = small_sky_order1_catalog.plot_moc()
+    small_sky_order1_catalog.moc.fill.assert_called_once()
+    assert small_sky_order1_catalog.moc.fill.call_args[0][0] is ax
+    wcs = ax.wcs
+    assert small_sky_order1_catalog.moc.fill.call_args[0][1] is wcs
