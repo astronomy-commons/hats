@@ -14,10 +14,10 @@ import cdshealpix
 import numpy as np
 from astropy.coordinates import ICRS, Angle, SkyCoord
 from astropy.units import Quantity
+from astropy.visualization.wcsaxes import WCSAxes
 from astropy.visualization.wcsaxes.frame import BaseFrame, EllipticalFrame
 from astropy.wcs.utils import pixel_to_skycoord, skycoord_to_pixel
 from matplotlib import pyplot as plt
-from matplotlib.axes import Axes
 from matplotlib.collections import PathCollection
 from matplotlib.colors import Colormap, Normalize
 from matplotlib.figure import Figure
@@ -106,6 +106,73 @@ def plot_pixel_list(pixels: List[HealpixPixel], plot_title: str = "", projection
         ticks=np.arange(np.min(col_array), np.max(col_array) + 1),
         label="HEALPix Order",
     )
+    return fig, ax
+
+
+def plot_moc(
+    moc: MOC,
+    *,
+    projection: str = "MOL",
+    title: str = "",
+    fov: Quantity | Tuple[Quantity, Quantity] = None,
+    center: SkyCoord | None = None,
+    wcs: astropy.wcs.WCS = None,
+    frame_class: Type[BaseFrame] | None = None,
+    ax: WCSAxes | None = None,
+    fig: Figure | None = None,
+    **kwargs,
+) -> Tuple[Figure, WCSAxes]:
+    """Plots a moc
+
+    By default, a new matplotlib figure and axis will be created, and the projection will be a Molleweide
+    projection across the whole sky.
+
+    Args:
+        moc (mocpy.MOC): MOC to plot
+        projection (str): The projection to use in the WCS. Available projections listed at
+            https://docs.astropy.org/en/stable/wcs/supported_projections.html
+        title (str): The title of the plot
+        fov (Quantity or Sequence[Quantity, Quantity] | None): The Field of View of the WCS. Must be an
+            astropy Quantity with an angular unit, or a tuple of quantities for different longitude and \
+            latitude FOVs (Default covers the full sky)
+        center (SkyCoord | None): The center of the projection in the WCS (Default: SkyCoord(0, 0))
+        wcs (WCS | None): The WCS to specify the projection of the plot. If used, all other WCS parameters
+            are ignored and the parameters from the WCS object is used.
+        frame_class (Type[BaseFrame] | None): The class of the frame for the WCSAxes to be initialized with.
+            if the `ax` kwarg is used, this value is ignored (By Default uses EllipticalFrame for full
+            sky projection. If FOV is set, RectangularFrame is used)
+        ax (WCSAxes | None): The matplotlib axes to plot onto. If None, an axes will be created to be used. If
+            specified, the axes must be an astropy WCSAxes, and the `wcs` parameter must be set with the WCS
+            object used in the axes. (Default: None)
+        fig (Figure | None): The matplotlib figure to add the axes to. If None, one will be created, unless
+            ax is specified (Default: None)
+        **kwargs: Additional kwargs to pass to `mocpy.MOC.fill`
+
+    Returns:
+        Tuple[Figure, WCSAxes] - The figure and axes used to plot the healpix map
+    """
+    fig, ax, wcs = initialize_wcs_axes(
+        projection=projection,
+        fov=fov,
+        center=center,
+        wcs=wcs,
+        frame_class=frame_class,
+        ax=ax,
+        fig=fig,
+        figsize=(9, 5),
+    )
+
+    mocpy_args = {"alpha": 0.5, "fill": True, "color": "teal"}
+    mocpy_args.update(**kwargs)
+
+    moc.fill(ax, wcs, **mocpy_args)
+
+    ax.coords[0].set_format_unit("deg")
+
+    plt.grid()
+    plt.ylabel("Dec")
+    plt.xlabel("RA")
+    plt.title(title)
     return fig, ax
 
 
@@ -305,7 +372,7 @@ def plot_healpix_map(
     center: SkyCoord | None = None,
     wcs: astropy.wcs.WCS = None,
     frame_class: Type[BaseFrame] | None = None,
-    ax: Axes | None = None,
+    ax: WCSAxes | None = None,
     fig: Figure | None = None,
     **kwargs,
 ):
@@ -348,25 +415,76 @@ def plot_healpix_map(
         frame_class (Type[BaseFrame] | None): The class of the frame for the WCSAxes to be initialized with.
             if the `ax` kwarg is used, this value is ignored (By Default uses EllipticalFrame for full
             sky projection. If FOV is set, RectangularFrame is used)
-        ax (Axes | None): The matplotlib axes to plot onto. If None, an axes will be created to be used. If
-            specified, the axes must be initialized with a WCS for the projection, and passed to the method
-            with the WCS parameter. (Default: None)
+        ax (WCSAxes | None): The matplotlib axes to plot onto. If None, an axes will be created to be used. If
+            specified, the axes must be an astropy WCSAxes, and the `wcs` parameter must be set with the WCS
+            object used in the axes. (Default: None)
         fig (Figure | None): The matplotlib figure to add the axes to. If None, one will be created, unless
             ax is specified (Default: None)
         **kwargs: Additional kwargs to pass to creating the matplotlib `PathCollection` artist
 
     Returns:
-        Tuple[Figure, Axes] - The figure and axes used to plot the healpix map
+        Tuple[Figure, WCSAxes] - The figure and axes used to plot the healpix map
     """
     if ipix is None or depth is None:
         order = int(np.ceil(np.log2(len(healpix_map) / 12) / 2))
         ipix = np.arange(len(healpix_map))
         depth = np.full(len(healpix_map), fill_value=order)
+
+    fig, ax, wcs = initialize_wcs_axes(
+        projection=projection,
+        fov=fov,
+        center=center,
+        wcs=wcs,
+        frame_class=frame_class,
+        ax=ax,
+        fig=fig,
+        figsize=(10, 5),
+    )
+
+    _plot_healpix_value_map(ipix, depth, healpix_map, ax, wcs, cmap=cmap, norm=norm, cbar=cbar, **kwargs)
+    plt.grid()
+    plt.ylabel("Dec")
+    plt.xlabel("RA")
+    plt.title(title)
+    return fig, ax
+
+
+def initialize_wcs_axes(
+    projection: str = "MOL",
+    fov: Quantity | Tuple[Quantity, Quantity] = None,
+    center: SkyCoord | None = None,
+    wcs: astropy.wcs.WCS = None,
+    frame_class: Type[BaseFrame] | None = None,
+    ax: WCSAxes | None = None,
+    fig: Figure | None = None,
+    **kwargs,
+):
+    """Initializes matplotlib Figure and WCSAxes if they do not exist
+
+    Args:
+        projection (str): The projection to use in the WCS. Available projections listed at
+            https://docs.astropy.org/en/stable/wcs/supported_projections.html
+        fov (Quantity or Sequence[Quantity, Quantity] | None): The Field of View of the WCS. Must be an
+            astropy Quantity with an angular unit, or a tuple of quantities for different longitude and \
+            latitude FOVs (Default covers the full sky)
+        center (SkyCoord | None): The center of the projection in the WCS (Default: SkyCoord(0, 0))
+        wcs (WCS | None): The WCS to specify the projection of the plot. If used, all other WCS parameters
+            are ignored and the parameters from the WCS object is used.
+        frame_class (Type[BaseFrame] | None): The class of the frame for the WCSAxes to be initialized with.
+            if the `ax` kwarg is used, this value is ignored (By Default uses EllipticalFrame for full
+            sky projection. If FOV is set, RectangularFrame is used)
+        ax (WCSAxes | None): The matplotlib axes to plot onto. If None, an axes will be created to be used. If
+            specified, the axes must be an astropy WCSAxes, and the `wcs` parameter must be set with the WCS
+            object used in the axes. (Default: None)
+        fig (Figure | None): The matplotlib figure to add the axes to. If None, one will be created, unless
+            ax is specified (Default: None)
+        kwargs: additional kwargs to pass to figure initialization
+    """
     if fig is None:
         if ax is not None:
             fig = ax.get_figure()
         else:
-            fig = plt.figure(figsize=(10, 5))
+            fig = plt.figure(**kwargs)
     if frame_class is None and fov is None and wcs is None:
         frame_class = EllipticalFrame
     if fov is None:
@@ -388,12 +506,7 @@ def plot_healpix_map(
         raise ValueError(
             "if ax is provided, wcs must also be provided with the projection used in initializing ax"
         )
-    _plot_healpix_value_map(ipix, depth, healpix_map, ax, wcs, cmap=cmap, norm=norm, cbar=cbar, **kwargs)
-    plt.grid()
-    plt.ylabel("Dec")
-    plt.xlabel("RA")
-    plt.title(title)
-    return fig, ax
+    return fig, ax, wcs
 
 
 def _plot_healpix_value_map(ipix, depth, values, ax, wcs, cmap="viridis", norm=None, cbar=True, **kwargs):

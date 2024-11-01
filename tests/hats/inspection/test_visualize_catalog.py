@@ -1,3 +1,5 @@
+from unittest.mock import MagicMock
+
 import astropy.units as u
 import matplotlib.pyplot as plt
 import numpy as np
@@ -12,7 +14,7 @@ from mocpy.moc.plot.fill import compute_healpix_vertices
 from mocpy.moc.plot.utils import build_plotting_moc
 
 from hats.inspection import plot_pixels
-from hats.inspection.visualize_catalog import cull_from_pixel_map, cull_to_fov, plot_healpix_map
+from hats.inspection.visualize_catalog import cull_from_pixel_map, cull_to_fov, plot_healpix_map, plot_moc
 
 # pylint: disable=no-member
 
@@ -669,3 +671,21 @@ def test_catalog_plot(small_sky_order1_catalog):
         np.testing.assert_array_equal(path.codes, codes)
     np.testing.assert_array_equal(col.get_array(), np.array(order_3_orders))
     assert ax.get_title() == f"Catalog pixel density map - {small_sky_order1_catalog.catalog_name}"
+
+
+def test_plot_moc(small_sky_order1_catalog):
+    small_sky_order1_catalog.moc.fill = MagicMock()
+    _, ax = plot_moc(small_sky_order1_catalog.moc)
+    small_sky_order1_catalog.moc.fill.assert_called_once()
+    assert small_sky_order1_catalog.moc.fill.call_args[0][0] is ax
+    wcs = ax.wcs
+    assert small_sky_order1_catalog.moc.fill.call_args[0][1] is wcs
+
+
+def test_plot_moc_catalog(small_sky_order1_catalog):
+    small_sky_order1_catalog.moc.fill = MagicMock()
+    _, ax = small_sky_order1_catalog.plot_moc()
+    small_sky_order1_catalog.moc.fill.assert_called_once()
+    assert small_sky_order1_catalog.moc.fill.call_args[0][0] is ax
+    wcs = ax.wcs
+    assert small_sky_order1_catalog.moc.fill.call_args[0][1] is wcs
