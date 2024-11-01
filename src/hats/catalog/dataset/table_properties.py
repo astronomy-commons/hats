@@ -191,9 +191,9 @@ class TableProperties(BaseModel):
         return formatted_string
 
     @classmethod
-    def read_from_dir(cls, catalog_dir: Union[str, Path, UPath]) -> Self:
+    def read_from_dir(cls, catalog_dir: Union[str, Path, UPath], **storage_options) -> Self:
         """Read field values from a java-style properties file."""
-        file_path = file_io.get_upath(catalog_dir) / "properties"
+        file_path = file_io.get_upath(catalog_dir, **storage_options) / "properties"
         if not file_io.does_file_or_directory_exist(file_path):
             raise FileNotFoundError(f"No properties file found where expected: {str(file_path)}")
         p = Properties()

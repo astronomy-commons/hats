@@ -26,7 +26,7 @@ DATASET_TYPE_TO_CLASS = {
 }
 
 
-def read_hats(catalog_path: str | Path | UPath) -> Dataset:
+def read_hats(catalog_path: str | Path | UPath, **kwargs) -> Dataset:
     """Reads a HATS Catalog from a HATS directory
 
     Args:
@@ -34,7 +34,7 @@ def read_hats(catalog_path: str | Path | UPath) -> Dataset:
     Returns:
         The initialized catalog object
     """
-    catalog_path = file_io.get_upath(catalog_path)
+    catalog_path = file_io.get_upath(catalog_path, **kwargs)
     try:
         properties = TableProperties.read_from_dir(catalog_path)
         dataset_type = properties.catalog_type

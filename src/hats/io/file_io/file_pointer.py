@@ -6,13 +6,14 @@ from typing import List
 from upath import UPath
 
 
-def get_upath(path: str | Path | UPath) -> UPath:
+def get_upath(path: str | Path | UPath, **storage_options) -> UPath:
     """Returns a file pointer from a path string"""
     if not path:
         return None
     if isinstance(path, UPath):
         return path
-    return UPath(path)
+
+    return UPath(path, **storage_options)
 
 
 def append_paths_to_pointer(pointer: str | Path | UPath, *paths: str) -> UPath:

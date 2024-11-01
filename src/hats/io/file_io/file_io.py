@@ -282,5 +282,7 @@ def read_parquet_file_to_pandas(
     file_pointer = get_upath(file_pointer)
     if file_open_kwargs is None:
         file_open_kwargs = {}
+
     with file_pointer.open("rb", **file_open_kwargs) as parquet_file:
+        kwargs.pop("headers", None)
         return pd.read_parquet(parquet_file, **kwargs)
