@@ -24,7 +24,6 @@ from matplotlib.figure import Figure
 from matplotlib.path import Path
 from mocpy import MOC, WCS
 from mocpy.moc.plot.culling_backfacing_cells import backface_culling
-from mocpy.moc.plot.fill import compute_healpix_vertices
 from mocpy.moc.plot.utils import _set_wcs
 
 from hats.io import file_io, paths
@@ -311,30 +310,26 @@ def cull_from_pixel_map(depth_ipix_d: Dict[int, Tuple[np.ndarray, np.ndarray]], 
     for depth in range(min_depth, max_split_depth + 1):
         # for each depth, check if pixels are too large, or wrap around projection, and split into pixels at
         # higher order
-        if depth < 3:
-            too_large_ipix = ipixels
-            too_large_vals = vals
-        else:
-            ipix_lon, ipix_lat = cdshealpix.vertices(ipixels, depth)
+        ipix_lon, ipix_lat = cdshealpix.vertices(ipixels, depth)
 
-            ipix_lon = ipix_lon[:, [2, 3, 0, 1]]
-            ipix_lat = ipix_lat[:, [2, 3, 0, 1]]
-            ipix_vertices = SkyCoord(ipix_lon, ipix_lat, frame=ICRS())
+        ipix_lon = ipix_lon[:, [2, 3, 0, 1]]
+        ipix_lat = ipix_lat[:, [2, 3, 0, 1]]
+        ipix_vertices = SkyCoord(ipix_lon, ipix_lat, frame=ICRS())
 
-            # Projection on the given WCS
-            xp, yp = skycoord_to_pixel(coords=ipix_vertices, wcs=wcs)
-            _, _, frontface_id = backface_culling(xp, yp)
+        # Projection on the given WCS
+        xp, yp = skycoord_to_pixel(coords=ipix_vertices, wcs=wcs)
+        _, _, frontface_id = backface_culling(xp, yp)
 
-            # Get the pixels which are backfacing the projection
-            backfacing_ipix = ipixels[~frontface_id]  # backfacing
-            backfacing_vals = vals[~frontface_id]
-            frontface_ipix = ipixels[frontface_id]
-            frontface_vals = vals[frontface_id]
+        # Get the pixels which are backfacing the projection
+        backfacing_ipix = ipixels[~frontface_id]  # backfacing
+        backfacing_vals = vals[~frontface_id]
+        frontface_ipix = ipixels[frontface_id]
+        frontface_vals = vals[frontface_id]
 
-            ipix_d.update({depth: (frontface_ipix, frontface_vals)})
+        ipix_d.update({depth: (frontface_ipix, frontface_vals)})
 
-            too_large_ipix = backfacing_ipix
-            too_large_vals = backfacing_vals
+        too_large_ipix = backfacing_ipix
+        too_large_vals = backfacing_vals
 
         next_depth = depth + 1
 
@@ -356,6 +351,46 @@ def cull_from_pixel_map(depth_ipix_d: Dict[int, Tuple[np.ndarray, np.ndarray]], 
         vals = np.concatenate((vals, too_large_child_vals))
 
     return ipix_d
+
+
+def compute_healpix_vertices(depth, ipix, wcs, step=1):
+    """Compute HEALPix vertices.
+
+    Parameters
+    ----------
+    depth : int
+        The depth of the HEALPix cells.
+    ipix : `numpy.ndarray`
+        The HEALPix cell index given as a `np.uint64` numpy array.
+    wcs : `astropy.wcs.WCS`
+        A WCS projection
+
+    Returns
+    -------
+    path_vertices, codes : (`np.array`, `np.array`)
+    """
+
+    depth = int(depth)
+
+    ipix_lon, ipix_lat = cdshealpix.vertices(ipix, depth, step=step)
+    indices = np.concatenate([np.arange(2 * step, 4 * step), np.arange(2 * step)])
+
+    ipix_lon = ipix_lon[:, indices]
+    ipix_lat = ipix_lat[:, indices]
+    ipix_boundaries = SkyCoord(ipix_lon, ipix_lat, frame=ICRS())
+    # Projection on the given WCS
+    xp, yp = skycoord_to_pixel(ipix_boundaries, wcs=wcs)
+
+    raw_cells = [np.vstack((xp[:, i], yp[:, i])).T for i in range(4 * step)]
+
+    cells = np.hstack(raw_cells + [np.zeros((raw_cells[0].shape[0], 2))])
+
+    path_vertices = cells.reshape(((4 * step + 1) * raw_cells[0].shape[0], 2))
+    single_code = np.array([Path.MOVETO] + [Path.LINETO] * (step * 4 - 1) + [Path.CLOSEPOLY])
+
+    codes = np.tile(single_code, raw_cells[0].shape[0])
+
+    return path_vertices, codes
 
 
 def plot_healpix_map(
@@ -527,9 +562,15 @@ def _plot_healpix_value_map(ipix, depth, values, ax, wcs, cmap="viridis", norm=N
     plt_paths = []
     cum_vals = []
     for d, (ip, vals) in culled_d.items():
-        vertices, codes = compute_healpix_vertices(depth=d, ipix=ip, wcs=wcs)
+        step = 1 if d >= 3 else 2 ** (3 - d)
+        vertices, codes = compute_healpix_vertices(depth=d, ipix=ip, wcs=wcs, step=step)
         for i in range(len(ip)):
-            plt_paths.append(Path(vertices[5 * i : 5 * (i + 1)], codes[5 * i : 5 * (i + 1)]))
+            plt_paths.append(
+                Path(
+                    vertices[(4 * step + 1) * i : (4 * step + 1) * (i + 1)],
+                    codes[(4 * step + 1) * i : (4 * step + 1) * (i + 1)],
+                )
+            )
         cum_vals.append(vals)
     col = PathCollection(plt_paths, cmap=cmap, norm=norm, **kwargs)
     col.set_array(np.concatenate(cum_vals))
