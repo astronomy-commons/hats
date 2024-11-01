@@ -171,7 +171,7 @@ class HealpixDataset(Dataset):
         """Create a visual map of the pixel density of the catalog.
 
         Args:
-            kwargs: Additional args to pass to `hipscat.inspection.visualize_catalog.plot_healpix_map`
+            kwargs: Additional args to pass to `hats.inspection.visualize_catalog.plot_healpix_map`
         """
         return plot_pixels(self, **kwargs)
 
@@ -179,7 +179,7 @@ class HealpixDataset(Dataset):
         """Create a visual map of the coverage of the catalog.
 
         Args:
-            kwargs: Additional args to pass to `hipscat.inspection.visualize_catalog.plot_moc`
+            kwargs: Additional args to pass to `hats.inspection.visualize_catalog.plot_moc`
         """
         default_title = f"Coverage MOC of {self.catalog_name}"
         plot_args = {"title": default_title}
