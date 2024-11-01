@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import tempfile
 from collections.abc import Generator
 from pathlib import Path
 from typing import Any, Tuple
@@ -223,7 +224,11 @@ def read_fits_image(map_file_pointer: str | Path | UPath) -> np.ndarray:
         value at each index corresponds to the number of objects found at the healpix pixel.
     """
     map_file_pointer = get_upath(map_file_pointer)
-    return Skymap.from_fits(map_file_pointer).values
+    with tempfile.NamedTemporaryFile() as _tmp_file:
+        with map_file_pointer.open("rb") as _map_file:
+            map_data = _map_file.read()
+            _tmp_file.write(map_data)
+            return Skymap.from_fits(_tmp_file.name).values
 
 
 def write_fits_image(histogram: np.ndarray, map_file_pointer: str | Path | UPath):
@@ -235,8 +240,11 @@ def write_fits_image(histogram: np.ndarray, map_file_pointer: str | Path | UPath
         map_file_pointer (path-like): location of file to be written
     """
     map_file_pointer = get_upath(map_file_pointer)
-    skymap = Skymap.from_array(histogram)
-    skymap.to_fits(map_file_pointer)
+    with tempfile.NamedTemporaryFile() as _tmp_file:
+        with map_file_pointer.open("wb") as _map_file:
+            skymap = Skymap.from_array(histogram)
+            skymap.to_fits(_tmp_file.name)
+            _map_file.write(_tmp_file.read())
 
 
 def read_yaml(file_handle: str | Path | UPath):
