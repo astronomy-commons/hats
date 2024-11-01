@@ -127,9 +127,6 @@ def plot_moc(
     By default, a new matplotlib figure and axis will be created, and the projection will be a Molleweide
     projection across the whole sky.
 
-    Additional kwargs will be passed to the creation of a matplotlib `PathCollection` object, which is the
-    artist that draws the tiles.
-
     Args:
         moc (mocpy.MOC): MOC to plot
         projection (str): The projection to use in the WCS. Available projections listed at
