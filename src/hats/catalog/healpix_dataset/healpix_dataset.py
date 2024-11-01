@@ -14,6 +14,7 @@ from hats.catalog.dataset import Dataset
 from hats.catalog.dataset.table_properties import TableProperties
 from hats.catalog.partition_info import PartitionInfo
 from hats.inspection import plot_pixels
+from hats.inspection.visualize_catalog import plot_moc
 from hats.pixel_math import HealpixPixel
 from hats.pixel_tree import PixelAlignment, PixelAlignmentType
 from hats.pixel_tree.moc_filter import filter_by_moc
@@ -173,3 +174,14 @@ class HealpixDataset(Dataset):
             kwargs: Additional args to pass to `hipscat.inspection.visualize_catalog.plot_healpix_map`
         """
         return plot_pixels(self, **kwargs)
+
+    def plot_moc(self, **kwargs):
+        """Create a visual map of the coverage of the catalog.
+
+        Args:
+            kwargs: Additional args to pass to `hipscat.inspection.visualize_catalog.plot_moc`
+        """
+        default_title = f"Coverage MOC of {self.catalog_name}"
+        plot_args = {"title": default_title}
+        plot_args.update(kwargs)
+        return plot_moc(self.moc, **plot_args)
