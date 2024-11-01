@@ -5,6 +5,8 @@ from typing import List, Tuple
 
 import numpy as np
 
+import hats.pixel_math.healpix_shim as hp
+
 
 class ValidatorsErrors(str, Enum):
     """Error messages for the coordinate validators"""
@@ -15,6 +17,7 @@ class ValidatorsErrors(str, Enum):
     DUPLICATE_VERTICES = "polygon has duplicated vertices"
     DEGENERATE_POLYGON = "polygon is degenerate"
     INVALID_RADEC_RANGE = "invalid ra or dec range"
+    INVALID_COORDS_SHAPE = "invalid coordinates shape"
 
 
 def validate_radius(radius_arcsec: float):
@@ -45,16 +48,22 @@ def validate_declination_values(dec: float | List[float]):
         raise ValueError(ValidatorsErrors.INVALID_DEC.value)
 
 
-def validate_polygon(vertices: np.ndarray):
+def validate_polygon(vertices: list[tuple[float, float]]):
     """Checks if the polygon contain a minimum of three vertices, that they are
     unique and that the polygon does not fall on a great circle.
 
     Args:
-        vertices (np.ndarray): The polygon vertices, in cartesian coordinates
+        vertices (list[tuple[float,float]]): The polygon vertices
 
     Raises:
         ValueError: exception if the polygon is invalid.
     """
+    vertices = np.array(vertices)
+    if vertices.shape[1] != 2:
+        raise ValueError(ValidatorsErrors.INVALID_COORDS_SHAPE.value)
+    _, dec = vertices.T
+    validate_declination_values(dec)
+
     if len(vertices) < 3:
         raise ValueError(ValidatorsErrors.INVALID_NUM_VERTICES.value)
     if len(vertices) != len(np.unique(vertices, axis=0)):
@@ -68,12 +77,14 @@ def is_polygon_degenerate(vertices: np.ndarray) -> bool:
     If the plane intersects the center of the sphere, the polygon is degenerate.
 
     Args:
-        vertices (np.ndarray): The polygon vertices, in cartesian coordinates
+        vertices (np.ndarray): The polygon vertices, in spherical coordinates
 
     Returns:
         A boolean, which is True if the polygon is degenerate, i.e. if it falls
         on a great circle, False otherwise.
     """
+    vertices = hp.ang2vec(*vertices.T, lonlat=True)
+
     # Calculate the normal vector of the plane using three of the vertices
     normal_vector = np.cross(vertices[1] - vertices[0], vertices[2] - vertices[0])
 
@@ -89,7 +100,7 @@ def is_polygon_degenerate(vertices: np.ndarray) -> bool:
     return bool(np.isclose(center_distance, 0))
 
 
-def validate_box_search(ra: Tuple[float, float] | None, dec: Tuple[float, float] | None):
+def validate_box(ra: Tuple[float, float] | None, dec: Tuple[float, float] | None):
     """Checks if ra and dec values are valid for the box search.
 
     - At least one range of ra or dec must have been provided

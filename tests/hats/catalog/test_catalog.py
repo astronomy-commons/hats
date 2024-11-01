@@ -224,14 +224,10 @@ def test_polygonal_filter(small_sky_order1_catalog):
     assert filtered_catalog.moc == polygon_moc.intersection(small_sky_order1_catalog.moc)
 
 
-def test_polygonal_filter_with_cartesian_coordinates(small_sky_order1_catalog):
-    sky_vertices = [(282, -58), (282, -55), (272, -55), (272, -58)]
-    cartesian_vertices = hp.ang2vec(*np.array(sky_vertices).T, lonlat=True)
-    filtered_catalog_1 = small_sky_order1_catalog.filter_by_polygon(sky_vertices)
-    filtered_catalog_2 = small_sky_order1_catalog.filter_by_polygon(cartesian_vertices)
-    assert filtered_catalog_1.get_healpix_pixels() == filtered_catalog_2.get_healpix_pixels()
-    assert (1, 46) in filtered_catalog_1.pixel_tree
-    assert (1, 46) in filtered_catalog_2.pixel_tree
+def test_polygonal_filter_invalid_coordinate_shape(small_sky_order1_catalog):
+    with pytest.raises(ValueError, match="coordinates shape"):
+        vertices = [(282, -58, 1), (282, -55, 2), (272, -55, 3)]
+        small_sky_order1_catalog.filter_by_polygon(vertices)
 
 
 def test_polygonal_filter_big(small_sky_order1_catalog):
