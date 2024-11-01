@@ -53,7 +53,8 @@ def validate_polygon(vertices: list[tuple[float, float]]):
     unique and that the polygon does not fall on a great circle.
 
     Args:
-        vertices (list[tuple[float,float]]): The polygon vertices
+        vertices (list[tuple[float,float]]): The list of vertice coordinates for
+            the polygon, (ra, dec), in degrees.
 
     Raises:
         ValueError: exception if the polygon is invalid.
@@ -63,7 +64,6 @@ def validate_polygon(vertices: list[tuple[float, float]]):
         raise ValueError(ValidatorsErrors.INVALID_COORDS_SHAPE.value)
     _, dec = vertices.T
     validate_declination_values(dec)
-
     if len(vertices) < 3:
         raise ValueError(ValidatorsErrors.INVALID_NUM_VERTICES.value)
     if len(vertices) != len(np.unique(vertices, axis=0)):

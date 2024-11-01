@@ -108,6 +108,8 @@ class HealpixDataset(Dataset):
     def get_max_coverage_order(self) -> int:
         """Gets the maximum HEALPix order for which the coverage of the catalog is known from the pixel
         tree and moc if it exists"""
+        if len(self.pixel_tree) == 0:
+            raise ValueError("Cannot get max_order of empty catalog")
         max_order = (
             max(self.moc.max_order, self.pixel_tree.get_max_depth())
             if self.moc is not None
@@ -125,8 +127,6 @@ class HealpixDataset(Dataset):
             A new catalog with only the pixels that overlap with the given pixels. Note that we reset the
             total_rows to None, as updating would require a scan over the new pixel sizes.
         """
-        if len(self.pixel_tree) == 0:
-            raise ValueError("Cannot filter empty catalog")
         orders = np.array([p.order for p in pixels])
         pixel_inds = np.array([p.pixel for p in pixels])
         max_order = np.max(orders) if len(orders) > 0 else 0
@@ -137,15 +137,13 @@ class HealpixDataset(Dataset):
         """Filter the pixels in the catalog to only include the pixels that overlap with a cone
 
         Args:
-            ra (float): Right Ascension of the center of the cone in degrees
-            dec (float): Declination of the center of the cone in degrees
-            radius_arcsec (float): Radius of the cone in arcseconds
+            ra (float): Right ascension of the center of the cone, in degrees
+            dec (float): Declination of the center of the cone, in degrees
+            radius_arcsec (float): Radius of the cone, in arcseconds
 
         Returns:
             A new catalog with only the pixels that overlap with the specified cone
         """
-        if len(self.pixel_tree) == 0:
-            raise ValueError("Cannot filter empty catalog")
         validate_radius(radius_arcsec)
         validate_declination_values(dec)
         cone_moc = MOC.from_cone(
@@ -170,8 +168,6 @@ class HealpixDataset(Dataset):
         Returns:
             A new catalog with only the pixels that overlap with the specified region
         """
-        if len(self.pixel_tree) == 0:
-            raise ValueError("Cannot filter empty catalog")
         ra = tuple(wrap_ra_angles(ra)) if ra else None
         validate_box(ra, dec)
         box_moc = generate_box_moc(ra, dec, self.get_max_coverage_order())
@@ -182,14 +178,12 @@ class HealpixDataset(Dataset):
         with a polygonal sky region.
 
         Args:
-            vertices (list[tuple[float,float]]): The vertices of the polygon to
-                filter points with, in lists of (ra,dec) points on the unit sphere.
+            vertices (list[tuple[float,float]]): The list of vertice coordinates for
+                the polygon, (ra, dec), in degrees.
 
         Returns:
             A new catalog with only the pixels that overlap with the specified polygon.
         """
-        if len(self.pixel_tree) == 0:
-            raise ValueError("Cannot filter empty catalog")
         validate_polygon(vertices)
         polygon_moc = MOC.from_polygon_skycoord(
             SkyCoord(vertices, unit="deg"), max_depth=self.get_max_coverage_order()
