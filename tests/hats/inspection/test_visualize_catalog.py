@@ -1,13 +1,11 @@
 from unittest.mock import MagicMock
 
 import astropy.units as u
-import cdshealpix
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 from astropy.coordinates import Angle, SkyCoord
 from astropy.visualization.wcsaxes.frame import EllipticalFrame, RectangularFrame
-from cdshealpix.ring import vertices
 from matplotlib.colors import LogNorm, Normalize
 from matplotlib.path import Path
 from matplotlib.pyplot import get_cmap
@@ -18,10 +16,10 @@ from mocpy.moc.plot.utils import build_plotting_moc
 
 from hats.inspection import plot_pixels
 from hats.inspection.visualize_catalog import (
+    compute_healpix_vertices,
     cull_from_pixel_map,
     cull_to_fov,
     plot_healpix_map,
-    compute_healpix_vertices,
     plot_moc,
 )
 
