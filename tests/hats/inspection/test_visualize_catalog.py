@@ -7,14 +7,21 @@ import pytest
 from astropy.coordinates import Angle, SkyCoord
 from astropy.visualization.wcsaxes.frame import EllipticalFrame, RectangularFrame
 from matplotlib.colors import LogNorm, Normalize
+from matplotlib.path import Path
 from matplotlib.pyplot import get_cmap
 from mocpy import MOC, WCS
+from mocpy.moc.plot import fill
 from mocpy.moc.plot.culling_backfacing_cells import from_moc
-from mocpy.moc.plot.fill import compute_healpix_vertices
 from mocpy.moc.plot.utils import build_plotting_moc
 
 from hats.inspection import plot_pixels
-from hats.inspection.visualize_catalog import cull_from_pixel_map, cull_to_fov, plot_healpix_map, plot_moc
+from hats.inspection.visualize_catalog import (
+    compute_healpix_vertices,
+    cull_from_pixel_map,
+    cull_to_fov,
+    plot_healpix_map,
+    plot_moc,
+)
 
 # pylint: disable=no-member
 
@@ -25,6 +32,51 @@ DEFAULT_CENTER = SkyCoord(0, 0, unit="deg", frame="icrs")
 DEFAULT_COORDSYS = "icrs"
 DEFAULT_ROTATION = Angle(0, u.degree)
 DEFAULT_PROJECTION = "MOL"
+
+
+def test_healpix_vertices():
+    depth = 3
+    ipix = np.array([10, 11])
+    fig = plt.figure()
+    wcs = WCS(
+        fig,
+        fov=DEFAULT_FOV,
+        center=DEFAULT_CENTER,
+        coordsys=DEFAULT_COORDSYS,
+        rotation=DEFAULT_ROTATION,
+        projection=DEFAULT_PROJECTION,
+    ).w
+    paths, codes = compute_healpix_vertices(depth, ipix, wcs)
+    mocpy_paths, mocpy_codes = fill.compute_healpix_vertices(depth, ipix, wcs)
+    np.testing.assert_array_equal(paths, mocpy_paths)
+    np.testing.assert_array_equal(codes, mocpy_codes)
+
+
+def test_healpix_vertices_step():
+    depth = 1
+    ipix = np.array([10, 11])
+    fig = plt.figure()
+    step = 4
+    wcs = WCS(
+        fig,
+        fov=DEFAULT_FOV,
+        center=DEFAULT_CENTER,
+        coordsys=DEFAULT_COORDSYS,
+        rotation=DEFAULT_ROTATION,
+        projection=DEFAULT_PROJECTION,
+    ).w
+    paths, codes = compute_healpix_vertices(depth, ipix, wcs, step=step)
+    # checks the codes match the expected matplotlib path codes
+    np.testing.assert_array_equal(
+        codes, np.tile(np.array([Path.MOVETO] + [Path.LINETO] * (step * 4 - 1) + [Path.CLOSEPOLY]), len(ipix))
+    )
+    mocpy_paths, _ = fill.compute_healpix_vertices(depth, ipix, wcs)
+    # mocpy only generates path points at the healpix corner vertices. So we subsample our generated vertices
+    # to check the corners match the expected mocpy generated ones
+    first_path_vertex_indices = np.array([0, step, 2 * step, 3 * step, 4 * step])
+    start_path_index = np.array(([0] * 5) + ([first_path_vertex_indices[-1] + 1] * 5))
+    vertex_indices = start_path_index + np.tile(first_path_vertex_indices, len(ipix))
+    np.testing.assert_array_equal(paths[vertex_indices], mocpy_paths)
 
 
 def test_plot_healpix_pixels():
@@ -89,7 +141,7 @@ def test_plot_healpix_pixels_different_order():
     np.testing.assert_array_equal(col.get_array(), pix_map)
 
 
-def test_order_0_pixels_split_to_order_3():
+def test_order_0_pixel_plots_with_step():
     map_value = 0.5
     order_0_pix = 4
     ipix = np.array([order_0_pix])
@@ -99,8 +151,7 @@ def test_order_0_pixels_split_to_order_3():
     assert len(ax.collections) == 1
     col = ax.collections[0]
     paths = col.get_paths()
-    length = 4**3
-    order3_ipix = np.arange(length * order_0_pix, length * (order_0_pix + 1))
+    length = 1
     assert len(paths) == length
     wcs = WCS(
         fig,
@@ -110,11 +161,12 @@ def test_order_0_pixels_split_to_order_3():
         rotation=DEFAULT_ROTATION,
         projection=DEFAULT_PROJECTION,
     ).w
-    all_verts, all_codes = compute_healpix_vertices(3, order3_ipix, wcs)
-    for i, (path, ipix) in enumerate(zip(paths, order3_ipix)):
-        verts, codes = all_verts[i * 5 : (i + 1) * 5], all_codes[i * 5 : (i + 1) * 5]
-        np.testing.assert_array_equal(path.vertices, verts)
-        np.testing.assert_array_equal(path.codes, codes)
+    all_verts, all_codes = compute_healpix_vertices(0, ipix, wcs, step=2**3)
+    # assert the number of vertices == number of pixels * 4 sides per pixel * steps per side + 1 for the
+    # close polygon
+    assert len(all_verts) == len(ipix) * 4 * (2**3) + 1
+    np.testing.assert_array_equal(paths[0].vertices, all_verts)
+    np.testing.assert_array_equal(paths[0].codes, all_codes)
     np.testing.assert_array_equal(col.get_array(), np.full(length, fill_value=map_value))
 
 
@@ -126,17 +178,25 @@ def test_edge_pixels_split_to_order_7():
     depth = np.array([0])
     fig, ax = plot_healpix_map(pix_map, ipix=ipix, depth=depth)
     assert len(ax.collections) == 1
+
+    # Generate a dictionary of pixel indices that have sides that align with the meridian at ra = 180deg, the
+    # right edge of the plot
     edge_pixels = {0: [order_0_pix]}
     for iter_ord in range(1, 8):
         edge_pixels[iter_ord] = [p * 4 + i for p in edge_pixels[iter_ord - 1] for i in (2, 3)]
+
+    # Generate a dictionary of subpixels of the order 0 pixel that are not on the edge of the plot, i.e. the
+    # pixels that should be in the culled plot
     non_edge_pixels = {}
-    pixels_ord3 = np.arange(4**3 * order_0_pix, 4**3 * (order_0_pix + 1))
-    non_edge_pixels[3] = pixels_ord3[~np.isin(pixels_ord3, edge_pixels[3])]
-    for iter_ord in range(4, 8):
+    pixels_ord1 = np.arange(4 * order_0_pix, 4 * (order_0_pix + 1))
+    non_edge_pixels[1] = pixels_ord1[~np.isin(pixels_ord1, edge_pixels[1])]
+    for iter_ord in range(2, 8):
         pixels_ord = np.concatenate([np.arange(4 * pix, 4 * (pix + 1)) for pix in edge_pixels[iter_ord - 1]])
         non_edge_pixels[iter_ord] = pixels_ord[~np.isin(pixels_ord, edge_pixels[iter_ord])]
     col = ax.collections[0]
     paths = col.get_paths()
+
+    # Check that the plotted paths match the non_edge_pixels generated
     length = sum(len(x) for x in non_edge_pixels.values())
     assert len(paths) == length
     wcs = WCS(
@@ -150,14 +210,15 @@ def test_edge_pixels_split_to_order_7():
     ords = np.concatenate([np.full(len(x), fill_value=o) for o, x in non_edge_pixels.items()])
     pixels = np.concatenate([np.array(x) for _, x in non_edge_pixels.items()])
     for path, iter_ord, pix in zip(paths, ords, pixels):
-        verts, codes = compute_healpix_vertices(iter_ord, np.array([pix]), wcs)
+        step = 1 if iter_ord >= 3 else 2 ** (3 - iter_ord)
+        verts, codes = compute_healpix_vertices(iter_ord, np.array([pix]), wcs, step=step)
         np.testing.assert_array_equal(path.vertices, verts)
         np.testing.assert_array_equal(path.codes, codes)
     np.testing.assert_array_equal(col.get_array(), np.full(length, fill_value=map_value))
 
 
 def test_cull_from_pixel_map():
-    order = 1
+    order = 3
     ipix = np.arange(12 * 4**order)
     pix_map = np.arange(12 * 4**order)
     map_dict = {order: (ipix, pix_map)}
@@ -309,9 +370,14 @@ def test_plot_healpix_map():
     all_vals = []
     start_i = 0
     for iter_ord, (pixels, pix_map) in culled_dict.items():
-        all_verts, all_codes = compute_healpix_vertices(iter_ord, pixels, wcs)
+        step = 1 if iter_ord >= 3 else 2 ** (3 - iter_ord)
+        vert_len = step * 4 + 1
+        all_verts, all_codes = compute_healpix_vertices(iter_ord, pixels, wcs, step=step)
         for i, _ in enumerate(pixels):
-            verts, codes = all_verts[i * 5 : (i + 1) * 5], all_codes[i * 5 : (i + 1) * 5]
+            verts, codes = (
+                all_verts[i * vert_len : (i + 1) * vert_len],
+                all_codes[i * vert_len : (i + 1) * vert_len],
+            )
             path = paths[start_i + i]
             np.testing.assert_array_equal(path.vertices, verts)
             np.testing.assert_array_equal(path.codes, codes)
@@ -652,11 +718,9 @@ def test_plot_kwargs():
 def test_catalog_plot(small_sky_order1_catalog):
     fig, ax = plot_pixels(small_sky_order1_catalog)
     pixels = sorted(small_sky_order1_catalog.get_healpix_pixels())
-    order_3_pixels = [p for pix in pixels for p in pix.convert_to_higher_order(3 - pix.order)]
-    order_3_orders = [pix.order for pix in pixels for _ in pix.convert_to_higher_order(3 - pix.order)]
     col = ax.collections[0]
     paths = col.get_paths()
-    assert len(paths) == len(order_3_pixels)
+    assert len(paths) == len(pixels)
     wcs = WCS(
         fig,
         fov=DEFAULT_FOV,
@@ -665,11 +729,12 @@ def test_catalog_plot(small_sky_order1_catalog):
         rotation=DEFAULT_ROTATION,
         projection=DEFAULT_PROJECTION,
     ).w
-    for p, path in zip(order_3_pixels, paths):
-        verts, codes = compute_healpix_vertices(p.order, np.array([p.pixel]), wcs)
+    for p, path in zip(pixels, paths):
+        step = 2 ** (3 - p.order)
+        verts, codes = compute_healpix_vertices(p.order, np.array([p.pixel]), wcs, step=step)
         np.testing.assert_array_equal(path.vertices, verts)
         np.testing.assert_array_equal(path.codes, codes)
-    np.testing.assert_array_equal(col.get_array(), np.array(order_3_orders))
+    np.testing.assert_array_equal(col.get_array(), np.array([p.order for p in pixels]))
     assert ax.get_title() == f"Catalog pixel density map - {small_sky_order1_catalog.catalog_name}"
 
 
