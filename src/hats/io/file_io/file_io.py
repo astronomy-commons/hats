@@ -212,15 +212,15 @@ def write_parquet_metadata(
     )
 
 
-def read_fits_image(map_file_pointer: str | Path | UPath):
+def read_fits_image(map_file_pointer: str | Path | UPath) -> np.ndarray:
     """Read the object spatial distribution information from a healpix FITS file.
 
     Args:
-        map_file_pointer: location of file to be written
+        map_file_pointer (path-like): location of file to be written
 
     Returns:
-        one-dimensional numpy array of integers where the value at each index corresponds
-        to the number of objects found at the healpix pixel.
+        one-dimensional numpy array of integers where the
+        value at each index corresponds to the number of objects found at the healpix pixel.
     """
     map_file_pointer = get_upath(map_file_pointer)
     return Skymap.from_fits(map_file_pointer).values
