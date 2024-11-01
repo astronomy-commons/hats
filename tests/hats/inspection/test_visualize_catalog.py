@@ -66,10 +66,13 @@ def test_healpix_vertices_step():
         projection=DEFAULT_PROJECTION,
     ).w
     paths, codes = compute_healpix_vertices(depth, ipix, wcs, step=step)
+    # checks the codes match the expected matplotlib path codes
     np.testing.assert_array_equal(
         codes, np.tile(np.array([Path.MOVETO] + [Path.LINETO] * (step * 4 - 1) + [Path.CLOSEPOLY]), len(ipix))
     )
     mocpy_paths, _ = fill.compute_healpix_vertices(depth, ipix, wcs)
+    # mocpy only generates path points at the healpix corner vertices. So we subsample our generated vertices
+    # to check the corners match the expected mocpy generated ones
     first_path_vertex_indices = np.array([0, step, 2 * step, 3 * step, 4 * step])
     start_path_index = np.array(([0] * 5) + ([first_path_vertex_indices[-1] + 1] * 5))
     vertex_indices = start_path_index + np.tile(first_path_vertex_indices, len(ipix))
@@ -159,6 +162,8 @@ def test_order_0_pixel_plots_with_step():
         projection=DEFAULT_PROJECTION,
     ).w
     all_verts, all_codes = compute_healpix_vertices(0, ipix, wcs, step=2**3)
+    # assert the number of vertices == number of pixels * 4 sides per pixel * steps per side + 1 for the
+    # close polygon
     assert len(all_verts) == len(ipix) * 4 * (2**3) + 1
     np.testing.assert_array_equal(paths[0].vertices, all_verts)
     np.testing.assert_array_equal(paths[0].codes, all_codes)
@@ -173,9 +178,15 @@ def test_edge_pixels_split_to_order_7():
     depth = np.array([0])
     fig, ax = plot_healpix_map(pix_map, ipix=ipix, depth=depth)
     assert len(ax.collections) == 1
+
+    # Generate a dictionary of pixel indices that have sides that align with the meridian at ra = 180deg, the
+    # right edge of the plot
     edge_pixels = {0: [order_0_pix]}
     for iter_ord in range(1, 8):
         edge_pixels[iter_ord] = [p * 4 + i for p in edge_pixels[iter_ord - 1] for i in (2, 3)]
+
+    # Generate a dictionary of subpixels of the order 0 pixel that are not on the edge of the plot, i.e. the
+    # pixels that should be in the culled plot
     non_edge_pixels = {}
     pixels_ord1 = np.arange(4 * order_0_pix, 4 * (order_0_pix + 1))
     non_edge_pixels[1] = pixels_ord1[~np.isin(pixels_ord1, edge_pixels[1])]
@@ -184,6 +195,8 @@ def test_edge_pixels_split_to_order_7():
         non_edge_pixels[iter_ord] = pixels_ord[~np.isin(pixels_ord, edge_pixels[iter_ord])]
     col = ax.collections[0]
     paths = col.get_paths()
+
+    # Check that the plotted paths match the non_edge_pixels generated
     length = sum(len(x) for x in non_edge_pixels.values())
     assert len(paths) == length
     wcs = WCS(
