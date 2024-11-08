@@ -18,6 +18,7 @@ class ValidatorsErrors(str, Enum):
     DEGENERATE_POLYGON = "polygon is degenerate"
     INVALID_RADEC_RANGE = "invalid ra or dec range"
     INVALID_COORDS_SHAPE = "invalid coordinates shape"
+    INVALID_CONCAVE_SHAPE = "polygon must be convex"
 
 
 def validate_radius(radius_arcsec: float):
@@ -68,8 +69,33 @@ def validate_polygon(vertices: list[tuple[float, float]]):
         raise ValueError(ValidatorsErrors.INVALID_NUM_VERTICES.value)
     if len(vertices) != len(np.unique(vertices, axis=0)):
         raise ValueError(ValidatorsErrors.DUPLICATE_VERTICES.value)
-    if is_polygon_degenerate(vertices):
-        raise ValueError(ValidatorsErrors.DEGENERATE_POLYGON.value)
+    check_polygon_is_valid(vertices)
+
+
+def check_polygon_is_valid(vertices: np.ndarray):
+    """Check if the polygon has no degenerate corners and it is convex.
+
+    Based on HEALpy's `queryPolygonInternal` implementation:
+    https://github.com/cds-astro/cds.moc/blob/master/src/healpix/essentials/HealpixBase.java.
+
+    Args:
+        vertices (np.ndarray): The polygon vertices, in cartesian coordinates
+
+    Returns:
+        True if polygon is valid, False otherwise.
+    """
+    vertices_xyz = hp.ang2vec(*vertices.T, lonlat=True)
+    n_vertices = len(vertices_xyz)
+    flip = 0
+    for i in range(n_vertices):
+        normal = np.cross(vertices_xyz[i], vertices_xyz[(i + 1) % n_vertices])
+        hnd = normal.dot(vertices_xyz[(i + 2) % n_vertices])
+        if np.isclose(hnd, 0, atol=1e-10):
+            raise ValueError(ValidatorsErrors.DEGENERATE_POLYGON.value)
+        if i == 0:
+            flip = -1 if hnd < 0 else 1
+        elif flip * hnd <= 0:
+            raise ValueError(ValidatorsErrors.INVALID_CONCAVE_SHAPE.value)
 
 
 def is_polygon_degenerate(vertices: np.ndarray) -> bool:
@@ -77,14 +103,12 @@ def is_polygon_degenerate(vertices: np.ndarray) -> bool:
     If the plane intersects the center of the sphere, the polygon is degenerate.
 
     Args:
-        vertices (np.ndarray): The polygon vertices, in spherical coordinates
+        vertices (np.ndarray): The polygon vertices, in cartesian coordinates
 
     Returns:
         A boolean, which is True if the polygon is degenerate, i.e. if it falls
         on a great circle, False otherwise.
     """
-    vertices = hp.ang2vec(*vertices.T, lonlat=True)
-
     # Calculate the normal vector of the plane using three of the vertices
     normal_vector = np.cross(vertices[1] - vertices[0], vertices[2] - vertices[0])
 

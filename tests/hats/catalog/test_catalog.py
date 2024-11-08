@@ -285,6 +285,9 @@ def test_polygonal_filter_invalid_polygon(small_sky_order1_catalog):
     with pytest.raises(ValueError, match=ValidatorsErrors.DEGENERATE_POLYGON):
         vertices = [(50.1, 0), (100.1, 0), (150.1, 0), (200.1, 0)]
         small_sky_order1_catalog.filter_by_polygon(vertices)
+    with pytest.raises(ValueError, match=ValidatorsErrors.INVALID_CONCAVE_SHAPE):
+        vertices = [(45, 30), (60, 60), (90, 45), (60, 50)]
+        small_sky_order1_catalog.filter_by_polygon(vertices)
 
 
 def test_box_filter_ra(small_sky_order1_catalog):
