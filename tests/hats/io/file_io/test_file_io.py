@@ -2,15 +2,18 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from hats.io import paths
 from hats.io.file_io import (
     delete_file,
     load_csv_to_pandas,
     load_csv_to_pandas_generator,
     make_directory,
+    read_fits_image,
     read_parquet_dataset,
     read_parquet_file_to_pandas,
     remove_directory,
     write_dataframe_to_csv,
+    write_fits_image,
     write_string_to_file,
 )
 from hats.io.file_io.file_pointer import does_file_or_directory_exist
@@ -123,3 +126,12 @@ def test_read_parquet_dataset(small_sky_dir, small_sky_order1_dir):
     )
 
     assert ds.count_rows() == 131
+
+
+def test_write_point_map_roundtrip(small_sky_order1_dir, tmp_path):
+    """Test the reading/writing of a catalog point map"""
+    expected_counts_skymap = read_fits_image(paths.get_point_map_file_pointer(small_sky_order1_dir))
+    output_map_pointer = paths.get_point_map_file_pointer(tmp_path)
+    write_fits_image(expected_counts_skymap, output_map_pointer)
+    counts_skymap = read_fits_image(output_map_pointer)
+    np.testing.assert_array_equal(counts_skymap, expected_counts_skymap)
