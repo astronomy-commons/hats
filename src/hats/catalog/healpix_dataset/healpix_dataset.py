@@ -200,8 +200,6 @@ class HealpixDataset(Dataset):
         Returns:
             A new catalog with only the pixels that overlap with the moc. Note that we reset the total_rows
         to 0, as updating would require a scan over the new pixel sizes."""
-        if len(self.pixel_tree) == 0:
-            raise ValueError("Cannot filter empty catalog")
         filtered_tree = filter_by_moc(self.pixel_tree, moc)
         filtered_moc = self.moc.intersection(moc) if self.moc is not None else None
         filtered_catalog_info = self.catalog_info.copy_and_update(total_rows=0)

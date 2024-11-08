@@ -18,6 +18,8 @@ def filter_by_moc(
     Returns:
         A new PixelTree object with only the pixels from the input tree that overlap with the moc.
     """
+    if len(tree) == 0:
+        return tree
     moc_ranges = moc.to_depth29_ranges
     # Convert tree intervals to order 29 to match moc intervals
     tree_29_ranges = tree.tree << (2 * (29 - tree.tree_order))

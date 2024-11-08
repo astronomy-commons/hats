@@ -3,6 +3,7 @@ from mocpy import MOC
 
 from hats.pixel_math import HealpixPixel
 from hats.pixel_tree.moc_filter import filter_by_moc
+from hats.pixel_tree.pixel_tree import PixelTree
 
 
 def test_moc_filter(pixel_tree_2):
@@ -41,6 +42,15 @@ def test_moc_filter_higher_order(pixel_tree_2):
         HealpixPixel(2, 130),
         HealpixPixel(0, 10),
     ]
+
+
+def test_moc_filter_with_empty_tree():
+    orders = np.array([1, 1, 2])
+    pixels = np.array([45, 46, 128])
+    moc = MOC.from_healpix_cells(pixels, orders, 2)
+    empty_tree = PixelTree.from_healpix([])
+    filtered_tree = filter_by_moc(empty_tree, moc)
+    assert filtered_tree.get_healpix_pixels() == []
 
 
 def test_moc_filter_empty_moc(pixel_tree_2):

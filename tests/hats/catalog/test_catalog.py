@@ -10,6 +10,7 @@ from mocpy import MOC
 
 import hats.pixel_math.healpix_shim as hp
 from hats.catalog import Catalog, PartitionInfo, TableProperties
+from hats.catalog.healpix_dataset.healpix_dataset import HealpixDataset
 from hats.io import paths
 from hats.io.file_io import read_fits_image
 from hats.loaders import read_hats
@@ -145,6 +146,12 @@ def test_max_coverage_order(small_sky_order1_catalog):
         small_sky_order1_catalog.get_max_coverage_order()
         == small_sky_order1_catalog.pixel_tree.get_max_depth()
     )
+
+
+def test_max_coverage_order_empty_catalog(catalog_info):
+    empty_catalog = HealpixDataset(catalog_info, PixelTree.from_healpix([]))
+    with pytest.raises(ValueError, match="empty catalog"):
+        empty_catalog.get_max_coverage_order()
 
 
 def test_cone_filter(small_sky_order1_catalog):
