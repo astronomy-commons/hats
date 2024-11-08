@@ -98,32 +98,6 @@ def check_polygon_is_valid(vertices: np.ndarray):
             raise ValueError(ValidatorsErrors.INVALID_CONCAVE_SHAPE.value)
 
 
-def is_polygon_degenerate(vertices: np.ndarray) -> bool:
-    """Checks if all the vertices of the polygon are contained in a same plane.
-    If the plane intersects the center of the sphere, the polygon is degenerate.
-
-    Args:
-        vertices (np.ndarray): The polygon vertices, in cartesian coordinates
-
-    Returns:
-        A boolean, which is True if the polygon is degenerate, i.e. if it falls
-        on a great circle, False otherwise.
-    """
-    # Calculate the normal vector of the plane using three of the vertices
-    normal_vector = np.cross(vertices[1] - vertices[0], vertices[2] - vertices[0])
-
-    # Check if the other vertices lie on the same plane
-    for vertex in vertices[3:]:
-        dot_product = np.dot(normal_vector, vertex - vertices[0])
-        if not np.isclose(dot_product, 0):
-            return False
-
-    # Check if the plane intersects the sphere's center. If it does,
-    # the polygon is degenerate and therefore, invalid.
-    center_distance = np.dot(normal_vector, vertices[0])
-    return bool(np.isclose(center_distance, 0))
-
-
 def validate_box(ra: Tuple[float, float] | None, dec: Tuple[float, float] | None):
     """Checks if ra and dec values are valid for the box search.
 
