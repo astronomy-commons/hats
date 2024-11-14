@@ -91,6 +91,17 @@ def test_load_csv_to_pandas_generator(small_sky_source_dir):
     assert num_reads == 2
 
 
+def test_load_csv_to_pandas_generator_encoding(tmp_path):
+    path = tmp_path / "koi8-r.csv"
+    with path.open(encoding="koi8-r", mode="w") as fh:
+        fh.write("col1,col2\nыыы,яяя\n")
+    num_reads = 0
+    for frame in load_csv_to_pandas_generator(path, chunksize=7, encoding="koi8-r"):
+        assert len(frame) == 1
+        num_reads += 1
+    assert num_reads == 1
+
+
 def test_write_df_to_csv(tmp_path):
     random_df = pd.DataFrame(np.random.randint(0, 100, size=(100, 4)), columns=list("ABCD"))
     test_file_path = tmp_path / "test.csv"

@@ -107,7 +107,7 @@ def load_csv_to_pandas(file_pointer: str | Path | UPath, **kwargs) -> pd.DataFra
 
 
 def load_csv_to_pandas_generator(
-    file_pointer: str | Path | UPath, *, chunksize=10_000, open_mode=None, compression=None, **kwargs
+    file_pointer: str | Path | UPath, *, chunksize=10_000, compression=None, **kwargs
 ) -> Generator[pd.DataFrame]:
     """Load a csv file to a pandas dataframe
     Args:
@@ -119,9 +119,7 @@ def load_csv_to_pandas_generator(
         pandas dataframe loaded from CSV
     """
     file_pointer = get_upath(file_pointer)
-    if open_mode is None:
-        open_mode = "r" if compression is None else "rb"
-    with file_pointer.open(mode=open_mode, compression=compression, **kwargs) as csv_file:
+    with file_pointer.open(mode="rb", compression=compression, **kwargs) as csv_file:
         with pd.read_csv(csv_file, chunksize=chunksize, **kwargs) as reader:
             yield from reader
 
