@@ -10,6 +10,7 @@ from mocpy import MOC
 
 import hats.pixel_math.healpix_shim as hp
 from hats.catalog import Catalog, PartitionInfo, TableProperties
+from hats.catalog.healpix_dataset.healpix_dataset import HealpixDataset
 from hats.io import paths
 from hats.io.file_io import read_fits_image
 from hats.loaders import read_hats
@@ -147,6 +148,12 @@ def test_max_coverage_order(small_sky_order1_catalog):
     )
 
 
+def test_max_coverage_order_empty_catalog(catalog_info):
+    empty_catalog = HealpixDataset(catalog_info, PixelTree.from_healpix([]))
+    with pytest.raises(ValueError, match="empty catalog"):
+        empty_catalog.get_max_coverage_order()
+
+
 def test_cone_filter(small_sky_order1_catalog):
     ra = 315
     dec = -66.443
@@ -224,14 +231,10 @@ def test_polygonal_filter(small_sky_order1_catalog):
     assert filtered_catalog.moc == polygon_moc.intersection(small_sky_order1_catalog.moc)
 
 
-def test_polygonal_filter_with_cartesian_coordinates(small_sky_order1_catalog):
-    sky_vertices = [(282, -58), (282, -55), (272, -55), (272, -58)]
-    cartesian_vertices = hp.ang2vec(*np.array(sky_vertices).T, lonlat=True)
-    filtered_catalog_1 = small_sky_order1_catalog.filter_by_polygon(sky_vertices)
-    filtered_catalog_2 = small_sky_order1_catalog.filter_by_polygon(cartesian_vertices)
-    assert filtered_catalog_1.get_healpix_pixels() == filtered_catalog_2.get_healpix_pixels()
-    assert (1, 46) in filtered_catalog_1.pixel_tree
-    assert (1, 46) in filtered_catalog_2.pixel_tree
+def test_polygonal_filter_invalid_coordinate_shape(small_sky_order1_catalog):
+    with pytest.raises(ValueError, match="coordinates shape"):
+        vertices = [(282, -58, 1), (282, -55, 2), (272, -55, 3)]
+        small_sky_order1_catalog.filter_by_polygon(vertices)
 
 
 def test_polygonal_filter_big(small_sky_order1_catalog):
@@ -288,6 +291,9 @@ def test_polygonal_filter_invalid_polygon(small_sky_order1_catalog):
         small_sky_order1_catalog.filter_by_polygon(vertices)
     with pytest.raises(ValueError, match=ValidatorsErrors.DEGENERATE_POLYGON):
         vertices = [(50.1, 0), (100.1, 0), (150.1, 0), (200.1, 0)]
+        small_sky_order1_catalog.filter_by_polygon(vertices)
+    with pytest.raises(ValueError, match=ValidatorsErrors.INVALID_CONCAVE_SHAPE):
+        vertices = [(45, 30), (60, 60), (90, 45), (60, 50)]
         small_sky_order1_catalog.filter_by_polygon(vertices)
 
 
