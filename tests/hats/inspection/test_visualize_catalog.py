@@ -6,6 +6,7 @@ import numpy as np
 import pytest
 from astropy.coordinates import Angle, SkyCoord
 from astropy.visualization.wcsaxes.frame import EllipticalFrame, RectangularFrame
+from matplotlib import colors
 from matplotlib.colors import LogNorm, Normalize
 from matplotlib.path import Path
 from matplotlib.pyplot import get_cmap
@@ -715,6 +716,103 @@ def test_plot_kwargs():
     np.testing.assert_array_equal(col.get_array(), pix_map)
 
 
+def test_plot_existing_fig():
+    order = 3
+    length = 10
+    ipix = np.arange(length)
+    pix_map = np.arange(length)
+    depth = np.full(length, fill_value=order)
+    fig = plt.figure()
+    assert len(fig.axes) == 0
+    fig_ret, ax_ret = plot_healpix_map(pix_map, ipix=ipix, depth=depth)
+    assert fig is fig_ret
+    ax = fig.get_axes()[0]
+    assert ax is ax_ret
+    assert len(ax.collections) == 1
+    col = ax.collections[0]
+    paths = col.get_paths()
+    assert len(paths) == length
+    wcs = WCS(
+        fig,
+        fov=DEFAULT_FOV,
+        center=DEFAULT_CENTER,
+        coordsys=DEFAULT_COORDSYS,
+        rotation=DEFAULT_ROTATION,
+        projection=DEFAULT_PROJECTION,
+    ).w
+    for path, ipix in zip(paths, np.arange(len(pix_map))):
+        verts, codes = compute_healpix_vertices(order, np.array([ipix]), wcs)
+        np.testing.assert_array_equal(path.vertices, verts)
+        np.testing.assert_array_equal(path.codes, codes)
+    np.testing.assert_array_equal(col.get_array(), pix_map)
+
+
+def test_plot_existing_wcsaxes():
+    order = 3
+    length = 10
+    ipix = np.arange(length)
+    pix_map = np.arange(length)
+    depth = np.full(length, fill_value=order)
+    fig = plt.figure()
+    wcs = WCS(
+        fig,
+        fov=DEFAULT_FOV,
+        center=DEFAULT_CENTER,
+        coordsys=DEFAULT_COORDSYS,
+        rotation=DEFAULT_ROTATION,
+        projection=DEFAULT_PROJECTION,
+    ).w
+    ax = fig.add_subplot(1, 1, 1, projection=wcs)
+    assert len(fig.axes) == 1
+    assert len(ax.collections) == 0
+    fig_ret, ax_ret = plot_healpix_map(pix_map, ipix=ipix, depth=depth)
+    assert fig is fig_ret
+    assert ax is ax_ret
+    assert len(ax.collections) == 1
+    col = ax.collections[0]
+    paths = col.get_paths()
+    assert len(paths) == length
+    for path, ipix in zip(paths, np.arange(len(pix_map))):
+        verts, codes = compute_healpix_vertices(order, np.array([ipix]), wcs)
+        np.testing.assert_array_equal(path.vertices, verts)
+        np.testing.assert_array_equal(path.codes, codes)
+    np.testing.assert_array_equal(col.get_array(), pix_map)
+
+
+def test_plot_existing_wrong_axes():
+    order = 3
+    length = 10
+    ipix = np.arange(length)
+    pix_map = np.arange(length)
+    depth = np.full(length, fill_value=order)
+    fig = plt.figure()
+    ax = fig.add_subplot(1, 1, 1)
+    assert len(fig.axes) == 1
+    assert len(ax.collections) == 0
+    with pytest.warns(match="WCSAxes"):
+        fig_ret, ax_ret = plot_healpix_map(pix_map, ipix=ipix, depth=depth)
+    assert fig is not fig_ret
+    assert ax is not ax_ret
+    assert len(ax.collections) == 0
+    assert len(ax_ret.collections) == 1
+    col = ax_ret.collections[0]
+    paths = col.get_paths()
+    wcs = WCS(
+        fig_ret,
+        fov=DEFAULT_FOV,
+        center=DEFAULT_CENTER,
+        coordsys=DEFAULT_COORDSYS,
+        rotation=DEFAULT_ROTATION,
+        projection=DEFAULT_PROJECTION,
+    ).w
+    assert len(paths) == length
+    for path, ipix in zip(paths, np.arange(len(pix_map))):
+        verts, codes = compute_healpix_vertices(order, np.array([ipix]), wcs)
+        np.testing.assert_array_equal(path.vertices, verts)
+        np.testing.assert_array_equal(path.codes, codes)
+    np.testing.assert_array_equal(col.get_array(), pix_map)
+
+
 def test_catalog_plot(small_sky_order1_catalog):
     fig, ax = plot_pixels(small_sky_order1_catalog)
     pixels = sorted(small_sky_order1_catalog.get_healpix_pixels())
@@ -735,6 +833,33 @@ def test_catalog_plot(small_sky_order1_catalog):
         np.testing.assert_array_equal(path.vertices, verts)
         np.testing.assert_array_equal(path.codes, codes)
     np.testing.assert_array_equal(col.get_array(), np.array([p.order for p in pixels]))
+    assert ax.get_title() == f"Catalog pixel density map - {small_sky_order1_catalog.catalog_name}"
+
+
+def test_catalog_plot_no_color_by_order(small_sky_order1_catalog):
+    fc = "white"
+    ec = "black"
+    fig, ax = plot_pixels(small_sky_order1_catalog, color_by_order=False, facecolor=fc, edgecolor=ec)
+    pixels = sorted(small_sky_order1_catalog.get_healpix_pixels())
+    col = ax.collections[0]
+    paths = col.get_paths()
+    assert len(paths) == len(pixels)
+    wcs = WCS(
+        fig,
+        fov=DEFAULT_FOV,
+        center=DEFAULT_CENTER,
+        coordsys=DEFAULT_COORDSYS,
+        rotation=DEFAULT_ROTATION,
+        projection=DEFAULT_PROJECTION,
+    ).w
+    for p, path in zip(pixels, paths):
+        step = 2 ** (3 - p.order)
+        verts, codes = compute_healpix_vertices(p.order, np.array([p.pixel]), wcs, step=step)
+        np.testing.assert_array_equal(path.vertices, verts)
+        np.testing.assert_array_equal(path.codes, codes)
+    assert col.get_array() is None
+    np.testing.assert_array_equal(col.get_facecolor()[0], colors.to_rgba(fc))
+    np.testing.assert_array_equal(col.get_edgecolor()[0], colors.to_rgba(ec))
     assert ax.get_title() == f"Catalog pixel density map - {small_sky_order1_catalog.catalog_name}"
 
 
