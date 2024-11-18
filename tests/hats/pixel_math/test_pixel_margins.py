@@ -2,7 +2,6 @@
 
 import numpy as np
 import numpy.testing as npt
-import pytest
 
 import hats.pixel_math.pixel_margins as pm
 
