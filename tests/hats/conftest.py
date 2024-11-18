@@ -1,5 +1,8 @@
+import numpy as np
 import pytest
 
+import hats.pixel_math.healpix_shim as hp
+from hats.catalog import Catalog, TableProperties
 from hats.loaders import read_hats
 from hats.pixel_math import HealpixPixel
 
@@ -82,3 +85,17 @@ def pixel_list_breadth_first():
         HealpixPixel(1, 45),
         HealpixPixel(1, 46),
     ]
+
+
+@pytest.fixture
+def full_sky_catalog_order5():
+    all_pixels_order5 = [HealpixPixel(5, pix) for pix in np.arange(hp.order2npix(5))]
+    catalog_info = TableProperties(
+        catalog_name="full_sky_order5",
+        catalog_type="object",
+        ra_column="ra",
+        dec_column="dec",
+        total_rows=0,
+        hats_copyright="LINCC Frameworks 2024",
+    )
+    return Catalog(catalog_info, all_pixels_order5)
