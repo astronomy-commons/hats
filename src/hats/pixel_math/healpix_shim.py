@@ -8,16 +8,12 @@ import numpy as np
 ## Arithmetic conversions
 
 
-def nside2order(param):
-    return hp.nside2order(param)
+def npix2order(param):
+    return hp.nside2order(hp.npix2nside(param))
 
 
 def order2nside(param):
     return hp.order2nside(param)
-
-
-def npix2nside(param):
-    return hp.npix2nside(param)
 
 
 def order2npix(param):
@@ -51,19 +47,11 @@ def query_polygon(*args, **kwargs):
     return hp.query_polygon(*args, **kwargs)
 
 
-def get_all_neighbours(*args, **kwargs):
-    return hp.get_all_neighbours(*args, **kwargs)
-
-
 ## Coordinate conversion
 
 
 def ang2vec(*args, **kwargs):
     return hp.ang2vec(*args, **kwargs)
-
-
-def pix2xyf(*args, **kwargs):
-    return hp.pix2xyf(*args, **kwargs)
 
 
 ## FITS

@@ -36,7 +36,6 @@ operations on top of these utilities. Some known extensions:
    :caption: Developers
 
    guide/contributing
-   Pixel math <guide/pixel_math>
    API Reference <autoapi/index>
 
 Getting Started
