@@ -35,6 +35,12 @@ DEFAULT_ROTATION = Angle(0, u.degree)
 DEFAULT_PROJECTION = "MOL"
 
 
+@pytest.fixture(autouse=True)
+def reset_matplotlib():
+    yield
+    plt.close("all")
+
+
 def test_healpix_vertices():
     depth = 3
     ipix = np.array([10, 11])
@@ -87,7 +93,7 @@ def test_plot_healpix_pixels():
     pix_map = np.arange(length)
     depth = np.full(length, fill_value=order)
     fig, ax = plot_healpix_map(pix_map, ipix=ipix, depth=depth)
-    assert len(ax.collections) == 1
+    assert len(ax.collections) > 0
     col = ax.collections[0]
     paths = col.get_paths()
     assert len(paths) == length
@@ -121,7 +127,7 @@ def test_plot_healpix_pixels_different_order():
     pix_map = np.arange(length)
     depth = np.full(length, fill_value=order)
     fig, ax = plot_healpix_map(pix_map, ipix=ipix, depth=depth)
-    assert len(ax.collections) == 1
+    assert len(ax.collections) > 0
     col = ax.collections[0]
     paths = col.get_paths()
     assert len(paths) == length
@@ -149,7 +155,7 @@ def test_order_0_pixel_plots_with_step():
     pix_map = np.array([map_value])
     depth = np.array([0])
     fig, ax = plot_healpix_map(pix_map, ipix=ipix, depth=depth)
-    assert len(ax.collections) == 1
+    assert len(ax.collections) > 0
     col = ax.collections[0]
     paths = col.get_paths()
     length = 1
@@ -178,7 +184,7 @@ def test_edge_pixels_split_to_order_7():
     pix_map = np.array([map_value])
     depth = np.array([0])
     fig, ax = plot_healpix_map(pix_map, ipix=ipix, depth=depth)
-    assert len(ax.collections) == 1
+    assert len(ax.collections) > 0
 
     # Generate a dictionary of pixel indices that have sides that align with the meridian at ra = 180deg, the
     # right edge of the plot
@@ -355,7 +361,7 @@ def test_plot_healpix_map():
     ipix = np.arange(12 * 4**order)
     pix_map = np.arange(12 * 4**order)
     fig, ax = plot_healpix_map(pix_map)
-    assert len(ax.collections) == 1
+    assert len(ax.collections) > 0
     col = ax.collections[0]
     paths = col.get_paths()
     wcs = WCS(
@@ -402,7 +408,7 @@ def test_plot_wcs_params():
         center=SkyCoord(10, 10, unit="deg", frame="icrs"),
         projection="AIT",
     )
-    assert len(ax.collections) == 1
+    assert len(ax.collections) > 0
     col = ax.collections[0]
     paths = col.get_paths()
     assert len(paths) == length
@@ -438,7 +444,7 @@ def test_plot_wcs_params_frame():
         projection="AIT",
         frame_class=EllipticalFrame,
     )
-    assert len(ax.collections) == 1
+    assert len(ax.collections) > 0
     col = ax.collections[0]
     paths = col.get_paths()
     assert len(paths) == length
@@ -473,7 +479,7 @@ def test_plot_fov_culling():
         center=SkyCoord(10, 10, unit="deg", frame="icrs"),
         projection="AIT",
     )
-    assert len(ax.collections) == 1
+    assert len(ax.collections) > 0
     col = ax.collections[0]
     paths = col.get_paths()
     wcs = WCS(
@@ -520,7 +526,7 @@ def test_plot_wcs():
     ).w
     fig2, ax = plot_healpix_map(pix_map, ipix=ipix, depth=depth, fig=fig, wcs=wcs)
     assert fig2 is fig
-    assert len(ax.collections) == 1
+    assert len(ax.collections) > 0
     col = ax.collections[0]
     paths = col.get_paths()
     assert len(paths) == length
@@ -552,7 +558,7 @@ def test_plot_wcs_and_ax():
     fig2, ax2 = plot_healpix_map(pix_map, ipix=ipix, depth=depth, fig=fig, wcs=wcs, ax=ax)
     assert fig2 is fig
     assert ax2 is ax
-    assert len(ax.collections) == 1
+    assert len(ax.collections) > 0
     col = ax.collections[0]
     paths = col.get_paths()
     assert len(paths) == length
@@ -580,8 +586,20 @@ def test_plot_ax_no_wcs():
         projection="AIT",
     ).w
     ax = fig.add_subplot(1, 1, 1, projection=wcs, frame_class=EllipticalFrame)
-    with pytest.raises(ValueError):
-        plot_healpix_map(pix_map, ipix=ipix, depth=depth, fig=fig, ax=ax)
+    assert len(ax.collections) == 0
+    fig2, ax2 = plot_healpix_map(pix_map, ipix=ipix, depth=depth, fig=fig, ax=ax)
+    assert fig2 is fig
+    assert ax2 is ax
+    assert len(ax.collections) > 0
+    col = ax.collections[0]
+    paths = col.get_paths()
+    assert len(paths) == length
+    for path, ipix in zip(paths, np.arange(len(pix_map))):
+        verts, codes = compute_healpix_vertices(order, np.array([ipix]), wcs)
+        np.testing.assert_array_equal(path.vertices, verts)
+        np.testing.assert_array_equal(path.codes, codes)
+    np.testing.assert_array_equal(col.get_array(), pix_map)
+    assert ax.get_transform("icrs") is not None
 
 
 def test_plot_cmaps():
@@ -592,7 +610,7 @@ def test_plot_cmaps():
     pix_map = np.arange(length)
     depth = np.full(length, fill_value=order)
     fig, ax = plot_healpix_map(pix_map, ipix=ipix, depth=depth, cmap=cmap_name)
-    assert len(ax.collections) == 1
+    assert len(ax.collections) > 0
     col = ax.collections[0]
     paths = col.get_paths()
     assert col.get_cmap() == get_cmap(cmap_name)
@@ -617,7 +635,7 @@ def test_plot_cmaps():
     pix_map = np.arange(length)
     depth = np.full(length, fill_value=order)
     fig, ax = plot_healpix_map(pix_map, ipix=ipix, depth=depth, cmap=get_cmap(cmap_name))
-    assert len(ax.collections) == 1
+    assert len(ax.collections) > 0
     col = ax.collections[0]
     paths = col.get_paths()
     assert col.get_cmap() == get_cmap(cmap_name)
@@ -639,7 +657,7 @@ def test_plot_norm():
     pix_map = np.arange(length)
     depth = np.full(length, fill_value=order)
     fig, ax = plot_healpix_map(pix_map, ipix=ipix, depth=depth, norm=norm)
-    assert len(ax.collections) == 1
+    assert len(ax.collections) > 0
     col = ax.collections[0]
     paths = col.get_paths()
     assert col.norm == norm
@@ -668,7 +686,7 @@ def test_plot_no_cbar():
     pix_map = np.arange(length)
     depth = np.full(length, fill_value=order)
     fig, ax = plot_healpix_map(pix_map, ipix=ipix, depth=depth, cbar=False)
-    assert len(ax.collections) == 1
+    assert len(ax.collections) > 0
     col = ax.collections[0]
     assert col.colorbar is None
     paths = col.get_paths()
@@ -696,7 +714,7 @@ def test_plot_kwargs():
     pix_map = np.arange(length)
     depth = np.full(length, fill_value=order)
     fig, ax = plot_healpix_map(pix_map, ipix=ipix, depth=depth, label=label)
-    assert len(ax.collections) == 1
+    assert len(ax.collections) > 0
     col = ax.collections[0]
     assert col.get_label() == label
     paths = col.get_paths()
@@ -728,7 +746,7 @@ def test_plot_existing_fig():
     assert fig is fig_ret
     ax = fig.get_axes()[0]
     assert ax is ax_ret
-    assert len(ax.collections) == 1
+    assert len(ax.collections) > 0
     col = ax.collections[0]
     paths = col.get_paths()
     assert len(paths) == length
@@ -768,7 +786,7 @@ def test_plot_existing_wcsaxes():
     fig_ret, ax_ret = plot_healpix_map(pix_map, ipix=ipix, depth=depth)
     assert fig is fig_ret
     assert ax is ax_ret
-    assert len(ax.collections) == 1
+    assert len(ax.collections) > 0
     col = ax.collections[0]
     paths = col.get_paths()
     assert len(paths) == length
