@@ -9,8 +9,8 @@ from mocpy import MOC
 
 def generate_box_moc(ra: tuple[float, float], dec: tuple[float, float], order: int) -> MOC:
     """Generates a MOC object that covers the specified box. A box is delimited
-    by right ascension and declination ranges. The right ascension sides follow
-    great arc circles, the declination sides follow small arc circles.
+    by right ascension and declination ranges. The right ascension edges follow
+    great arc circles and the declination edges follow small arc circles.
 
     Args:
         ra (tuple[float, float]): Right ascension range, in [0,360] degrees
