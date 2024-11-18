@@ -7,6 +7,7 @@ import astropy.units as u
 import numpy as np
 import pyarrow as pa
 import pytest
+from astropy.coordinates import SkyCoord
 from mocpy import MOC
 
 import hats.pixel_math.healpix_shim as hp
@@ -297,7 +298,7 @@ def test_polygonal_filter_invalid_polygon(small_sky_order1_catalog):
         small_sky_order1_catalog.filter_by_polygon(vertices)
 
 
-def test_box_filter_ra_and_dec(small_sky_order1_catalog):
+def test_box_filter(small_sky_order1_catalog):
     # The catalog pixels are distributed around the [-90,0] degree range.
     filtered_catalog = small_sky_order1_catalog.filter_by_box(ra=(280, 300), dec=(-30, -20))
     filtered_pixels = filtered_catalog.get_healpix_pixels()
@@ -311,14 +312,13 @@ def test_box_filter_ra_and_dec(small_sky_order1_catalog):
     assert filtered_catalog.catalog_info.total_rows == 0
 
     # Check that the previous filter is the same as intersecting the ra and dec filters
-    filtered_catalog_ra = small_sky_order1_catalog.filter_by_box(ra=(280, 300))
-    filtered_catalog_dec = small_sky_order1_catalog.filter_by_box(dec=(-30, -20))
-    filtered_catalog_ra_pixels = filtered_catalog_ra.get_healpix_pixels()
-    filtered_catalog_dec_pixels = filtered_catalog_dec.get_healpix_pixels()
-    intersected_pixels = [
-        pixel for pixel in filtered_catalog_ra_pixels if pixel in filtered_catalog_dec_pixels
-    ]
-    assert filtered_pixels == intersected_pixels
+    assert filtered_catalog.moc is not None
+    box_moc = MOC.from_zone(
+        # SkyCoord([bottom_left_corner, upper_right_corner])
+        SkyCoord([[280, -30], [300, -20]], unit="deg"),
+        max_depth=small_sky_order1_catalog.get_max_coverage_order(),
+    )
+    assert filtered_catalog.moc == box_moc.intersection(small_sky_order1_catalog.moc)
 
 
 def test_box_filter_wrapped_ra(small_sky_order1_catalog):
