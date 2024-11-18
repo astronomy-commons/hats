@@ -36,19 +36,7 @@ def ang2pix(*args, **kwargs):
     return hp.ang2pix(*args, **kwargs)
 
 
-def ring2nest(*args, **kwargs):
-    return hp.ring2nest(*args, **kwargs)
-
-
 ## Query
-
-
-def query_strip(*args, **kwargs):
-    return hp.query_strip(*args, **kwargs)
-
-
-def query_polygon(*args, **kwargs):
-    return hp.query_polygon(*args, **kwargs)
 
 
 def get_all_neighbours(*args, **kwargs):
