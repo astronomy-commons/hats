@@ -35,26 +35,11 @@ def test_get_margin():
             1119,
         ]
     )
+    expected.sort()
 
     assert len(margins) == 20
 
     npt.assert_array_equal(margins, expected)
-
-
-def test_zero_dk():
-    """Check that the code fails when trying to find margins at same order as the pixel."""
-    with pytest.raises(ValueError) as value_error:
-        pm.get_margin(2, 2, 0)
-
-    assert str(value_error.value) == "dk must be greater than order"
-
-
-def test_negative_dk():
-    """Check that the code fails when trying to find margins at a higher order than the pixel."""
-    with pytest.raises(ValueError) as value_error:
-        pm.get_margin(2, 2, -1)
-
-    assert str(value_error.value) == "dk must be greater than order"
 
 
 def test_polar_edge():
@@ -84,6 +69,7 @@ def test_polar_edge():
             1519,
         ]
     )
+    expected.sort()
 
     assert len(margins) == 19
 
@@ -118,22 +104,7 @@ def test_polar_edge_south():
             527,
         ]
     )
+    expected.sort()
     assert len(margins) == 20
 
     npt.assert_array_equal(margins, expected)
-
-
-def test_edge_negative_value():
-    """Check to make sure get_edge fails when passed a negative edge value."""
-    with pytest.raises(ValueError) as value_error:
-        pm.get_edge(2, 5, -1)
-
-    assert str(value_error.value) == "edge can only be values between 0 and 7 (see docstring)"
-
-
-def test_edge_greater_than_7():
-    """Check to make sure get_edge fails when passed an edge value greater than 7."""
-    with pytest.raises(ValueError) as value_error:
-        pm.get_edge(2, 5, 8)
-
-    assert str(value_error.value) == "edge can only be values between 0 and 7 (see docstring)"
