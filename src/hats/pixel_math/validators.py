@@ -11,7 +11,7 @@ import hats.pixel_math.healpix_shim as hp
 class ValidatorsErrors(str, Enum):
     """Error messages for the coordinate validators"""
 
-    INVALID_DEC = "declination must be in the -90.0 to 90.0 degree range"
+    INVALID_DEC = "declination must be in the [-90,90[ degree range"
     INVALID_RADIUS = "cone radius must be positive"
     INVALID_NUM_VERTICES = "polygon must contain a minimum of 3 vertices"
     DUPLICATE_VERTICES = "polygon has duplicated vertices"
@@ -35,17 +35,17 @@ def validate_radius(radius_arcsec: float):
 
 
 def validate_declination_values(dec: float | List[float]):
-    """Validates that declination values are in the [-90,90] degree range
+    """Validates that declination values are in the [-90,90[ degree range
 
     Args:
         dec (float | List[float]): The declination values to be validated
 
     Raises:
-        ValueError: if declination values are not in the [-90,90] degree range
+        ValueError: if declination values are not in the [-90,90[ degree range
     """
     dec_values = np.array(dec)
     lower_bound, upper_bound = -90.0, 90.0
-    if not np.all((dec_values >= lower_bound) & (dec_values <= upper_bound)):
+    if not np.all((dec_values >= lower_bound) & (dec_values < upper_bound)):
         raise ValueError(ValidatorsErrors.INVALID_DEC.value)
 
 
@@ -98,25 +98,22 @@ def check_polygon_is_valid(vertices: np.ndarray):
             raise ValueError(ValidatorsErrors.INVALID_CONCAVE_SHAPE.value)
 
 
-def validate_box(ra: Tuple[float, float] | None, dec: Tuple[float, float] | None):
+def validate_box(ra: Tuple[float, float], dec: Tuple[float, float]):
     """Checks if ra and dec values are valid for the box search.
 
-    - At least one range of ra or dec must have been provided
-    - Ranges must be pairs of non-duplicate minimum and maximum values, in degrees
-    - Declination values, if existing, must be in ascending order
-    - Declination values, if existing, must be in the [-90,90] degree range
+    - Both ranges for ra or dec must have been provided
+    - Ranges must be defined by a unique pair of values, in degrees
+    - Declination values must be in ascending order and in the [-90,90[ degree range
 
     Args:
         ra (Tuple[float, float]): Right ascension range, in degrees
         dec (Tuple[float, float]): Declination range, in degrees
     """
     invalid_range = False
-    if ra is not None:
-        if len(ra) != 2 or len(ra) != len(set(ra)):
-            invalid_range = True
-    if dec is not None:
-        if len(dec) != 2 or dec[0] >= dec[1]:
-            invalid_range = True
-        validate_declination_values(list(dec))
-    if (ra is None and dec is None) or invalid_range:
+    if ra is None or len(ra) != 2 or ra[0] == ra[1]:
+        invalid_range = True
+    elif dec is None or len(dec) != 2 or dec[0] >= dec[1]:
+        invalid_range = True
+    if invalid_range:
         raise ValueError(ValidatorsErrors.INVALID_RADEC_RANGE.value)
+    validate_declination_values(dec)
