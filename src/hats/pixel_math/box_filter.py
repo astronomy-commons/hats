@@ -14,7 +14,7 @@ def generate_box_moc(ra: tuple[float, float], dec: tuple[float, float], order: i
 
     Args:
         ra (tuple[float, float]): Right ascension range, in [0,360] degrees
-        dec (tuple[float, float]): Declination range, in [-90,90] degrees
+        dec (tuple[float, float]): Declination range, in [-90,90[ degrees
         order (int): Maximum order of the moc to generate the box at
 
     Returns:

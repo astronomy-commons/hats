@@ -11,7 +11,7 @@ import hats.pixel_math.healpix_shim as hp
 class ValidatorsErrors(str, Enum):
     """Error messages for the coordinate validators"""
 
-    INVALID_DEC = "declination must be in the [-90,90[ degree range"
+    INVALID_DEC = "declination must be in the -90 <= dec < 90 degree range"
     INVALID_RADIUS = "cone radius must be positive"
     INVALID_NUM_VERTICES = "polygon must contain a minimum of 3 vertices"
     DUPLICATE_VERTICES = "polygon has duplicated vertices"
