@@ -182,6 +182,16 @@ def plot_moc(
 
 
 def get_fov_moc_from_wcs(wcs: WCS) -> MOC | None:
+    """Returns a MOC that matches the plot window defined by a WCS
+
+    Modified from mocpy.moc.plot.utils.build_plotting_moc
+
+    Args:
+        wcs (astropy.WCS): The wcs object with the plot's projection
+
+    Returns:
+        The moc which defines the area of the sky that would be visible in a WCSAxes with the given WCS
+    """
     # Get the MOC delimiting the FOV polygon
     width_px = int(wcs.wcs.crpix[0] * 2.0)  # Supposing the wcs is centered in the axis
     height_px = int(wcs.wcs.crpix[1] * 2.0)
@@ -557,12 +567,9 @@ def initialize_wcs_axes(
                 # Use current axes if axes exists in figure and current axes is correct type
                 wcs = ax.wcs
                 return fig, ax, wcs
-            else:
-                # Plot onto new axes on new figure if current axes is not correct type
-                warnings.warn(
-                    "Current axes is not of correct type WCSAxes. A new figure and axes will be used."
-                )
-                fig = plt.figure(**kwargs)
+            # Plot onto new axes on new figure if current axes is not correct type
+            warnings.warn("Current axes is not of correct type WCSAxes. A new figure and axes will be used.")
+            fig = plt.figure(**kwargs)
         if wcs is None:
             # Initialize wcs with params if no WCS provided
             wcs = WCS(
