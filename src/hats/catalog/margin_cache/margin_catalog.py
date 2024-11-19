@@ -33,8 +33,8 @@ class MarginCatalog(HealpixDataset):
             pixel sizes.
         """
         max_order = moc.max_order
-        max_order_size = hp.nside2resol(2**max_order, arcmin=True)
-        if self.catalog_info.margin_threshold > max_order_size * 60:
+        max_order_size_arcsec = hp.order2mindist(max_order) * 60
+        if self.catalog_info.margin_threshold > max_order_size_arcsec:
             raise ValueError(
                 f"Cannot Filter Margin: Margin size {self.catalog_info.margin_threshold} is "
                 f"greater than the size of a pixel at the highest order {max_order}."

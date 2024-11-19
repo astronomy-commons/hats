@@ -1,23 +1,21 @@
 from __future__ import annotations
 
+import astropy.units as u
 import healpy as hp
 import numpy as np
+from astropy.coordinates import SkyCoord
 
 # pylint: disable=missing-function-docstring
 
 ## Arithmetic conversions
 
 
-def nside2order(param):
-    return hp.nside2order(param)
+def npix2order(param):
+    return hp.nside2order(hp.npix2nside(param))
 
 
 def order2nside(param):
     return hp.order2nside(param)
-
-
-def npix2nside(param):
-    return hp.npix2nside(param)
 
 
 def order2npix(param):
@@ -36,22 +34,13 @@ def ang2pix(*args, **kwargs):
     return hp.ang2pix(*args, **kwargs)
 
 
-## Query
-
-
-def get_all_neighbours(*args, **kwargs):
-    return hp.get_all_neighbours(*args, **kwargs)
-
-
 ## Coordinate conversion
 
 
-def ang2vec(*args, **kwargs):
-    return hp.ang2vec(*args, **kwargs)
-
-
-def pix2xyf(*args, **kwargs):
-    return hp.pix2xyf(*args, **kwargs)
+def ang2vec(ra, dec, **kwargs) -> np.ndarray:
+    """Converts ra and dec to cartesian coordinates on the unit sphere"""
+    coords = SkyCoord(ra=ra * u.deg, dec=dec * u.deg, **kwargs).cartesian
+    return np.array([coords.x.value, coords.y.value, coords.z.value]).T
 
 
 ## FITS

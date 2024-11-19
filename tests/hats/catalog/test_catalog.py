@@ -113,7 +113,7 @@ def test_load_catalog_small_sky_order1_moc(small_sky_order1_dir):
     assert isinstance(cat, Catalog)
     assert cat.moc is not None
     counts_skymap = read_fits_image(paths.get_point_map_file_pointer(small_sky_order1_dir))
-    skymap_order = hp.nside2order(hp.npix2nside(len(counts_skymap)))
+    skymap_order = hp.npix2order(len(counts_skymap))
     assert cat.moc.max_order == skymap_order
     assert np.all(cat.moc.flatten() == np.where(counts_skymap > 0))
 
