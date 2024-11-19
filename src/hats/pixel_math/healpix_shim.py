@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import astropy.units as u
 import healpy as hp
 import numpy as np
+from astropy.coordinates import SkyCoord
 
 # pylint: disable=missing-function-docstring
 
@@ -50,8 +52,10 @@ def query_polygon(*args, **kwargs):
 ## Coordinate conversion
 
 
-def ang2vec(*args, **kwargs):
-    return hp.ang2vec(*args, **kwargs)
+def ang2vec(ra, dec) -> np.ndarray:
+    """Converts ra and dec to cartesian coordinates on the unit sphere"""
+    coords = SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame="icrs").cartesian
+    return np.array([coords.x.value, coords.y.value, coords.z.value]).T
 
 
 ## FITS

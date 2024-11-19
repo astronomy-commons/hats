@@ -111,7 +111,7 @@ def _get_pixels_for_subpolygons(polygons: List[List[tuple[float, float]]], order
     nside = hp.order2nside(order)
     all_polygon_pixels = []
     for vertices in polygons:
-        vertices = hp.ang2vec(*np.array(vertices).T, lonlat=True)
+        vertices = hp.ang2vec(*np.array(vertices).T)
         pixels = hp.query_polygon(nside, vertices, inclusive=True, nest=True)
         all_polygon_pixels.append(pixels)
     return np.unique(np.concatenate(all_polygon_pixels, 0))
