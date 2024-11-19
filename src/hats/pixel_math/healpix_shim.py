@@ -52,9 +52,9 @@ def query_polygon(*args, **kwargs):
 ## Coordinate conversion
 
 
-def ang2vec(ra, dec) -> np.ndarray:
+def ang2vec(ra, dec, **kwargs) -> np.ndarray:
     """Converts ra and dec to cartesian coordinates on the unit sphere"""
-    coords = SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame="icrs").cartesian
+    coords = SkyCoord(ra=ra * u.deg, dec=dec * u.deg, **kwargs).cartesian
     return np.array([coords.x.value, coords.y.value, coords.z.value]).T
 
 
