@@ -37,3 +37,16 @@ def test_order2mindist():
     assert_allclose(hps.order2mindist(orders), min_distances, rtol=1e-2)
 
     assert_allclose(hps.order2mindist(17), 0.01677, rtol=1e-2)
+
+
+def test_ang2vec():
+    """Tests conversion of ra/dec to unit cartesian vectors"""
+    ra = [230.14467816, 110.40507118, 9.41764689, 245.5553117]
+    dec = [38.78080888, 17.09584081, -28.6352765, 5.41803306]
+    ra_rad = np.radians(ra)
+    dec_rad = np.radians(dec)
+    x = np.cos(ra_rad) * np.cos(dec_rad)
+    y = np.sin(ra_rad) * np.cos(dec_rad)
+    z = np.sin(dec_rad)
+    actual = np.asarray([x, y, z]).T
+    assert_array_equal(actual, hps.ang2vec(ra, dec))
