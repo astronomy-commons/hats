@@ -84,7 +84,7 @@ def check_polygon_is_valid(vertices: np.ndarray):
     Returns:
         True if polygon is valid, False otherwise.
     """
-    vertices_xyz = hp.ang2vec(*vertices.T, lonlat=True)
+    vertices_xyz = hp.ang2vec(*vertices.T)
     n_vertices = len(vertices_xyz)
     flip = 0
     for i in range(n_vertices):
