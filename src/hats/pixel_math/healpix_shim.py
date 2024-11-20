@@ -17,7 +17,7 @@ MAX_HEALPIX_ORDER = 29
 
 
 def is_order_valid(order: int) -> bool:
-    return 0 <= order <= MAX_HEALPIX_ORDER
+    return np.all(0 <= order) and np.all(order <= MAX_HEALPIX_ORDER)
 
 
 def npix2order(npix: int) -> int:
