@@ -1,4 +1,7 @@
+import cdshealpix
 import numpy as np
+import pytest
+from astropy.coordinates import Longitude, Latitude
 from numpy.testing import assert_allclose, assert_array_equal
 
 from hats.pixel_math import healpix_shim as hps
@@ -50,3 +53,142 @@ def test_ang2vec():
     z = np.sin(dec_rad)
     actual = np.asarray([x, y, z]).T
     assert_array_equal(actual, hps.ang2vec(ra, dec))
+
+
+def test_npix2order():
+    orders = [0, 1, 5, 10, 20, 29]
+    npix = [12 * (4**order) for order in orders]
+    test_orders = [hps.npix2order(x) for x in npix]
+    assert test_orders == orders
+
+
+def test_npix2order_invalid():
+    npixs = [-10, 0, 11, 13, 47, 49, 100000, 100000000000000000]
+    for npix in npixs:
+        with pytest.raises(ValueError, match="Invalid"):
+            hps.npix2order(npix)
+
+
+def test_order2nside():
+    orders = [0, 1, 5, 10, 20, 29]
+    expected_nsides = [2**x for x in orders]
+    test_nsides = [hps.order2nside(o) for o in orders]
+    assert test_nsides == expected_nsides
+
+
+def test_order2nside_invalid():
+    orders = [-1000, -1, 30, 4000]
+    for order in orders:
+        with pytest.raises(ValueError, match="Invalid"):
+            hps.order2nside(order)
+
+
+def test_order2npix():
+    orders = [0, 1, 5, 10, 20, 29]
+    npix = [12 * (4**order) for order in orders]
+    test_npix = [hps.order2npix(o) for o in orders]
+    assert test_npix == npix
+
+
+def test_order2npix_invalid():
+    orders = [-1000, -1, 30, 4000]
+    for order in orders:
+        with pytest.raises(ValueError, match="Invalid"):
+            hps.order2npix(order)
+
+
+def test_nside2pixarea():
+    orders = [0, 1, 5, 10, 20, 29]
+    nsides = [2**x for x in orders]
+    npix = [12 * (4**order) for order in orders]
+    pix_area_expected = [4 * np.pi / x for x in npix]
+    pix_area_test = [hps.nside2pixarea(nside) for nside in nsides]
+    assert pix_area_test == pix_area_expected
+
+
+def test_nside2pixarea_degrees():
+    orders = [0, 1, 5, 10, 20, 29]
+    nsides = [2**x for x in orders]
+    npix = [12 * (4**order) for order in orders]
+    pix_area_expected = [np.rad2deg(np.rad2deg(4 * np.pi / x)) for x in npix]
+    pix_area_test = [hps.nside2pixarea(nside, degrees=True) for nside in nsides]
+    assert pix_area_test == pix_area_expected
+
+
+def test_nside2resol():
+    orders = [0, 1, 5, 10, 20, 29]
+    nsides = [2**x for x in orders]
+    resol_expected = [np.sqrt(hps.nside2pixarea(nside)) for nside in nsides]
+    resol_test = [hps.nside2resol(nside) for nside in nsides]
+    assert resol_test == resol_expected
+
+
+def test_nside2resol_arcmin():
+    orders = [0, 1, 5, 10, 20, 29]
+    nsides = [2**x for x in orders]
+    resol_expected = [np.rad2deg(np.sqrt(hps.nside2pixarea(nside))) * 60 for nside in nsides]
+    resol_test = [hps.nside2resol(nside, arcmin=True) for nside in nsides]
+    assert resol_test == resol_expected
+
+
+def test_ang2pix():
+    orders = [0, 1, 5, 10, 20, 29]
+    ras = np.arange(-180.0, 180.0, 10.0)
+    decs = np.arange(-90.0, 90.0, 180 // len(ras))
+    colats = 90 - decs
+    for order in orders:
+        expected_pixels = cdshealpix.lonlat_to_healpix(
+            Longitude(ras, unit="deg"), Latitude(decs, unit="deg"), order
+        )
+        pixels = hps.ang2pix(hps.order2nside(order), np.deg2rad(colats), np.deg2rad(ras), nest=True)
+        assert np.all(pixels == expected_pixels)
+
+
+def test_ang2pix_lonlat():
+    orders = [0, 1, 5, 10, 20, 29]
+    ras = np.arange(-180.0, 180.0, 10.0)
+    decs = np.arange(-90.0, 90.0, 180 // len(ras))
+    for order in orders:
+        expected_pixels = cdshealpix.lonlat_to_healpix(
+            Longitude(ras, unit="deg"), Latitude(decs, unit="deg"), order
+        )
+        pixels = hps.ang2pix(hps.order2nside(order), ras, decs, nest=True, lonlat=True)
+        assert np.all(pixels == expected_pixels)
+
+
+def test_ang2pix_ring():
+    order = 4
+    ras = np.arange(-180.0, 180.0, 10.0)
+    decs = np.arange(-90.0, 90.0, 180 // len(ras))
+    colats = 90 - decs
+    with pytest.raises(NotImplementedError, match="RING"):
+        hps.ang2pix(hps.order2nside(order), ras, decs, lonlat=True)
+    with pytest.raises(NotImplementedError, match="RING"):
+        hps.ang2pix(hps.order2nside(order), colats, ras)
+
+
+def test_ang2pix_invalid():
+    orders = [0, 1, 5, 10, 20, 29]
+    invalid_orders = [-1000, -1, 30, 40]
+    ras = np.arange(-4000.0, 1000.0, 100.0)
+    decs = np.arange(-1000.0, 1000.0, 2000.0 // len(ras))
+    colats = 90 - decs
+    for order in invalid_orders:
+        with pytest.raises(ValueError, match="Invalid"):
+            hps.ang2pix(int(2**order), np.deg2rad(colats), np.deg2rad(ras), nest=True)
+        with pytest.raises(ValueError, match="Invalid"):
+            hps.ang2pix(int(2**order), ras, decs, nest=True, lonlat=True)
+    for order in orders:
+        with pytest.raises(ValueError, match="angle"):
+            hps.ang2pix(hps.order2nside(order), np.deg2rad(colats), np.deg2rad(ras), nest=True)
+        with pytest.raises(ValueError, match="angle"):
+            hps.ang2pix(hps.order2nside(order), ras, decs, nest=True, lonlat=True)
+
+
+def test_ring2nest():
+    orders = [0, 1, 5, 10, 20, 29]
+    for order in orders:
+        ipix = np.arange(0, 12 * (4**order), 12 * (4**order) // 10)
+        expected_ring_ipix = cdshealpix.from_ring(ipix, order)
+        test_ring_ipix = hps.ring2nest(2**order, ipix)
+        assert np.all(test_ring_ipix == expected_ring_ipix)

@@ -1,41 +1,85 @@
 from __future__ import annotations
 
+import math
+
 import astropy.units as u
+import cdshealpix
 import healpy as hp
 import numpy as np
-from astropy.coordinates import SkyCoord
+from astropy.coordinates import SkyCoord, Longitude, Latitude
 
 # pylint: disable=missing-function-docstring
 
 ## Arithmetic conversions
 
 
-def npix2order(param):
-    return hp.nside2order(hp.npix2nside(param))
+MAX_HEALPIX_ORDER = 29
 
 
-def order2nside(param):
-    return hp.order2nside(param)
+def is_order_valid(order: int) -> bool:
+    return 0 <= order <= MAX_HEALPIX_ORDER
 
 
-def order2npix(param):
-    return hp.order2npix(param)
+def npix2order(npix: int) -> int:
+    if npix <= 0:
+        raise ValueError("Invalid value for npix")
+    order = int(math.log2(npix / 12)) >> 1
+    if not is_order_valid(order) or not 12 * (1 << (2 * order)) == npix:
+        raise ValueError("Invalid value for npix")
+    return order
 
 
-def nside2resol(*args, **kwargs):
-    return hp.nside2resol(*args, **kwargs)
+def order2nside(order: int) -> int:
+    if not is_order_valid(order):
+        raise ValueError("Invalid value for order")
+    return 1 << order
 
 
-def nside2pixarea(*args, **kwargs):
-    return hp.nside2pixarea(*args, **kwargs)
+def order2npix(order: int) -> int:
+    if not is_order_valid(order):
+        raise ValueError("Invalid value for order")
+    return 12 * (1 << (2 * order))
 
 
-def ang2pix(*args, **kwargs):
-    return hp.ang2pix(*args, **kwargs)
+def nside2resol(nside: int, arcmin: bool = False) -> float:
+    resol_rad = np.sqrt(nside2pixarea(nside))
+
+    if arcmin:
+        return np.rad2deg(resol_rad) * 60
+
+    return resol_rad
 
 
-def ring2nest(*args, **kwargs):
-    return hp.ring2nest(*args, **kwargs)
+def nside2pixarea(nside: int, degrees: bool = False) -> float:
+    npix = 12 * nside * nside
+    pix_area_rad = 4 * np.pi / npix
+    if degrees:
+        return pix_area_rad * (180 / np.pi) * (180 / np.pi)
+    return pix_area_rad
+
+
+def ang2pix(nside: int, theta: float, phi: float, nest: bool = False, lonlat: bool = False) -> int:
+    if not nest:
+        raise NotImplementedError("RING order ang2pix not supported")
+    order = nside2order(nside)
+    if lonlat:
+        ra = Longitude(theta, unit="deg")
+        dec = Latitude(phi, unit="deg")
+    else:
+        ra = Longitude(phi, unit="rad")
+        dec = Latitude(np.pi / 2 - theta, unit="rad")
+
+    return cdshealpix.lonlat_to_healpix(ra, dec, order)
+
+
+def nside2order(nside: int) -> int:
+    npix = 12 * nside * nside
+    return npix2order(npix)
+
+
+def ring2nest(nside: int, ipix: int) -> int:
+    order = nside2order(nside)
+    return cdshealpix.from_ring(ipix, order)
 
 
 ## Query
