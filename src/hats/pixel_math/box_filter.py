@@ -7,7 +7,6 @@ import numpy as np
 from mocpy import MOC
 
 import hats.pixel_math.healpix_shim as hp
-from hats.pixel_math.polygon_filter import SphericalCoordinates
 
 
 def generate_box_moc(ra: Tuple[float, float] | None, dec: Tuple[float, float] | None, order: int) -> MOC:
@@ -107,7 +106,7 @@ def _get_division_ra(ra_range: Tuple[float, float]) -> float | None:
     return division_ra
 
 
-def _get_pixels_for_subpolygons(polygons: List[List[SphericalCoordinates]], order: int) -> np.ndarray:
+def _get_pixels_for_subpolygons(polygons: List[List[tuple[float, float]]], order: int) -> np.ndarray:
     """Gets the unique pixels for a set of sub-polygons."""
     nside = hp.order2nside(order)
     all_polygon_pixels = []

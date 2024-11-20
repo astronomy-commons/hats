@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List, Union
+from typing import List, Tuple, Union
 
+import astropy.units as u
 import numpy as np
 import pandas as pd
 import pyarrow as pa
+from astropy.coordinates import SkyCoord
 from mocpy import MOC
 from typing_extensions import Self
 from upath import UPath
@@ -14,7 +16,15 @@ from hats.catalog.dataset import Dataset
 from hats.catalog.dataset.table_properties import TableProperties
 from hats.catalog.partition_info import PartitionInfo
 from hats.inspection import plot_pixels
+from hats.inspection.visualize_catalog import plot_moc
 from hats.pixel_math import HealpixPixel
+from hats.pixel_math.box_filter import generate_box_moc, wrap_ra_angles
+from hats.pixel_math.validators import (
+    validate_box,
+    validate_declination_values,
+    validate_polygon,
+    validate_radius,
+)
 from hats.pixel_tree import PixelAlignment, PixelAlignmentType
 from hats.pixel_tree.moc_filter import filter_by_moc
 from hats.pixel_tree.pixel_alignment import align_with_mocs
@@ -99,6 +109,8 @@ class HealpixDataset(Dataset):
     def get_max_coverage_order(self) -> int:
         """Gets the maximum HEALPix order for which the coverage of the catalog is known from the pixel
         tree and moc if it exists"""
+        if len(self.pixel_tree) == 0:
+            raise ValueError("Cannot get max_order of empty catalog")
         max_order = (
             max(self.moc.max_order, self.pixel_tree.get_max_depth())
             if self.moc is not None
@@ -121,6 +133,63 @@ class HealpixDataset(Dataset):
         max_order = np.max(orders) if len(orders) > 0 else 0
         moc = MOC.from_healpix_cells(ipix=pixel_inds, depth=orders, max_depth=max_order)
         return self.filter_by_moc(moc)
+
+    def filter_by_cone(self, ra: float, dec: float, radius_arcsec: float) -> Self:
+        """Filter the pixels in the catalog to only include the pixels that overlap with a cone
+
+        Args:
+            ra (float): Right ascension of the center of the cone, in degrees
+            dec (float): Declination of the center of the cone, in degrees
+            radius_arcsec (float): Radius of the cone, in arcseconds
+
+        Returns:
+            A new catalog with only the pixels that overlap with the specified cone
+        """
+        validate_radius(radius_arcsec)
+        validate_declination_values(dec)
+        cone_moc = MOC.from_cone(
+            lon=ra * u.deg,
+            lat=dec * u.deg,
+            radius=radius_arcsec * u.arcsec,
+            max_depth=self.get_max_coverage_order(),
+        )
+        return self.filter_by_moc(cone_moc)
+
+    def filter_by_box(
+        self, ra: Tuple[float, float] | None = None, dec: Tuple[float, float] | None = None
+    ) -> Self:
+        """Filter the pixels in the catalog to only include the pixels that overlap with a
+        right ascension or declination range. In case both ranges are provided, filtering
+        is performed using a polygon.
+
+        Args:
+            ra (Tuple[float, float]): Right ascension range, in degrees
+            dec (Tuple[float, float]): Declination range, in degrees
+
+        Returns:
+            A new catalog with only the pixels that overlap with the specified region
+        """
+        ra = tuple(wrap_ra_angles(ra)) if ra else None
+        validate_box(ra, dec)
+        box_moc = generate_box_moc(ra, dec, self.get_max_coverage_order())
+        return self.filter_by_moc(box_moc)
+
+    def filter_by_polygon(self, vertices: list[tuple[float, float]]) -> Self:
+        """Filter the pixels in the catalog to only include the pixels that overlap
+        with a polygonal sky region.
+
+        Args:
+            vertices (list[tuple[float,float]]): The list of vertice coordinates for
+                the polygon, (ra, dec), in degrees.
+
+        Returns:
+            A new catalog with only the pixels that overlap with the specified polygon.
+        """
+        validate_polygon(vertices)
+        polygon_moc = MOC.from_polygon_skycoord(
+            SkyCoord(vertices, unit="deg"), max_depth=self.get_max_coverage_order()
+        )
+        return self.filter_by_moc(polygon_moc)
 
     def filter_by_moc(self, moc: MOC) -> Self:
         """Filter the pixels in the catalog to only include the pixels that overlap with the moc provided.
@@ -170,6 +239,17 @@ class HealpixDataset(Dataset):
         """Create a visual map of the pixel density of the catalog.
 
         Args:
-            kwargs: Additional args to pass to `hipscat.inspection.visualize_catalog.plot_healpix_map`
+            kwargs: Additional args to pass to `hats.inspection.visualize_catalog.plot_healpix_map`
         """
         return plot_pixels(self, **kwargs)
+
+    def plot_moc(self, **kwargs):
+        """Create a visual map of the coverage of the catalog.
+
+        Args:
+            kwargs: Additional args to pass to `hats.inspection.visualize_catalog.plot_moc`
+        """
+        default_title = f"Coverage MOC of {self.catalog_name}"
+        plot_args = {"title": default_title}
+        plot_args.update(kwargs)
+        return plot_moc(self.moc, **plot_args)
