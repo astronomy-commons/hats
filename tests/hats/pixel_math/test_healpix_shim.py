@@ -1,7 +1,7 @@
 import cdshealpix
 import numpy as np
 import pytest
-from astropy.coordinates import Longitude, Latitude
+from astropy.coordinates import Latitude, Longitude
 from numpy.testing import assert_allclose, assert_array_equal
 
 from hats.pixel_math import healpix_shim as hps

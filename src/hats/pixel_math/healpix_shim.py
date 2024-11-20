@@ -6,7 +6,7 @@ import astropy.units as u
 import cdshealpix
 import healpy as hp
 import numpy as np
-from astropy.coordinates import SkyCoord, Longitude, Latitude
+from astropy.coordinates import Latitude, Longitude, SkyCoord
 
 # pylint: disable=missing-function-docstring
 
