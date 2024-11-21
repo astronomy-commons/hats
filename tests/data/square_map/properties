@@ -1,0 +1,12 @@
+#HATS catalog
+obs_collection=square_map
+dataproduct_type=map
+hats_nrows=12
+hats_max_rows=1000000
+hats_order=1
+moc_sky_fraction=0.25000
+hats_builder=hats-import v0.4.1
+hats_creation_date=2024-11-20T19\:32UTC
+hats_estsize=52
+hats_release_date=2024-09-18
+hats_version=v0.1

@@ -9,7 +9,7 @@ from mocpy import MOC
 from upath import UPath
 
 import hats.pixel_math.healpix_shim as hp
-from hats.catalog import AssociationCatalog, Catalog, CatalogType, Dataset, MarginCatalog
+from hats.catalog import AssociationCatalog, Catalog, CatalogType, Dataset, MapCatalog, MarginCatalog
 from hats.catalog.association_catalog.partition_join_info import PartitionJoinInfo
 from hats.catalog.dataset.table_properties import TableProperties
 from hats.catalog.index.index_catalog import IndexCatalog
@@ -23,6 +23,7 @@ DATASET_TYPE_TO_CLASS = {
     CatalogType.ASSOCIATION: AssociationCatalog,
     CatalogType.INDEX: IndexCatalog,
     CatalogType.MARGIN: MarginCatalog,
+    CatalogType.MAP: MapCatalog,
 }
 
 
@@ -63,6 +64,7 @@ def _is_healpix_dataset(dataset_type):
         CatalogType.SOURCE,
         CatalogType.ASSOCIATION,
         CatalogType.MARGIN,
+        CatalogType.MAP,
     )
 
 
