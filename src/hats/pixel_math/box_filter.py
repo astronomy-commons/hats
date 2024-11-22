@@ -87,7 +87,7 @@ def _generate_dec_strip_moc(dec_range: Tuple[float, float], order: int) -> MOC:
     colat_rad = np.sort(np.radians([90 - dec if dec > 0 else 90 + abs(dec) for dec in dec_range]))
     # Figure out which pixels in nested order are contained in the declination band
     pixels_in_range = hp.ring2nest(
-        nside, hp.query_strip(nside, theta1=colat_rad[0], theta2=colat_rad[1], inclusive=True)
+        order, hp.query_strip(nside, theta1=colat_rad[0], theta2=colat_rad[1], inclusive=True)
     )
     orders = np.full(pixels_in_range.shape, fill_value=order)
     return MOC.from_healpix_cells(ipix=pixels_in_range, depth=orders, max_depth=order)

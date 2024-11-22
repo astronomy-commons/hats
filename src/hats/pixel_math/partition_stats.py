@@ -43,12 +43,10 @@ def generate_histogram(
     required_columns = [ra_column, dec_column]
     if not all(x in data.columns for x in required_columns):
         raise ValueError(f"Invalid column names in input: {ra_column}, {dec_column}")
-    mapped_pixels = hp.ang2pix(
-        2**highest_order,
+    mapped_pixels = hp.radec2pix(
+        highest_order,
         data[ra_column].values,
         data[dec_column].values,
-        lonlat=True,
-        nest=True,
     )
     mapped_pixel, count_at_pixel = np.unique(mapped_pixels, return_counts=True)
     histogram_result[mapped_pixel] += count_at_pixel.astype(np.int64)

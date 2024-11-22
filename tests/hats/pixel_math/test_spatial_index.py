@@ -16,12 +16,10 @@ from hats.pixel_math.spatial_index import (
 def test_single():
     """Single point. Adheres to specification."""
     result = compute_spatial_index([5], [5])
-    expected = hp.ang2pix(
-        2**SPATIAL_INDEX_ORDER,
+    expected = hp.radec2pix(
+        SPATIAL_INDEX_ORDER,
         [5],
         [5],
-        nest=True,
-        lonlat=True,
     )
 
     npt.assert_array_equal(result, expected)
@@ -38,12 +36,10 @@ def test_short_list():
     ra = [5, 1, 5]
     dec = [5, 1, 5]
     result = compute_spatial_index(ra, dec)
-    expected = hp.ang2pix(
-        2**SPATIAL_INDEX_ORDER,
+    expected = hp.radec2pix(
+        SPATIAL_INDEX_ORDER,
         ra,
         dec,
-        nest=True,
-        lonlat=True,
     )
     npt.assert_array_equal(result, expected)
 
@@ -53,12 +49,10 @@ def test_list():
     ra = [5, 5, 5, 1, 5, 5, 5, 1, 5]
     dec = [5, 5, 5, 1, 5, 5, 5, 1, 5]
     result = compute_spatial_index(ra, dec)
-    expected = hp.ang2pix(
-        2**SPATIAL_INDEX_ORDER,
+    expected = hp.radec2pix(
+        SPATIAL_INDEX_ORDER,
         ra,
         dec,
-        nest=True,
-        lonlat=True,
     )
     npt.assert_array_equal(result, expected)
 

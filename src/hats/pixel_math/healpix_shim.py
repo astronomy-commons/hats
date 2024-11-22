@@ -41,8 +41,8 @@ def order2npix(order: int) -> int:
     return 12 * (1 << (2 * order))
 
 
-def nside2resol(nside: int, arcmin: bool = False) -> float:
-    resol_rad = np.sqrt(nside2pixarea(nside))
+def order2resol(order: int, arcmin: bool = False) -> float:
+    resol_rad = np.sqrt(order2pixarea(order))
 
     if arcmin:
         return np.rad2deg(resol_rad) * 60
@@ -50,35 +50,25 @@ def nside2resol(nside: int, arcmin: bool = False) -> float:
     return resol_rad
 
 
-def nside2pixarea(nside: int, degrees: bool = False) -> float:
-    npix = 12 * nside * nside
+def order2pixarea(order: int, degrees: bool = False) -> float:
+    npix = order2npix(order)
     pix_area_rad = 4 * np.pi / npix
     if degrees:
         return pix_area_rad * (180 / np.pi) * (180 / np.pi)
     return pix_area_rad
 
 
-def ang2pix(nside: int, theta: float, phi: float, nest: bool = False, lonlat: bool = False) -> int:
-    if not nest:
-        raise NotImplementedError("RING order ang2pix not supported")
-    order = nside2order(nside)
-    if lonlat:
-        ra = Longitude(theta, unit="deg")
-        dec = Latitude(phi, unit="deg")
-    else:
-        ra = Longitude(phi, unit="rad")
-        dec = Latitude(np.pi / 2 - theta, unit="rad")
+def radec2pix(order: int, ra: float, dec: float) -> int:
+    if not is_order_valid(order):
+        raise ValueError("Invalid value for order")
+
+    ra = Longitude(ra, unit="deg")
+    dec = Latitude(dec, unit="deg")
 
     return cdshealpix.lonlat_to_healpix(ra, dec, order)
 
 
-def nside2order(nside: int) -> int:
-    npix = 12 * nside * nside
-    return npix2order(npix)
-
-
-def ring2nest(nside: int, ipix: int) -> int:
-    order = nside2order(nside)
+def ring2nest(order: int, ipix: int) -> int:
     return cdshealpix.from_ring(ipix, order)
 
 
@@ -220,6 +210,5 @@ def order2mindist(order: np.ndarray | int) -> np.ndarray | float:
     np.ndarray of float or a single scalar float
         The minimum distance between pixels in arcminutes
     """
-    pixel_nside = order2nside(order)
-    pixel_avgsize = nside2resol(pixel_nside, arcmin=True)
+    pixel_avgsize = order2resol(order, arcmin=True)
     return avgsize2mindist(pixel_avgsize)
