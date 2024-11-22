@@ -136,6 +136,7 @@ def test_radec2pix_lonlat():
         )
         pixels = hps.radec2pix(order, ras, decs)
         assert np.all(pixels == expected_pixels)
+        assert pixels.dtype == np.int64
 
 
 def test_radec2pix_invalid():

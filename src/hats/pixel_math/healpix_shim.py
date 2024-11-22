@@ -65,7 +65,7 @@ def radec2pix(order: int, ra: float, dec: float) -> int:
     ra = Longitude(ra, unit="deg")
     dec = Latitude(dec, unit="deg")
 
-    return cdshealpix.lonlat_to_healpix(ra, dec, order)
+    return cdshealpix.lonlat_to_healpix(ra, dec, order).astype(np.int64)
 
 
 def ring2nest(order: int, ipix: int) -> int:
