@@ -11,7 +11,7 @@ import hats.pixel_math.healpix_shim as hp
 class ValidatorsErrors(str, Enum):
     """Error messages for the coordinate validators"""
 
-    INVALID_DEC = "declination must be in the -90 <= dec < 90 degree range"
+    INVALID_DEC = "declination must be in the -90.0 to 90.0 degree range"
     INVALID_RADIUS = "cone radius must be positive"
     INVALID_NUM_VERTICES = "polygon must contain a minimum of 3 vertices"
     DUPLICATE_VERTICES = "polygon has duplicated vertices"
@@ -35,17 +35,17 @@ def validate_radius(radius_arcsec: float):
 
 
 def validate_declination_values(dec: float | List[float]):
-    """Validates that declination values are in the [-90,90[ degree range
+    """Validates that declination values are in the [-90,90] degree range
 
     Args:
         dec (float | List[float]): The declination values to be validated
 
     Raises:
-        ValueError: if declination values are not in the [-90,90[ degree range
+        ValueError: if declination values are not in the [-90,90] degree range
     """
     dec_values = np.array(dec)
     lower_bound, upper_bound = -90.0, 90.0
-    if not np.all((dec_values >= lower_bound) & (dec_values < upper_bound)):
+    if not np.all((dec_values >= lower_bound) & (dec_values <= upper_bound)):
         raise ValueError(ValidatorsErrors.INVALID_DEC.value)
 
 
@@ -101,9 +101,10 @@ def check_polygon_is_valid(vertices: np.ndarray):
 def validate_box(ra: Tuple[float, float], dec: Tuple[float, float]):
     """Checks if ra and dec values are valid for the box search.
 
-    - Both ranges for ra or dec must have been provided
-    - Ranges must be defined by a unique pair of values, in degrees
-    - Declination values must be in ascending order and in the [-90,90[ degree range
+    - Both ranges for ra or dec must have been provided.
+    - Ranges must be defined by a pair of values, in degrees.
+    - Declination values must be unique, provided in ascending order, and
+    belong to the [-90,90] degree range.
 
     Args:
         ra (Tuple[float, float]): Right ascension range, in degrees

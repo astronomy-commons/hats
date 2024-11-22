@@ -322,7 +322,7 @@ def test_box_filter(small_sky_order1_catalog):
 
 def test_box_filter_wrapped_ra(small_sky_order1_catalog):
     # The catalog pixels are distributed around the [270,0] degree range.
-    filtered_catalog = small_sky_order1_catalog.filter_by_box(ra=(-10, 10), dec=(-90, 89))
+    filtered_catalog = small_sky_order1_catalog.filter_by_box(ra=(-10, 10), dec=(-90, 90))
     filtered_pixels = filtered_catalog.get_healpix_pixels()
 
     assert len(filtered_pixels) == 2
@@ -352,9 +352,7 @@ def test_box_filter_ra_divisions_edge_cases(small_sky_order1_catalog):
     # pixels from the catalog after filtering. We construct these complement regions in
     # a way that allows us to capture more pixels of the catalog. This is useful to test
     # that wide RA ranges (larger than 180 degrees) are correctly handled.
-
-    # The catalog pixels are distributed around the [270,0] degree range.
-    dec = (-90, 89)
+    dec = (-90, 90)
 
     def assert_is_subset_of(catalog, catalog_complement):
         pixels_catalog = catalog.get_healpix_pixels()
