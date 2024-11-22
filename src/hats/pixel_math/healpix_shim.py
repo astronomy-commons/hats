@@ -58,14 +58,14 @@ def order2pixarea(order: int, degrees: bool = False) -> float:
     return pix_area_rad
 
 
-def radec2pix(order: int, ra: float, dec: float) -> int:
+def radec2pix(order: int, ra: float, dec: float) -> np.ndarray[np.int64]:
     if not is_order_valid(order):
         raise ValueError("Invalid value for order")
 
     ra = Longitude(ra, unit="deg")
     dec = Latitude(dec, unit="deg")
 
-    return cdshealpix.lonlat_to_healpix(ra, dec, order)
+    return cdshealpix.lonlat_to_healpix(ra, dec, order).astype(np.int64)
 
 
 def ring2nest(order: int, ipix: int) -> int:
@@ -90,15 +90,6 @@ def ang2vec(ra, dec, **kwargs) -> np.ndarray:
     """Converts ra and dec to cartesian coordinates on the unit sphere"""
     coords = SkyCoord(ra=ra * u.deg, dec=dec * u.deg, **kwargs).cartesian
     return np.array([coords.x.value, coords.y.value, coords.z.value]).T
-
-
-## FITS
-def read_map(*args, **kwargs):
-    return hp.read_map(*args, **kwargs)
-
-
-def write_map(*args, **kwargs):
-    return hp.write_map(*args, **kwargs)
 
 
 ## Custom functions
