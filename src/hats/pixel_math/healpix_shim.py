@@ -1,37 +1,70 @@
 from __future__ import annotations
 
+import math
+
 import astropy.units as u
-import healpy as hp
+import cdshealpix
 import numpy as np
-from astropy.coordinates import SkyCoord
+from astropy.coordinates import Latitude, Longitude, SkyCoord
 
 # pylint: disable=missing-function-docstring
 
 ## Arithmetic conversions
 
 
-def npix2order(param):
-    return hp.nside2order(hp.npix2nside(param))
+MAX_HEALPIX_ORDER = 29
 
 
-def order2nside(param):
-    return hp.order2nside(param)
+def is_order_valid(order: int) -> bool:
+    return np.all(0 <= order) and np.all(order <= MAX_HEALPIX_ORDER)
 
 
-def order2npix(param):
-    return hp.order2npix(param)
+def npix2order(npix: int) -> int:
+    if npix <= 0:
+        raise ValueError("Invalid value for npix")
+    order = int(math.log2(npix / 12)) >> 1
+    if not is_order_valid(order) or not 12 * (1 << (2 * order)) == npix:
+        raise ValueError("Invalid value for npix")
+    return order
 
 
-def nside2resol(*args, **kwargs):
-    return hp.nside2resol(*args, **kwargs)
+def order2nside(order: int) -> int:
+    if not is_order_valid(order):
+        raise ValueError("Invalid value for order")
+    return 1 << order
 
 
-def nside2pixarea(*args, **kwargs):
-    return hp.nside2pixarea(*args, **kwargs)
+def order2npix(order: int) -> int:
+    if not is_order_valid(order):
+        raise ValueError("Invalid value for order")
+    return 12 * (1 << (2 * order))
 
 
-def ang2pix(*args, **kwargs):
-    return hp.ang2pix(*args, **kwargs)
+def order2resol(order: int, arcmin: bool = False) -> float:
+    resol_rad = np.sqrt(order2pixarea(order))
+
+    if arcmin:
+        return np.rad2deg(resol_rad) * 60
+
+    return resol_rad
+
+
+def order2pixarea(order: int, degrees: bool = False) -> float:
+    npix = order2npix(order)
+    pix_area_rad = 4 * np.pi / npix
+    if degrees:
+        return pix_area_rad * (180 / np.pi) * (180 / np.pi)
+    return pix_area_rad
+
+
+def radec2pix(order: int, ra: float, dec: float) -> np.ndarray[np.int64]:
+    if not is_order_valid(order):
+        raise ValueError("Invalid value for order")
+
+    ra = Longitude(ra, unit="deg")
+    dec = Latitude(dec, unit="deg")
+
+    return cdshealpix.lonlat_to_healpix(ra, dec, order).astype(np.int64)
 
 
 ## Coordinate conversion
@@ -41,15 +74,6 @@ def ang2vec(ra, dec, **kwargs) -> np.ndarray:
     """Converts ra and dec to cartesian coordinates on the unit sphere"""
     coords = SkyCoord(ra=ra * u.deg, dec=dec * u.deg, **kwargs).cartesian
     return np.array([coords.x.value, coords.y.value, coords.z.value]).T
-
-
-## FITS
-def read_map(*args, **kwargs):
-    return hp.read_map(*args, **kwargs)
-
-
-def write_map(*args, **kwargs):
-    return hp.write_map(*args, **kwargs)
 
 
 ## Custom functions
@@ -161,6 +185,5 @@ def order2mindist(order: np.ndarray | int) -> np.ndarray | float:
     np.ndarray of float or a single scalar float
         The minimum distance between pixels in arcminutes
     """
-    pixel_nside = order2nside(order)
-    pixel_avgsize = nside2resol(pixel_nside, arcmin=True)
+    pixel_avgsize = order2resol(order, arcmin=True)
     return avgsize2mindist(pixel_avgsize)
