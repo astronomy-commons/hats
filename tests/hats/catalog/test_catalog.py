@@ -1,4 +1,5 @@
 """Tests of catalog functionality"""
+
 import os
 
 import astropy.units as u
@@ -333,6 +334,19 @@ def test_box_filter_wrapped_ra(small_sky_order1_catalog):
     assert filtered_catalog.catalog_info.total_rows == 0
 
 
+def test_box_filter_ra_boundary(small_sky_order1_catalog):
+    dec = (-30, 0)
+    filtered_catalog = small_sky_order1_catalog.filter_by_box(ra=(0, 0), dec=dec)
+    filtered_pixels = filtered_catalog.get_healpix_pixels()
+
+    assert len(filtered_pixels) == 3
+    assert filtered_pixels == [HealpixPixel(1, 45), HealpixPixel(1, 46), HealpixPixel(1, 47)]
+
+    for ra_range in [(0, 360), (360, 0)]:
+        catalog = small_sky_order1_catalog.filter_by_box(ra=ra_range, dec=dec)
+        assert catalog.get_healpix_pixels() == filtered_catalog.get_healpix_pixels()
+
+
 def test_box_filter_ra_divisions_edge_cases(small_sky_order1_catalog):
     # In this test we generate RA bands and their complements and compare the amount of
     # pixels from the catalog after filtering. We construct these complement regions in
@@ -390,11 +404,7 @@ def test_box_filter_invalid_args(small_sky_order1_catalog):
     with pytest.raises(ValueError, match=ValidatorsErrors.INVALID_RADEC_RANGE):
         small_sky_order1_catalog.filter_by_box(ra=(0, 30, 40), dec=(-40, 10))
 
-    # The range values coincide (for ra, values are wrapped)
-    with pytest.raises(ValueError, match=ValidatorsErrors.INVALID_RADEC_RANGE):
-        small_sky_order1_catalog.filter_by_box(ra=(100, 100), dec=(-40, -30))
-    with pytest.raises(ValueError, match=ValidatorsErrors.INVALID_RADEC_RANGE):
-        small_sky_order1_catalog.filter_by_box(ra=(0, 360), dec=(-40, -30))
+    # The declination values coincide
     with pytest.raises(ValueError, match=ValidatorsErrors.INVALID_RADEC_RANGE):
         small_sky_order1_catalog.filter_by_box(ra=(0, 50), dec=(50, 50))
 

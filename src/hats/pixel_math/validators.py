@@ -110,7 +110,7 @@ def validate_box(ra: Tuple[float, float], dec: Tuple[float, float]):
         dec (Tuple[float, float]): Declination range, in degrees
     """
     invalid_range = False
-    if ra is None or len(ra) != 2 or ra[0] == ra[1]:
+    if ra is None or len(ra) != 2:
         invalid_range = True
     elif dec is None or len(dec) != 2 or dec[0] >= dec[1]:
         invalid_range = True
