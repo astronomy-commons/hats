@@ -6,6 +6,7 @@ import astropy.units as u
 import numpy as np
 import pyarrow as pa
 import pytest
+from astropy.coordinates import SkyCoord
 from mocpy import MOC
 
 import hats.pixel_math.healpix_shim as hp
@@ -15,7 +16,6 @@ from hats.io import paths
 from hats.io.file_io import read_fits_image
 from hats.loaders import read_hats
 from hats.pixel_math import HealpixPixel
-from hats.pixel_math.box_filter import _generate_ra_strip_moc, generate_box_moc
 from hats.pixel_math.validators import ValidatorsErrors
 from hats.pixel_tree.pixel_tree import PixelTree
 
@@ -297,125 +297,7 @@ def test_polygonal_filter_invalid_polygon(small_sky_order1_catalog):
         small_sky_order1_catalog.filter_by_polygon(vertices)
 
 
-def test_box_filter_ra(small_sky_order1_catalog):
-    ra = (280, 290)
-    # The catalog pixels are distributed around the [270,0] degree range.
-    filtered_catalog = small_sky_order1_catalog.filter_by_box(ra=ra)
-
-    filtered_pixels = filtered_catalog.get_healpix_pixels()
-
-    assert len(filtered_pixels) == 2
-    assert filtered_pixels == [HealpixPixel(1, 44), HealpixPixel(1, 46)]
-
-    assert (1, 44) in filtered_catalog.pixel_tree
-    assert (1, 46) in filtered_catalog.pixel_tree
-    assert len(filtered_catalog.pixel_tree.pixels[1]) == 2
-    assert filtered_catalog.catalog_info.total_rows == 0
-
-    assert filtered_catalog.moc is not None
-    box_moc = generate_box_moc(ra=ra, dec=None, order=small_sky_order1_catalog.get_max_coverage_order())
-    assert filtered_catalog.moc == box_moc.intersection(small_sky_order1_catalog.moc)
-
-
-def test_box_filter_wrapped_ra(small_sky_order1_catalog):
-    # The catalog pixels are distributed around the [270,0] degree range.
-    filtered_catalog = small_sky_order1_catalog.filter_by_box(ra=(-10, 10))
-
-    filtered_pixels = filtered_catalog.get_healpix_pixels()
-
-    assert len(filtered_pixels) == 2
-    assert filtered_pixels == [HealpixPixel(1, 44), HealpixPixel(1, 45)]
-
-    assert (1, 44) in filtered_catalog.pixel_tree
-    assert (1, 45) in filtered_catalog.pixel_tree
-    assert len(filtered_catalog.pixel_tree.pixels[1]) == 2
-    assert filtered_catalog.catalog_info.total_rows == 0
-
-
-def test_box_filter_ra_divisions_edge_cases(small_sky_order1_catalog):
-    # In this test we generate RA bands and their complements and compare the amount of
-    # pixels from the catalog after filtering. We construct these complement regions in
-    # a way that allows us to capture more pixels of the catalog. This is useful to test
-    # that wide RA ranges (larger than 180 degrees) are correctly handled.
-
-    # The catalog pixels are distributed around the [270,0] degree range.
-
-    def assert_is_subset_of(catalog, catalog_complement):
-        pixels_catalog = catalog.get_healpix_pixels()
-        pixels_catalog_complement = catalog_complement.get_healpix_pixels()
-        assert len(pixels_catalog) < len(pixels_catalog_complement)
-        assert all(pixel in pixels_catalog_complement for pixel in pixels_catalog)
-
-    filtered_catalog = small_sky_order1_catalog.filter_by_box(ra=(0, 180))
-    filtered_catalog_complement = small_sky_order1_catalog.filter_by_box(ra=(180, 0))
-    assert_is_subset_of(filtered_catalog, filtered_catalog_complement)
-
-    filtered_catalog = small_sky_order1_catalog.filter_by_box(ra=(10, 50))
-    filtered_catalog_complement = small_sky_order1_catalog.filter_by_box(ra=(50, 10))
-    assert_is_subset_of(filtered_catalog, filtered_catalog_complement)
-
-    filtered_catalog = small_sky_order1_catalog.filter_by_box(ra=(10, 220))
-    filtered_catalog_complement = small_sky_order1_catalog.filter_by_box(ra=(220, 10))
-    assert_is_subset_of(filtered_catalog, filtered_catalog_complement)
-
-    filtered_catalog = small_sky_order1_catalog.filter_by_box(ra=(350, 200))
-    filtered_catalog_complement = small_sky_order1_catalog.filter_by_box(ra=(200, 350))
-    assert_is_subset_of(filtered_catalog, filtered_catalog_complement)
-
-    filtered_catalog = small_sky_order1_catalog.filter_by_box(ra=(50, 200))
-    filtered_catalog_complement = small_sky_order1_catalog.filter_by_box(ra=(200, 50))
-    assert_is_subset_of(filtered_catalog, filtered_catalog_complement)
-
-
-def test_box_filter_ra_pixel_tree_generation():
-    """This method tests the pixel tree generation for the ra filter"""
-    # The catalog pixels are distributed around the [270,0] degree range.
-    moc = _generate_ra_strip_moc(ra_range=(0, 180), order=1)
-    moc_complement = _generate_ra_strip_moc(ra_range=(180, 0), order=1)
-    assert len(moc.flatten()) == len(moc_complement.flatten())
-
-    moc = _generate_ra_strip_moc(ra_range=(10, 50), order=1)
-    moc_complement = _generate_ra_strip_moc(ra_range=(50, 10), order=1)
-    assert len(moc.flatten()) < len(moc_complement.flatten())
-
-    moc = _generate_ra_strip_moc(ra_range=(10, 220), order=1)
-    moc_complement = _generate_ra_strip_moc(ra_range=(220, 10), order=1)
-    assert len(moc_complement.flatten()) < len(moc.flatten())
-
-    moc = _generate_ra_strip_moc(ra_range=(200, 350), order=1)
-    moc_complement = _generate_ra_strip_moc(ra_range=(350, 200), order=1)
-    assert len(moc.flatten()) < len(moc_complement.flatten())
-
-    moc = _generate_ra_strip_moc(ra_range=(200, 50), order=1)
-    moc_complement = _generate_ra_strip_moc(ra_range=(50, 200), order=1)
-    assert len(moc_complement.flatten()) < len(moc.flatten())
-
-
-def test_box_filter_dec(small_sky_order1_catalog):
-    # The catalog pixels are distributed around the [-90,0] degree range.
-    filtered_catalog = small_sky_order1_catalog.filter_by_box(dec=(10, 20))
-    assert len(filtered_catalog.get_healpix_pixels()) == 0
-    assert len(filtered_catalog.pixel_tree) == 0
-    assert filtered_catalog.catalog_info.total_rows == 0
-
-    filtered_catalog_1 = small_sky_order1_catalog.filter_by_box(dec=(-10, 10))
-    filtered_pixels_1 = filtered_catalog_1.get_healpix_pixels()
-    assert filtered_pixels_1 == [HealpixPixel(1, 47)]
-    assert (1, 47) in filtered_catalog_1.pixel_tree
-    assert len(filtered_catalog_1.pixel_tree) == 1
-    assert filtered_catalog_1.catalog_info.total_rows == 0
-
-    filtered_catalog_2 = small_sky_order1_catalog.filter_by_box(dec=(-30, -20))
-    filtered_pixels_2 = filtered_catalog_2.get_healpix_pixels()
-    assert filtered_pixels_2 == [HealpixPixel(1, 45), HealpixPixel(1, 46), HealpixPixel(1, 47)]
-    assert (1, 45) in filtered_catalog_2.pixel_tree
-    assert (1, 46) in filtered_catalog_2.pixel_tree
-    assert (1, 47) in filtered_catalog_2.pixel_tree
-    assert len(filtered_catalog_2.pixel_tree) == 3
-    assert filtered_catalog_2.catalog_info.total_rows == 0
-
-
-def test_box_filter_ra_and_dec(small_sky_order1_catalog):
+def test_box_filter(small_sky_order1_catalog):
     # The catalog pixels are distributed around the [-90,0] degree range.
     filtered_catalog = small_sky_order1_catalog.filter_by_box(ra=(280, 300), dec=(-30, -20))
     filtered_pixels = filtered_catalog.get_healpix_pixels()
@@ -429,55 +311,100 @@ def test_box_filter_ra_and_dec(small_sky_order1_catalog):
     assert filtered_catalog.catalog_info.total_rows == 0
 
     # Check that the previous filter is the same as intersecting the ra and dec filters
-    filtered_catalog_ra = small_sky_order1_catalog.filter_by_box(ra=(280, 300))
-    filtered_catalog_dec = small_sky_order1_catalog.filter_by_box(dec=(-30, -20))
-    filtered_catalog_ra_pixels = filtered_catalog_ra.get_healpix_pixels()
-    filtered_catalog_dec_pixels = filtered_catalog_dec.get_healpix_pixels()
-    intersected_pixels = [
-        pixel for pixel in filtered_catalog_ra_pixels if pixel in filtered_catalog_dec_pixels
-    ]
-    assert filtered_pixels == intersected_pixels
+    assert filtered_catalog.moc is not None
+    box_moc = MOC.from_zone(
+        # SkyCoord([bottom_left_corner, upper_right_corner])
+        SkyCoord([[280, -30], [300, -20]], unit="deg"),
+        max_depth=small_sky_order1_catalog.get_max_coverage_order(),
+    )
+    assert filtered_catalog.moc == box_moc.intersection(small_sky_order1_catalog.moc)
+
+
+def test_box_filter_wrapped_ra(small_sky_order1_catalog):
+    # The catalog pixels are distributed around the [270,0] degree range.
+    filtered_catalog = small_sky_order1_catalog.filter_by_box(ra=(-10, 10), dec=(-90, 90))
+    filtered_pixels = filtered_catalog.get_healpix_pixels()
+
+    assert len(filtered_pixels) == 2
+    assert filtered_pixels == [HealpixPixel(1, 44), HealpixPixel(1, 45)]
+
+    assert (1, 44) in filtered_catalog.pixel_tree
+    assert (1, 45) in filtered_catalog.pixel_tree
+    assert len(filtered_catalog.pixel_tree.pixels[1]) == 2
+    assert filtered_catalog.catalog_info.total_rows == 0
+
+
+def test_box_filter_ra_boundary(small_sky_order1_catalog):
+    dec = (-30, 0)
+    filtered_catalog = small_sky_order1_catalog.filter_by_box(ra=(0, 0), dec=dec)
+    filtered_pixels = filtered_catalog.get_healpix_pixels()
+
+    assert len(filtered_pixels) == 3
+    assert filtered_pixels == [HealpixPixel(1, 45), HealpixPixel(1, 46), HealpixPixel(1, 47)]
+
+    for ra_range in [(0, 360), (360, 0)]:
+        catalog = small_sky_order1_catalog.filter_by_box(ra=ra_range, dec=dec)
+        assert catalog.get_healpix_pixels() == filtered_catalog.get_healpix_pixels()
+
+
+def test_box_filter_ra_divisions_edge_cases(small_sky_order1_catalog):
+    # In this test we generate RA bands and their complements and compare the amount of
+    # pixels from the catalog after filtering. We construct these complement regions in
+    # a way that allows us to capture more pixels of the catalog. This is useful to test
+    # that wide RA ranges (larger than 180 degrees) are correctly handled.
+    dec = (-90, 90)
+
+    def assert_is_subset_of(catalog, catalog_complement):
+        pixels_catalog = catalog.get_healpix_pixels()
+        pixels_catalog_complement = catalog_complement.get_healpix_pixels()
+        assert len(pixels_catalog) < len(pixels_catalog_complement)
+        assert all(pixel in pixels_catalog_complement for pixel in pixels_catalog)
+
+    filtered_catalog = small_sky_order1_catalog.filter_by_box(ra=(0, 180), dec=dec)
+    filtered_catalog_complement = small_sky_order1_catalog.filter_by_box(ra=(180, 0), dec=dec)
+    assert_is_subset_of(filtered_catalog, filtered_catalog_complement)
+
+    filtered_catalog = small_sky_order1_catalog.filter_by_box(ra=(10, 50), dec=dec)
+    filtered_catalog_complement = small_sky_order1_catalog.filter_by_box(ra=(50, 10), dec=dec)
+    assert_is_subset_of(filtered_catalog, filtered_catalog_complement)
+
+    filtered_catalog = small_sky_order1_catalog.filter_by_box(ra=(10, 220), dec=dec)
+    filtered_catalog_complement = small_sky_order1_catalog.filter_by_box(ra=(220, 10), dec=dec)
+    assert_is_subset_of(filtered_catalog, filtered_catalog_complement)
+
+    filtered_catalog = small_sky_order1_catalog.filter_by_box(ra=(350, 200), dec=dec)
+    filtered_catalog_complement = small_sky_order1_catalog.filter_by_box(ra=(200, 350), dec=dec)
+    assert_is_subset_of(filtered_catalog, filtered_catalog_complement)
+
+    filtered_catalog = small_sky_order1_catalog.filter_by_box(ra=(50, 200), dec=dec)
+    filtered_catalog_complement = small_sky_order1_catalog.filter_by_box(ra=(200, 50), dec=dec)
+    assert_is_subset_of(filtered_catalog, filtered_catalog_complement)
 
 
 def test_box_filter_empty(small_sky_order1_catalog):
-    # It is very difficult to get an empty set of HEALPix with ra for this test catalog
-    # as its pixels are very close to the South Pole (dec of -90 degrees). In order 1,
-    # they are very large in area, and easily overlap with any ra region.
-    filtered_catalog = small_sky_order1_catalog.filter_by_box(ra=(0, 10))
-    assert len(filtered_catalog.get_healpix_pixels()) == 2
-    assert len(filtered_catalog.pixel_tree) == 2
-
-    filtered_catalog = small_sky_order1_catalog.filter_by_box(dec=(10, 20))
-    assert len(filtered_catalog.get_healpix_pixels()) == 0
-    assert len(filtered_catalog.pixel_tree) == 0
-
     filtered_catalog = small_sky_order1_catalog.filter_by_box(ra=(40, 50), dec=(10, 20))
     assert len(filtered_catalog.get_healpix_pixels()) == 0
     assert len(filtered_catalog.pixel_tree) == 0
 
 
 def test_box_filter_invalid_args(small_sky_order1_catalog):
-    # Some declination values are out of the [-90,90] bounds
+    # Some declination values are out of the [-90,90[ bounds
     with pytest.raises(ValueError, match=ValidatorsErrors.INVALID_DEC):
         small_sky_order1_catalog.filter_by_box(ra=(0, 30), dec=(-100, -70))
 
     # Declination values should be in ascending order
     with pytest.raises(ValueError, match=ValidatorsErrors.INVALID_RADEC_RANGE):
-        small_sky_order1_catalog.filter_by_box(dec=(0, -10))
+        small_sky_order1_catalog.filter_by_box(ra=(0, 30), dec=(0, -10))
 
     # There are ranges are defined with more than 2 values
     with pytest.raises(ValueError, match=ValidatorsErrors.INVALID_RADEC_RANGE):
-        small_sky_order1_catalog.filter_by_box(ra=(0, 30), dec=(-30, -40, 10))
+        small_sky_order1_catalog.filter_by_box(ra=(0, 30), dec=(-40, -30, 10))
     with pytest.raises(ValueError, match=ValidatorsErrors.INVALID_RADEC_RANGE):
         small_sky_order1_catalog.filter_by_box(ra=(0, 30, 40), dec=(-40, 10))
 
-    # The range values coincide (for ra, values are wrapped)
+    # The declination values coincide
     with pytest.raises(ValueError, match=ValidatorsErrors.INVALID_RADEC_RANGE):
-        small_sky_order1_catalog.filter_by_box(ra=(100, 100))
-    with pytest.raises(ValueError, match=ValidatorsErrors.INVALID_RADEC_RANGE):
-        small_sky_order1_catalog.filter_by_box(ra=(0, 360))
-    with pytest.raises(ValueError, match=ValidatorsErrors.INVALID_RADEC_RANGE):
-        small_sky_order1_catalog.filter_by_box(dec=(50, 50))
+        small_sky_order1_catalog.filter_by_box(ra=(0, 50), dec=(50, 50))
 
     # No range values were provided
     with pytest.raises(ValueError, match=ValidatorsErrors.INVALID_RADEC_RANGE):
@@ -594,6 +521,6 @@ def test_catalog_len_is_undetermined(small_sky_order1_catalog):
         vertices = [(300, -50), (300, -55), (272, -55), (272, -50)]
         len(small_sky_order1_catalog.filter_by_polygon(vertices))
     with pytest.raises(ValueError, match="undetermined"):
-        len(small_sky_order1_catalog.filter_by_box(ra=(280, 300)))
+        len(small_sky_order1_catalog.filter_by_box(ra=(280, 300), dec=(0, 30)))
     with pytest.raises(ValueError, match="undetermined"):
         len(small_sky_order1_catalog.filter_from_pixel_list([HealpixPixel(0, 11)]))

@@ -4,7 +4,6 @@ import math
 
 import astropy.units as u
 import cdshealpix
-import healpy as hp
 import numpy as np
 from astropy.coordinates import Latitude, Longitude, SkyCoord
 
@@ -66,21 +65,6 @@ def radec2pix(order: int, ra: float, dec: float) -> np.ndarray[np.int64]:
     dec = Latitude(dec, unit="deg")
 
     return cdshealpix.lonlat_to_healpix(ra, dec, order).astype(np.int64)
-
-
-def ring2nest(order: int, ipix: int) -> int:
-    return cdshealpix.from_ring(ipix, order)
-
-
-## Query
-
-
-def query_strip(*args, **kwargs):
-    return hp.query_strip(*args, **kwargs)
-
-
-def query_polygon(*args, **kwargs):
-    return hp.query_polygon(*args, **kwargs)
 
 
 ## Coordinate conversion

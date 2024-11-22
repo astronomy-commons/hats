@@ -149,12 +149,3 @@ def test_radec2pix_invalid():
     for order in orders:
         with pytest.raises(ValueError, match="angle"):
             hps.radec2pix(order, ras, decs)
-
-
-def test_ring2nest():
-    orders = [0, 1, 5, 10, 20, 29]
-    for order in orders:
-        ipix = np.arange(0, 12 * (4**order), 12 * (4**order) // 10)
-        expected_ring_ipix = cdshealpix.from_ring(ipix, order)
-        test_ring_ipix = hps.ring2nest(order, ipix)
-        assert np.all(test_ring_ipix == expected_ring_ipix)
