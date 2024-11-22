@@ -121,7 +121,6 @@ def test_order2resol():
 
 def test_order2resol_arcmin():
     orders = [0, 1, 5, 10, 20, 29]
-    nsides = [2**x for x in orders]
     resol_expected = [np.rad2deg(np.sqrt(hps.order2pixarea(order))) * 60 for order in orders]
     resol_test = [hps.order2resol(order, arcmin=True) for order in orders]
     assert resol_test == resol_expected
