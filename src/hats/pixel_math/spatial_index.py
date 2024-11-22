@@ -24,7 +24,7 @@ def compute_spatial_index(ra_values: List[float], dec_values: List[float]) -> np
     if len(ra_values) != len(dec_values):
         raise ValueError("ra and dec arrays should have the same length")
 
-    mapped_pixels = hp.ang2pix(2**SPATIAL_INDEX_ORDER, ra_values, dec_values, nest=True, lonlat=True)
+    mapped_pixels = hp.radec2pix(SPATIAL_INDEX_ORDER, ra_values, dec_values)
 
     return mapped_pixels
 
