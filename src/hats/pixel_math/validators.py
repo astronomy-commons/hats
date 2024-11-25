@@ -78,7 +78,7 @@ def check_polygon_is_valid(vertices: np.ndarray):
     Args:
         vertices (np.ndarray): The polygon vertices, in cartesian coordinates
     """
-    vertices_xyz = hp.ang2vec(*vertices.T, lonlat=True)
+    vertices_xyz = hp.ang2vec(*vertices.T)
 
     # Compute the normal between each pair of neighboring vertices
     second_vertices = np.roll(vertices_xyz, -1, axis=0)
