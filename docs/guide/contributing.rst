@@ -58,19 +58,7 @@ Notes:
 
 .. tip::
     Installing on Mac
-
-    Native prebuilt binaries for healpy on Apple Silicon Macs 
-    `do not yet exist <https://healpy.readthedocs.io/en/latest/install.html#binary-installation-with-pip-recommended-for-most-other-python-users>`_, 
-    so it's recommended to install via conda before proceeding to hats.
-
-    .. code-block:: bash
-
-        $ conda config --add channels conda-forge
-        $ conda install healpy
-        $ git clone https://github.com/astronomy-commons/hats
-        $ cd hats
-        $ pip install -e .
-        
+       
     When installing dev dependencies, make sure to include the single quotes.
 
     .. code-block:: bash

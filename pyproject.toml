@@ -22,7 +22,6 @@ dependencies = [
     "aiohttp", # http filesystem support
     "astropy",
     "fsspec>=2023.10.0", # Used for abstract filesystems
-    "healpy",
     "jproperties",
     "matplotlib>=3.3,<3.9",
     "mocpy>=0.17.1",

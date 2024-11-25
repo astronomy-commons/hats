@@ -82,9 +82,6 @@ def ang2vec(ra, dec, **kwargs) -> np.ndarray:
 def avgsize2mindist(avg_size: np.ndarray) -> np.ndarray:
     """Get the minimum distance between pixels for a given average size
 
-    Average size is a "resolution" in healpy terms, i.e. given by
-    `healpy.nside2resol`.
-
     We don't have the precise geometry of the healpix grid yet,
     so we are using average_size / mininimum_distance = 1.6
     as a rough estimate.
@@ -104,9 +101,6 @@ def avgsize2mindist(avg_size: np.ndarray) -> np.ndarray:
 
 def mindist2avgsize(mindist: np.ndarray) -> np.ndarray:
     """Get the average size for a given minimum distance between pixels
-
-    Average size is a "resolution" in healpy terms, i.e. given by
-    `healpy.nside2resol`.
 
     We don't have the precise geometry of the healpix grid yet,
     so we are using average_size / mininimum_distance = 1.6
@@ -128,9 +122,6 @@ def mindist2avgsize(mindist: np.ndarray) -> np.ndarray:
 
 def avgsize2order(avg_size_arcmin: np.ndarray) -> np.ndarray:
     """Get the largest order with average healpix size larger than avg_size_arcmin
-
-    "Average" size is healpy's "resolution", so this function is
-    reverse to healpy.nside2resol(healpy.order2nside(order))..
 
     Parameters
     ----------
