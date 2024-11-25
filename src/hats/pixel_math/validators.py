@@ -75,9 +75,6 @@ def validate_polygon(vertices: list[tuple[float, float]]):
 def check_polygon_is_valid(vertices: np.ndarray):
     """Check if the polygon has no degenerate corners and it is convex.
 
-    Based on HEALpy's `queryPolygonInternal` implementation:
-    https://github.com/cds-astro/cds.moc/blob/master/src/healpix/essentials/HealpixBase.java.
-
     Args:
         vertices (np.ndarray): The polygon vertices, in cartesian coordinates
 
