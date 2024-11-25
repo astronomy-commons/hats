@@ -77,22 +77,24 @@ def check_polygon_is_valid(vertices: np.ndarray):
 
     Args:
         vertices (np.ndarray): The polygon vertices, in cartesian coordinates
-
-    Returns:
-        True if polygon is valid, False otherwise.
     """
-    vertices_xyz = hp.ang2vec(*vertices.T)
-    n_vertices = len(vertices_xyz)
-    flip = 0
-    for i in range(n_vertices):
-        normal = np.cross(vertices_xyz[i], vertices_xyz[(i + 1) % n_vertices])
-        hnd = normal.dot(vertices_xyz[(i + 2) % n_vertices])
-        if np.isclose(hnd, 0, atol=1e-10):
-            raise ValueError(ValidatorsErrors.DEGENERATE_POLYGON.value)
-        if i == 0:
-            flip = -1 if hnd < 0 else 1
-        elif flip * hnd <= 0:
-            raise ValueError(ValidatorsErrors.INVALID_CONCAVE_SHAPE.value)
+    vertices_xyz = hp.ang2vec(*vertices.T, lonlat=True)
+
+    # Compute the normal between each pair of neighboring vertices
+    second_vertices = np.roll(vertices_xyz, -1, axis=0)
+    normals = np.cross(vertices_xyz, second_vertices)
+
+    # Compute the dot products between each normal and a third neighboring vertex.
+    # 'ij,ij->i' means we will multiply each normal vector with the corresponding
+    # vector of the third vertex ('ij,ij': hence element-wise) and sum over each
+    # column for each row '->i'.
+    third_vertices = np.roll(second_vertices, -1, axis=0)
+    dot_products = np.einsum("ij,ij->i", normals, third_vertices)
+
+    if np.any(np.isclose(dot_products, 0)):
+        raise ValueError(ValidatorsErrors.DEGENERATE_POLYGON.value)
+    if not (np.all(dot_products > 0) or np.all(dot_products < 0)):
+        raise ValueError(ValidatorsErrors.INVALID_CONCAVE_SHAPE.value)
 
 
 def validate_box(ra: Tuple[float, float], dec: Tuple[float, float]):

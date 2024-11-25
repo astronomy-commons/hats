@@ -25,6 +25,7 @@ CATALOG_TYPE_ALLOWED_FIELDS = {
     ],
     CatalogType.INDEX: ["primary_catalog", "indexing_column", "extra_columns"],
     CatalogType.MARGIN: ["primary_catalog", "margin_threshold", "ra_column", "dec_column", "default_columns"],
+    CatalogType.MAP: ["default_columns"],
 }
 
 ## catalog_name, catalog_type, and total_rows are required for ALL types
@@ -40,6 +41,7 @@ CATALOG_TYPE_REQUIRED_FIELDS = {
     ],
     CatalogType.INDEX: ["primary_catalog", "indexing_column"],
     CatalogType.MARGIN: ["primary_catalog", "margin_threshold"],
+    CatalogType.MAP: [],
 }
 
 # All additional properties in the HATS recommendation.
