@@ -81,7 +81,9 @@ def plot_pixels(catalog: HealpixDataset, plot_title: str | None = None, **kwargs
     )
 
 
-def plot_pixel_list(pixels: List[HealpixPixel], plot_title: str = "", projection="MOL", **kwargs):
+def plot_pixel_list(
+    pixels: List[HealpixPixel], plot_title: str = "", projection="MOL", color_by_order=True, **kwargs
+):
     """Create a visual map of the pixel density of a list of pixels.
 
     Args:
@@ -89,6 +91,7 @@ def plot_pixel_list(pixels: List[HealpixPixel], plot_title: str = "", projection
         plot_title (str): heading for the plot
         projection (str): The projection to use. Available projections listed at
             https://docs.astropy.org/en/stable/wcs/supported_projections.html
+        color_by_order (bool): Whether to color the pixels by their order. True by default.
         kwargs: Additional args to pass to `plot_healpix_map`
     """
     orders = np.array([p.order for p in pixels])
@@ -98,13 +101,16 @@ def plot_pixel_list(pixels: List[HealpixPixel], plot_title: str = "", projection
         order_map, projection=projection, title=plot_title, ipix=ipix, depth=orders, cbar=False, **kwargs
     )
     col = ax.collections[0]
-    col_array = col.get_array()
-    plt.colorbar(
-        col,
-        boundaries=np.arange(np.min(col_array) - 0.5, np.max(col_array) + 0.6, 1),
-        ticks=np.arange(np.min(col_array), np.max(col_array) + 1),
-        label="HEALPix Order",
-    )
+    if color_by_order:
+        col_array = col.get_array()
+        plt.colorbar(
+            col,
+            boundaries=np.arange(np.min(col_array) - 0.5, np.max(col_array) + 0.6, 1),
+            ticks=np.arange(np.min(col_array), np.max(col_array) + 1),
+            label="HEALPix Order",
+        )
+    else:
+        col.set(cmap=None, norm=None, array=None)
     return fig, ax
 
 
@@ -175,26 +181,17 @@ def plot_moc(
     return fig, ax
 
 
-def cull_to_fov(depth_ipix_d: Dict[int, Tuple[np.ndarray, np.ndarray]], wcs):
-    """Culls a mapping of ipix to values to pixels that are inside the plot window defined by a WCS
+def get_fov_moc_from_wcs(wcs: WCS) -> MOC | None:
+    """Returns a MOC that matches the plot window defined by a WCS
 
     Modified from mocpy.moc.plot.utils.build_plotting_moc
 
-    Any pixels too small are merged to a lower order, with the map values within a lower order pixel being
-    sampled
-
     Args:
-        depth_ipix_d (Dict[int, Tuple[np.ndarray, np.ndarray]]): Map of HEALPix order to a tuple of 2 arrays
-            (the ipix array of pixel numbers in NESTED ordering, and the values of the pixels)
         wcs (astropy.WCS): The wcs object with the plot's projection
 
     Returns:
-        A new map with the same datatype of depth_ipix_d, with any pixels outside the plot's FOV removed,
-        and any pixels too small merged with their map values subsampled.
+        The moc which defines the area of the sky that would be visible in a WCSAxes with the given WCS
     """
-
-    depth_ipix_d = _merge_too_small_pixels(depth_ipix_d, wcs)
-
     # Get the MOC delimiting the FOV polygon
     width_px = int(wcs.wcs.crpix[0] * 2.0)  # Supposing the wcs is centered in the axis
     height_px = int(wcs.wcs.crpix[1] * 2.0)
@@ -223,10 +220,37 @@ def cull_to_fov(depth_ipix_d: Dict[int, Tuple[np.ndarray, np.ndarray]], wcs):
     warnings.filterwarnings("default")
 
     if np.isnan(ra_deg).any() or np.isnan(dec_deg).any():
-        return depth_ipix_d
+        return None
 
     # Create a rough MOC (depth=3 is sufficient) from the viewport
     moc_viewport = MOC.from_polygon_skycoord(viewport, max_depth=3)
+    return moc_viewport
+
+
+def cull_to_fov(depth_ipix_d: Dict[int, Tuple[np.ndarray, np.ndarray]], wcs):
+    """Culls a mapping of ipix to values to pixels that are inside the plot window defined by a WCS
+
+    Modified from mocpy.moc.plot.utils.build_plotting_moc
+
+    Any pixels too small are merged to a lower order, with the map values within a lower order pixel being
+    sampled
+
+    Args:
+        depth_ipix_d (Dict[int, Tuple[np.ndarray, np.ndarray]]): Map of HEALPix order to a tuple of 2 arrays
+            (the ipix array of pixel numbers in NESTED ordering, and the values of the pixels)
+        wcs (astropy.WCS): The wcs object with the plot's projection
+
+    Returns:
+        A new map with the same datatype of depth_ipix_d, with any pixels outside the plot's FOV removed,
+        and any pixels too small merged with their map values subsampled.
+    """
+
+    depth_ipix_d = _merge_too_small_pixels(depth_ipix_d, wcs)
+
+    moc_viewport = get_fov_moc_from_wcs(wcs)
+
+    if moc_viewport is None:
+        return depth_ipix_d
 
     output_dict = {}
 
@@ -510,18 +534,26 @@ def initialize_wcs_axes(
         frame_class (Type[BaseFrame] | None): The class of the frame for the WCSAxes to be initialized with.
             if the `ax` kwarg is used, this value is ignored (By Default uses EllipticalFrame for full
             sky projection. If FOV is set, RectangularFrame is used)
-        ax (WCSAxes | None): The matplotlib axes to plot onto. If None, an axes will be created to be used. If
-            specified, the axes must be an astropy WCSAxes, and the `wcs` parameter must be set with the WCS
-            object used in the axes. (Default: None)
-        fig (Figure | None): The matplotlib figure to add the axes to. If None, one will be created, unless
-            ax is specified (Default: None)
+        ax (WCSAxes | None): The matplotlib axes to plot onto. If None, the current axes will be used.
+            If the current axes is not the correct WCSAxes type, a new figure and  axes will be created to be
+            used. If specified, the axes must be an astropy WCSAxes, and the `wcs` parameter will be ignored
+            and the wcs of the axes used. (Default: None)
+        fig (Figure | None): The matplotlib figure to add the axes to. If None, the current figure will be
+            used, unless ax is specified, in which case the figure of the ax will be used. If there is no
+            current figure, one will be created. (Default: None)
         kwargs: additional kwargs to pass to figure initialization
     """
     if fig is None:
         if ax is not None:
+            # Use figure from axes if ax provided
             fig = ax.get_figure()
         else:
-            fig = plt.figure(**kwargs)
+            if len(plt.get_fignums()) == 0:
+                # create new figure if no existing figure
+                fig = plt.figure(**kwargs)
+            else:
+                # use current figure if exists
+                fig = plt.gcf()
     if frame_class is None and fov is None and wcs is None:
         frame_class = EllipticalFrame
     if fov is None:
@@ -529,20 +561,33 @@ def initialize_wcs_axes(
     if center is None:
         center = SkyCoord(0, 0, unit="deg", frame="icrs")
     if ax is None:
+        if len(fig.axes) > 0:
+            ax = plt.gca()
+            if isinstance(ax, WCSAxes):
+                # Use current axes if axes exists in figure and current axes is correct type
+                wcs = ax.wcs
+                return fig, ax, wcs
+            # Plot onto new axes on new figure if current axes is not correct type
+            warnings.warn("Current axes is not of correct type WCSAxes. A new figure and axes will be used.")
+            fig = plt.figure(**kwargs)
         if wcs is None:
+            # Initialize wcs with params if no WCS provided
             wcs = WCS(
                 fig,
                 fov=fov,
                 center=center,
                 coordsys="icrs",
-                rotation=Angle(0, u.degree),
+                rotation=Angle(0, u.deg),
                 projection=projection,
             ).w
+        # If no axes provided and no valid current axes then create new axes with the right projection
         ax = fig.add_subplot(1, 1, 1, projection=wcs, frame_class=frame_class)
-    elif wcs is None:
-        raise ValueError(
-            "if ax is provided, wcs must also be provided with the projection used in initializing ax"
-        )
+    elif not isinstance(ax, WCSAxes):
+        # Error if provided axes is of wrong type
+        raise ValueError("ax is not of correct type WCSAxes")
+    else:
+        # Use WCS from provided axes if provided axes is correct type
+        wcs = ax.wcs
     return fig, ax, wcs
 
 

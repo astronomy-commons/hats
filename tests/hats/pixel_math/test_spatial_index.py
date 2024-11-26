@@ -16,12 +16,10 @@ from hats.pixel_math.spatial_index import (
 def test_single():
     """Single point. Adheres to specification."""
     result = compute_spatial_index([5], [5])
-    expected = hp.ang2pix(
-        2**SPATIAL_INDEX_ORDER,
+    expected = hp.radec2pix(
+        SPATIAL_INDEX_ORDER,
         [5],
         [5],
-        nest=True,
-        lonlat=True,
     )
 
     npt.assert_array_equal(result, expected)
@@ -38,12 +36,10 @@ def test_short_list():
     ra = [5, 1, 5]
     dec = [5, 1, 5]
     result = compute_spatial_index(ra, dec)
-    expected = hp.ang2pix(
-        2**SPATIAL_INDEX_ORDER,
+    expected = hp.radec2pix(
+        SPATIAL_INDEX_ORDER,
         ra,
         dec,
-        nest=True,
-        lonlat=True,
     )
     npt.assert_array_equal(result, expected)
 
@@ -53,12 +49,10 @@ def test_list():
     ra = [5, 5, 5, 1, 5, 5, 5, 1, 5]
     dec = [5, 5, 5, 1, 5, 5, 5, 1, 5]
     result = compute_spatial_index(ra, dec)
-    expected = hp.ang2pix(
-        2**SPATIAL_INDEX_ORDER,
+    expected = hp.radec2pix(
+        SPATIAL_INDEX_ORDER,
         ra,
         dec,
-        nest=True,
-        lonlat=True,
     )
     npt.assert_array_equal(result, expected)
 
@@ -132,11 +126,11 @@ def test_spatial_index_to_healpix_low_order():
 def test_healpix_to_spatial_index_single():
     orders = [3, 3, 4, 1]
     pixels = [0, 12, 1231, 11]
-    pixels_at_high_order = [p * (4 ** (SPATIAL_INDEX_ORDER - o)) for o, p in zip(orders, pixels)]
-    lon, lat = hp.pix2ang(
-        [2**SPATIAL_INDEX_ORDER] * len(orders), pixels_at_high_order, nest=True, lonlat=True
-    )
-    actual_spatial_indices = compute_spatial_index(lon, lat)
+
+    ra = [45.0, 45.0, 0.0, 225.0]
+    dec = [7.11477952e-08, 1.94712207e01, 1.44775123e01, 4.18103150e01]
+
+    actual_spatial_indices = compute_spatial_index(ra, dec)
     test_spatial_indices = [healpix_to_spatial_index(o, p) for o, p in zip(orders, pixels)]
     assert np.all(test_spatial_indices == actual_spatial_indices)
 
@@ -144,10 +138,9 @@ def test_healpix_to_spatial_index_single():
 def test_healpix_to_spatial_index_array():
     orders = [3, 3, 4, 1]
     pixels = [0, 12, 1231, 11]
-    pixels_at_high_order = [p * (4 ** (SPATIAL_INDEX_ORDER - o)) for o, p in zip(orders, pixels)]
-    lon, lat = hp.pix2ang(
-        [2**SPATIAL_INDEX_ORDER] * len(orders), pixels_at_high_order, nest=True, lonlat=True
-    )
-    actual_spatial_indices = compute_spatial_index(lon, lat)
+
+    ra = [45.0, 45.0, 0.0, 225.0]
+    dec = [7.11477952e-08, 1.94712207e01, 1.44775123e01, 4.18103150e01]
+    actual_spatial_indices = compute_spatial_index(ra, dec)
     test_spatial_indices = healpix_to_spatial_index(orders, pixels)
     assert np.all(test_spatial_indices == actual_spatial_indices)

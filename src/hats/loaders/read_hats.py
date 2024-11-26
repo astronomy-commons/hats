@@ -74,7 +74,7 @@ def _read_moc_from_point_map(catalog_base_dir: str | Path | UPath) -> MOC | None
     if not file_io.does_file_or_directory_exist(point_map_path):
         return None
     fits_image = file_io.read_fits_image(point_map_path)
-    order = hp.nside2order(hp.npix2nside(len(fits_image)))
+    order = hp.npix2order(len(fits_image))
     boolean_skymap = fits_image.astype(bool)
     ipix = np.where(boolean_skymap)[0]
     orders = np.full(ipix.shape, order)

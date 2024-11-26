@@ -155,12 +155,10 @@ class HealpixDataset(Dataset):
         )
         return self.filter_by_moc(cone_moc)
 
-    def filter_by_box(
-        self, ra: Tuple[float, float] | None = None, dec: Tuple[float, float] | None = None
-    ) -> Self:
+    def filter_by_box(self, ra: Tuple[float, float], dec: Tuple[float, float]) -> Self:
         """Filter the pixels in the catalog to only include the pixels that overlap with a
-        right ascension or declination range. In case both ranges are provided, filtering
-        is performed using a polygon.
+        zone, defined by right ascension and declination ranges. The right ascension edges follow
+        great arc circles and the declination edges follow small arc circles.
 
         Args:
             ra (Tuple[float, float]): Right ascension range, in degrees

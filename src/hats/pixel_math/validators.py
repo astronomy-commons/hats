@@ -78,7 +78,7 @@ def check_polygon_is_valid(vertices: np.ndarray):
     Args:
         vertices (np.ndarray): The polygon vertices, in cartesian coordinates
     """
-    vertices_xyz = hp.ang2vec(*vertices.T, lonlat=True)
+    vertices_xyz = hp.ang2vec(*vertices.T)
 
     # Compute the normal between each pair of neighboring vertices
     second_vertices = np.roll(vertices_xyz, -1, axis=0)
@@ -97,25 +97,23 @@ def check_polygon_is_valid(vertices: np.ndarray):
         raise ValueError(ValidatorsErrors.INVALID_CONCAVE_SHAPE.value)
 
 
-def validate_box(ra: Tuple[float, float] | None, dec: Tuple[float, float] | None):
+def validate_box(ra: Tuple[float, float], dec: Tuple[float, float]):
     """Checks if ra and dec values are valid for the box search.
 
-    - At least one range of ra or dec must have been provided
-    - Ranges must be pairs of non-duplicate minimum and maximum values, in degrees
-    - Declination values, if existing, must be in ascending order
-    - Declination values, if existing, must be in the [-90,90] degree range
+    - Both ranges for ra or dec must have been provided.
+    - Ranges must be defined by a pair of values, in degrees.
+    - Declination values must be unique, provided in ascending order, and
+    belong to the [-90,90] degree range.
 
     Args:
         ra (Tuple[float, float]): Right ascension range, in degrees
         dec (Tuple[float, float]): Declination range, in degrees
     """
     invalid_range = False
-    if ra is not None:
-        if len(ra) != 2 or len(ra) != len(set(ra)):
-            invalid_range = True
-    if dec is not None:
-        if len(dec) != 2 or dec[0] >= dec[1]:
-            invalid_range = True
-        validate_declination_values(list(dec))
-    if (ra is None and dec is None) or invalid_range:
+    if ra is None or len(ra) != 2:
+        invalid_range = True
+    elif dec is None or len(dec) != 2 or dec[0] >= dec[1]:
+        invalid_range = True
+    if invalid_range:
         raise ValueError(ValidatorsErrors.INVALID_RADEC_RANGE.value)
+    validate_declination_values(dec)
