@@ -7,5 +7,5 @@
                 Latest value: 45.9ms (11.41% worse
                 than best value 41.2ms).</content></entry><entry><id>tag:hats.asv,2024-10-17:/2f5a37b703bb4432030cec3371687062f1630a41b39248d5e41122365b9f6d9f</id><title xml:lang="en">-0.35% benchmarks.time_test_cone_filter_multiple_order</title><updated>2024-10-17T16:50:06Z</updated><link href="index.html#benchmarks.time_test_cone_filter_multiple_order?commits=632292a0a60f8ddeb89f41237e04fdff9ae16ab3" /><content xml:lang="en" type="html">&lt;a href="index.html#benchmarks.time_test_cone_filter_multiple_order?commits=632292a0a60f8ddeb89f41237e04fdff9ae16ab3"&gt;-0.35% regression&lt;/a&gt; on 2024-10-17 16:46:46 in commit &lt;a href="https://github.com/astronomy-commons/hats/commit632292a0a60f8ddeb89f41237e04fdff9ae16ab3"&gt;632292a0&lt;/a&gt;.&lt;br&gt;
                 New value: 965μs, old value: 968μs.&lt;br&gt;
-                Latest value: 1.03ms (7.16% worse
+                Latest value: 1.03ms (7.26% worse
                 than best value 965μs).</content></entry></feed>
