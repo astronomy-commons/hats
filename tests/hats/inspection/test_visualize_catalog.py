@@ -848,6 +848,18 @@ def test_catalog_plot_density(small_sky_source_dir):
     assert len(order3_paths) < len(order10_paths)
 
 
+def test_catalog_plot_density_errors(small_sky_source_dir):
+    small_sky_source_catalog = read_hats(small_sky_source_dir)
+    with pytest.raises(ValueError, match="plotting order"):
+        plot_density(small_sky_source_catalog, order=13)
+
+    with pytest.raises(ValueError, match="Unit must be angular"):
+        plot_density(small_sky_source_catalog, unit="second")
+
+    with pytest.raises(ValueError, match="catalog required"):
+        plot_density(None)
+
+
 def test_catalog_plot(small_sky_order1_catalog):
     fig, ax = plot_pixels(small_sky_order1_catalog)
     pixels = sorted(small_sky_order1_catalog.get_healpix_pixels())

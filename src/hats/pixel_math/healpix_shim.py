@@ -40,20 +40,17 @@ def order2npix(order: int) -> int:
     return 12 * (1 << (2 * order))
 
 
-def order2resol(order: int, *, arcmin: bool = False, unit=None) -> float:
+def order2resol(order: int, *, arcmin: bool = False, unit=u.rad) -> float:
     if arcmin:
         unit = u.arcmin
-    else:
-        unit = _convert_unit(unit, default=u.rad)
 
     return np.sqrt(order2pixarea(order, unit=unit))
 
 
-def order2pixarea(order: int, *, degrees: bool = False, unit=None) -> float:
+def order2pixarea(order: int, *, degrees: bool = False, unit=u.rad) -> float:
     if degrees:
         unit = u.deg
-    else:
-        unit = _convert_unit(unit, default=u.rad)
+    unit = u.Unit(unit)
 
     npix = order2npix(order)
     pix_area_rad = 4 * np.pi / npix
@@ -68,17 +65,6 @@ def order2pixarea(order: int, *, degrees: bool = False, unit=None) -> float:
     if unit == u.arcsec:
         return pix_area_rad * (180 / np.pi) * (180 / np.pi) * 12960000
     raise ValueError("Unit must be angular measurement.")
-
-
-def _convert_unit(unit, default=u.rad):
-    if unit is not None:
-        unit = u.Unit(unit)
-    else:
-        unit = default
-
-    if unit not in (u.arcmin, u.arcsec, u.deg, u.rad):
-        raise ValueError("Unit must be angular measurement.")
-    return unit
 
 
 def radec2pix(order: int, ra: float, dec: float) -> np.ndarray[np.int64]:

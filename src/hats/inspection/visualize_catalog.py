@@ -58,7 +58,7 @@ def plot_density(catalog: Catalog, *, plot_title: str | None = None, order=None,
         order (int): Optionally reduce the display healpix order, and aggregate smaller tiles.
         kwargs: Additional args to pass to `plot_healpix_map`
     """
-    if not catalog.on_disk:
+    if catalog is None or not catalog.on_disk:
         raise ValueError("on disk catalog required for point-wise visualization")
     point_map = _read_point_map(catalog.catalog_base_dir)
     map_order = hp.npix2order(len(point_map))
