@@ -1,3 +1,4 @@
+import astropy.units as u
 import cdshealpix
 import numpy as np
 import pytest
@@ -112,6 +113,17 @@ def test_order2pixarea_degrees():
     assert pix_area_test == pix_area_expected
 
 
+def test_order2pixarea_arcmin():
+    orders = [20, 29]
+    npix = [12 * (4**order) for order in orders]
+    pix_area_expected = [np.rad2deg(np.rad2deg(4 * np.pi / x)) * 3600 for x in npix]
+    pix_area_test = [hps.order2pixarea(order, unit=u.arcmin) for order in orders]
+    assert_allclose(pix_area_test, pix_area_expected)
+
+    pix_area_test = [hps.order2pixarea(order, unit=u.arcminute) for order in orders]
+    assert_allclose(pix_area_test, pix_area_expected)
+
+
 def test_order2resol():
     orders = [0, 1, 5, 10, 20, 29]
     resol_expected = [np.sqrt(hps.order2pixarea(order)) for order in orders]
@@ -123,7 +135,20 @@ def test_order2resol_arcmin():
     orders = [0, 1, 5, 10, 20, 29]
     resol_expected = [np.rad2deg(np.sqrt(hps.order2pixarea(order))) * 60 for order in orders]
     resol_test = [hps.order2resol(order, arcmin=True) for order in orders]
-    assert resol_test == resol_expected
+    assert_allclose(resol_test, resol_expected)
+
+
+def test_order2resol_degree():
+    orders = [0, 1, 5, 10, 20, 29]
+    resol_expected = [np.rad2deg(np.sqrt(hps.order2pixarea(order))) for order in orders]
+    resol_test = [hps.order2resol(order, unit=u.deg) for order in orders]
+    assert_allclose(resol_test, resol_expected)
+
+    resol_test = [hps.order2resol(order, unit=u.degree) for order in orders]
+    assert_allclose(resol_test, resol_expected)
+
+    resol_test = [hps.order2resol(order, unit="deg") for order in orders]
+    assert_allclose(resol_test, resol_expected)
 
 
 def test_radec2pix_lonlat():

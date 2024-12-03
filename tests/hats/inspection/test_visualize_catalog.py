@@ -15,7 +15,8 @@ from mocpy.moc.plot import fill
 from mocpy.moc.plot.culling_backfacing_cells import from_moc
 from mocpy.moc.plot.utils import build_plotting_moc
 
-from hats.inspection import plot_pixels
+from hats import read_hats
+from hats.inspection import plot_density, plot_pixels
 from hats.inspection.visualize_catalog import (
     compute_healpix_vertices,
     cull_from_pixel_map,
@@ -829,6 +830,22 @@ def test_plot_existing_wrong_axes():
         np.testing.assert_array_equal(path.vertices, verts)
         np.testing.assert_array_equal(path.codes, codes)
     np.testing.assert_array_equal(col.get_array(), pix_map)
+
+
+def test_catalog_plot_density(small_sky_source_dir):
+    """Test plotting pixel-density for on-disk catalog.
+    Confirm plotting at lower order doesn't have a warning, and creates fewer plot paths."""
+    small_sky_source_catalog = read_hats(small_sky_source_dir)
+    with pytest.warns(match="smaller"):
+        _, ax = plot_density(small_sky_source_catalog)
+    order10_paths = ax.collections[0].get_paths()
+    assert "Angular density of catalog small_sky_source" == ax.get_title()
+
+    _, ax = plot_density(small_sky_source_catalog, order=3)
+    order3_paths = ax.collections[-1].get_paths()
+    assert "Angular density of catalog small_sky_source" == ax.get_title()
+
+    assert len(order3_paths) < len(order10_paths)
 
 
 def test_catalog_plot(small_sky_order1_catalog):
