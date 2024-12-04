@@ -3,7 +3,6 @@ from __future__ import annotations
 import tempfile
 from collections.abc import Generator
 from pathlib import Path
-from typing import Any, Tuple
 
 import numpy as np
 import pandas as pd
@@ -161,7 +160,7 @@ def read_parquet_metadata(file_pointer: str | Path | UPath, **kwargs) -> pq.File
     return parquet_file
 
 
-def read_parquet_dataset(source: str | Path | UPath, **kwargs) -> Tuple[UPath, Dataset]:
+def read_parquet_dataset(source: str | Path | UPath, **kwargs) -> tuple[UPath, Dataset]:
     """Read parquet dataset from directory pointer or list of files.
 
     Note that pyarrow.dataset reads require that directory pointers don't contain a
@@ -198,7 +197,7 @@ def read_parquet_dataset(source: str | Path | UPath, **kwargs) -> Tuple[UPath, D
 
 
 def write_parquet_metadata(
-    schema: Any, file_pointer: str | Path | UPath, metadata_collector: list | None = None, **kwargs
+    schema, file_pointer: str | Path | UPath, metadata_collector: list | None = None, **kwargs
 ):
     """Write a metadata only parquet file from a schema
 

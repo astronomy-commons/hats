@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import warnings
 from pathlib import Path
-from typing import Dict, List
 
 import numpy as np
 import pandas as pd
@@ -46,7 +45,7 @@ class PartitionJoinInfo:
             if column not in self.data_frame.columns:
                 raise ValueError(f"join_info_df does not contain column {column}")
 
-    def primary_to_join_map(self) -> Dict[HealpixPixel, List[HealpixPixel]]:
+    def primary_to_join_map(self) -> dict[HealpixPixel, list[HealpixPixel]]:
         """Generate a map from a single primary pixel to one or more pixels in the join catalog.
 
         Lots of cute comprehension is happening here, so watch out!

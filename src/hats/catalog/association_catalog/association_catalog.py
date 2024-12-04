@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Union
-
 import pandas as pd
 import pyarrow as pa
 from mocpy import MOC
@@ -19,13 +17,11 @@ class AssociationCatalog(HealpixDataset):
     Catalog, corresponding to each pair of partitions in each catalog that contain rows to join.
     """
 
-    JoinPixelInputTypes = Union[list, pd.DataFrame, PartitionJoinInfo]
-
     def __init__(
         self,
         catalog_info: TableProperties,
         pixels: PixelInputTypes,
-        join_pixels: JoinPixelInputTypes,
+        join_pixels: list | pd.DataFrame | PartitionJoinInfo,
         catalog_path=None,
         moc: MOC | None = None,
         schema: pa.Schema | None = None,
@@ -44,7 +40,7 @@ class AssociationCatalog(HealpixDataset):
 
     @staticmethod
     def _get_partition_join_info_from_pixels(
-        join_pixels: JoinPixelInputTypes,
+        join_pixels: list | pd.DataFrame | PartitionJoinInfo,
     ) -> PartitionJoinInfo:
         if isinstance(join_pixels, PartitionJoinInfo):
             return join_pixels

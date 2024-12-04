@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import List
 
 import numpy as np
 from mocpy import MOC
@@ -80,7 +79,7 @@ class PixelTree:
         """
         return np.max(self.pixels.T[0])
 
-    def get_healpix_pixels(self) -> List[HealpixPixel]:
+    def get_healpix_pixels(self) -> list[HealpixPixel]:
         """Creates a list of HealpixPixels in the tree
 
         Returns (List[HealpixPixel]):

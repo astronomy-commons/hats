@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import List
-
 import numpy as np
 
 import hats.pixel_math.healpix_shim as hp
@@ -10,7 +8,7 @@ SPATIAL_INDEX_COLUMN = "_healpix_29"
 SPATIAL_INDEX_ORDER = 29
 
 
-def compute_spatial_index(ra_values: List[float], dec_values: List[float]) -> np.ndarray:
+def compute_spatial_index(ra_values: list[float], dec_values: list[float]) -> np.ndarray:
     """Compute the healpix index field.
 
     Args:
@@ -29,7 +27,7 @@ def compute_spatial_index(ra_values: List[float], dec_values: List[float]) -> np
     return mapped_pixels
 
 
-def spatial_index_to_healpix(ids: List[int], target_order: int = SPATIAL_INDEX_ORDER) -> np.ndarray:
+def spatial_index_to_healpix(ids: list[int], target_order: int = SPATIAL_INDEX_ORDER) -> np.ndarray:
     """Convert _healpix_29 values to the healpix pixel at the specified order
 
     Args:
@@ -43,7 +41,7 @@ def spatial_index_to_healpix(ids: List[int], target_order: int = SPATIAL_INDEX_O
     return np.array(ids) >> (2 * delta_order)
 
 
-def healpix_to_spatial_index(order: int | List[int], pixel: int | List[int]) -> np.int64 | np.ndarray:
+def healpix_to_spatial_index(order: int | list[int], pixel: int | list[int]) -> np.int64 | np.ndarray:
     """Convert a healpix pixel to the healpix index
 
     This maps the healpix pixel to the lowest pixel number within that pixel at order 29.

@@ -1,6 +1,5 @@
 import os.path
 from pathlib import Path
-from typing import List
 
 import pandas as pd
 import pyarrow as pa
@@ -194,7 +193,7 @@ def catalog_path(test_data_dir) -> str:
 
 
 @pytest.fixture
-def margin_catalog_pixels() -> List[HealpixPixel]:
+def margin_catalog_pixels() -> list[HealpixPixel]:
     return [
         HealpixPixel(0, 4),
         HealpixPixel(1, 44),
@@ -210,7 +209,7 @@ def margin_catalog_path(test_data_dir) -> str:
 
 
 @pytest.fixture
-def catalog_pixels() -> List[HealpixPixel]:
+def catalog_pixels() -> list[HealpixPixel]:
     return [HealpixPixel(1, 0), HealpixPixel(1, 1), HealpixPixel(2, 8)]
 
 

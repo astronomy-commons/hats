@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
-from typing import List
 
 import yaml
 from typing_extensions import Self
@@ -24,14 +23,14 @@ class AlmanacInfo:
     join: str | None = None
     primary_link: Self | None = None
     join_link: Self | None = None
-    sources: List[Self] = field(default_factory=list)
-    objects: List[Self] = field(default_factory=list)
-    margins: List[Self] = field(default_factory=list)
-    associations: List[Self] = field(default_factory=list)
-    associations_right: List[Self] = field(default_factory=list)
-    indexes: List[Self] = field(default_factory=list)
+    sources: list[Self] = field(default_factory=list)
+    objects: list[Self] = field(default_factory=list)
+    margins: list[Self] = field(default_factory=list)
+    associations: list[Self] = field(default_factory=list)
+    associations_right: list[Self] = field(default_factory=list)
+    indexes: list[Self] = field(default_factory=list)
 
-    creators: List[str] = field(default_factory=list)
+    creators: list[str] = field(default_factory=list)
     description: str = ""
     version: str = ""
     deprecated: str = ""
