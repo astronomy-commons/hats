@@ -6,7 +6,10 @@ from mocpy import MOC
 
 from hats.catalog.association_catalog.partition_join_info import PartitionJoinInfo
 from hats.catalog.dataset.table_properties import TableProperties
-from hats.catalog.healpix_dataset.healpix_dataset import HealpixDataset, PixelInputTypes
+from hats.catalog.healpix_dataset.healpix_dataset import HealpixDataset
+from hats.catalog.partition_info import PartitionInfo
+from hats.pixel_math import HealpixPixel
+from hats.pixel_tree.pixel_tree import PixelTree
 
 
 class AssociationCatalog(HealpixDataset):
@@ -20,7 +23,7 @@ class AssociationCatalog(HealpixDataset):
     def __init__(
         self,
         catalog_info: TableProperties,
-        pixels: PixelInputTypes,
+        pixels: PartitionInfo | PixelTree | list[HealpixPixel],
         join_pixels: list | pd.DataFrame | PartitionJoinInfo,
         catalog_path=None,
         moc: MOC | None = None,
