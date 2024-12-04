@@ -853,8 +853,8 @@ def test_catalog_plot_density_errors(small_sky_source_dir):
     with pytest.raises(ValueError, match="plotting order"):
         plot_density(small_sky_source_catalog, order=13)
 
-    with pytest.raises(ValueError, match="Unit must be angular"):
-        plot_density(small_sky_source_catalog, unit="second")
+    with pytest.raises(ValueError, match="not convertible"):
+        plot_density(small_sky_source_catalog, unit="arcmin")
 
     with pytest.raises(ValueError, match="catalog required"):
         plot_density(None)

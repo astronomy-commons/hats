@@ -43,28 +43,19 @@ def order2npix(order: int) -> int:
 def order2resol(order: int, *, arcmin: bool = False, unit=u.rad) -> float:
     if arcmin:
         unit = u.arcmin
+    unit = u.Unit(unit)
 
-    return np.sqrt(order2pixarea(order, unit=unit))
+    return np.sqrt(order2pixarea(order, unit=unit * unit))
 
 
-def order2pixarea(order: int, *, degrees: bool = False, unit=u.rad) -> float:
+def order2pixarea(order: int, *, degrees: bool = False, unit=u.sr) -> float:
     if degrees:
-        unit = u.deg
+        unit = "deg**2"
     unit = u.Unit(unit)
 
     npix = order2npix(order)
-    pix_area_rad = 4 * np.pi / npix
-
-    # Yes, we're using astropy units, but those are not for SOLID angles.
-    if unit == u.rad:
-        return pix_area_rad
-    if unit == u.deg:
-        return pix_area_rad * (180 / np.pi) * (180 / np.pi)
-    if unit == u.arcmin:
-        return pix_area_rad * (180 / np.pi) * (180 / np.pi) * 3600
-    if unit == u.arcsec:
-        return pix_area_rad * (180 / np.pi) * (180 / np.pi) * 12960000
-    raise ValueError("Unit must be angular measurement.")
+    pix_area_rad = 4 * np.pi / npix * u.steradian
+    return pix_area_rad.to_value(unit)
 
 
 def radec2pix(order: int, ra: float, dec: float) -> np.ndarray[np.int64]:

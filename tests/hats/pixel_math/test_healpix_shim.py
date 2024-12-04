@@ -113,18 +113,18 @@ def test_order2pixarea_units():
     assert pix_area_test == pix_area_expected
 
     pix_area_expected = [np.rad2deg(np.rad2deg(4 * np.pi / x)) * 3600 for x in npix]
-    pix_area_test = [hps.order2pixarea(order, unit=u.arcmin) for order in orders]
+    pix_area_test = [hps.order2pixarea(order, unit="arcmin2") for order in orders]
     assert_allclose(pix_area_test, pix_area_expected)
 
-    pix_area_test = [hps.order2pixarea(order, unit=u.arcminute) for order in orders]
+    pix_area_test = [hps.order2pixarea(order, unit=u.arcmin * u.arcmin) for order in orders]
     assert_allclose(pix_area_test, pix_area_expected)
 
     pix_area_expected = [np.rad2deg(np.rad2deg(4 * np.pi / x)) * 12960000 for x in npix]
-    pix_area_test = [hps.order2pixarea(order, unit=u.arcsec) for order in orders]
+    pix_area_test = [hps.order2pixarea(order, unit="arcsec2") for order in orders]
     assert_allclose(pix_area_test, pix_area_expected)
 
-    with pytest.raises(ValueError, match="Unit must be angular"):
-        hps.order2pixarea(10, unit="micron")
+    with pytest.raises(ValueError, match="not convertible"):
+        hps.order2pixarea(10, unit="arcmin")
 
 
 def test_order2resol():

@@ -67,11 +67,11 @@ def plot_density(catalog: Catalog, *, plot_title: str | None = None, order=None,
         if order > map_order:
             raise ValueError(f"plotting order should be less than stored density map order ({map_order})")
         ## Create larger pixel sums from the constituent pixels.
-        point_map = point_map.reshape((hp.order2npix(order), 2 ** (2 * (map_order - order)))).sum(axis=1)
+        point_map = point_map.reshape(hp.order2npix(order), -1).sum(axis=1)
     else:
         order = map_order
     if unit is None:
-        unit = u.deg
+        unit = u.deg * u.deg
 
     pix_area = hp.order2pixarea(order, unit=unit)
 
