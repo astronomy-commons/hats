@@ -40,21 +40,22 @@ def order2npix(order: int) -> int:
     return 12 * (1 << (2 * order))
 
 
-def order2resol(order: int, arcmin: bool = False) -> float:
-    resol_rad = np.sqrt(order2pixarea(order))
-
+def order2resol(order: int, *, arcmin: bool = False, unit=u.rad) -> float:
     if arcmin:
-        return np.rad2deg(resol_rad) * 60
+        unit = u.arcmin
+    unit = u.Unit(unit)
 
-    return resol_rad
+    return np.sqrt(order2pixarea(order, unit=unit * unit))
 
 
-def order2pixarea(order: int, degrees: bool = False) -> float:
-    npix = order2npix(order)
-    pix_area_rad = 4 * np.pi / npix
+def order2pixarea(order: int, *, degrees: bool = False, unit=u.sr) -> float:
     if degrees:
-        return pix_area_rad * (180 / np.pi) * (180 / np.pi)
-    return pix_area_rad
+        unit = "deg**2"
+    unit = u.Unit(unit)
+
+    npix = order2npix(order)
+    pix_area_rad = 4 * np.pi / npix * u.steradian
+    return pix_area_rad.to_value(unit)
 
 
 def radec2pix(order: int, ra: float, dec: float) -> np.ndarray[np.int64]:

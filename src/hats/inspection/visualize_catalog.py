@@ -26,6 +26,7 @@ from mocpy import MOC, WCS
 from mocpy.moc.plot.culling_backfacing_cells import backface_culling
 from mocpy.moc.plot.utils import _set_wcs
 
+import hats.pixel_math.healpix_shim as hp
 from hats.io import file_io, paths
 from hats.pixel_math import HealpixPixel
 from hats.pixel_tree.moc_filter import perform_filter_by_moc
@@ -49,19 +50,42 @@ def _read_point_map(catalog_base_dir):
     return file_io.read_fits_image(map_file_pointer)
 
 
-def plot_points(catalog: Catalog, plot_title: str | None = None, **kwargs):
-    """Create a visual map of the input points of an in-memory catalog.
-
+def plot_density(catalog: Catalog, *, plot_title: str | None = None, order=None, unit=None, **kwargs):
+    """Create a visual map of the density of input points of a catalog on-disk.
     Args:
         catalog (`hats.catalog.Catalog`) Catalog to display
         plot_title (str): Optional title for the plot
+        order (int): Optionally reduce the display healpix order, and aggregate smaller tiles.
         kwargs: Additional args to pass to `plot_healpix_map`
     """
-    if not catalog.on_disk:
+    if catalog is None or not catalog.on_disk:
         raise ValueError("on disk catalog required for point-wise visualization")
     point_map = _read_point_map(catalog.catalog_base_dir)
-    default_title = f"Catalog point density map - {catalog.catalog_name}"
-    return plot_healpix_map(point_map, title=default_title if plot_title is None else plot_title, **kwargs)
+    map_order = hp.npix2order(len(point_map))
+
+    if order is not None:
+        if order > map_order:
+            raise ValueError(f"plotting order should be less than stored density map order ({map_order})")
+        ## Create larger pixel sums from the constituent pixels.
+        point_map = point_map.reshape(hp.order2npix(order), -1).sum(axis=1)
+    else:
+        order = map_order
+    if unit is None:
+        unit = u.deg * u.deg
+
+    pix_area = hp.order2pixarea(order, unit=unit)
+
+    point_map = point_map / pix_area
+    default_title = f"Angular density of catalog {catalog.catalog_name}"
+    fig, ax = plot_healpix_map(
+        point_map, title=default_title if plot_title is None else plot_title, cbar=False, **kwargs
+    )
+    col = ax.collections[0]
+    plt.colorbar(
+        col,
+        label=f"count / {unit} sq",
+    )
+    return fig, ax
 
 
 def plot_pixels(catalog: HealpixDataset, plot_title: str | None = None, **kwargs):
