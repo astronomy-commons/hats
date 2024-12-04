@@ -1,11 +1,9 @@
-from typing import List
-
 from hats.pixel_math import HealpixPixel
 from hats.pixel_tree import PixelAlignmentType, align_trees
 from hats.pixel_tree.pixel_tree import PixelTree
 
 
-def compute_negative_tree_pixels(tree: PixelTree) -> List[HealpixPixel]:
+def compute_negative_tree_pixels(tree: PixelTree) -> list[HealpixPixel]:
     """Computes a 'negative pixel tree' consisting of the pixels needed to cover the full sky not in the tree
 
     Args:

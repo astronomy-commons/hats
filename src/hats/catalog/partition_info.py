@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import warnings
 from pathlib import Path
-from typing import List
 
 import numpy as np
 import pandas as pd
@@ -27,11 +26,11 @@ class PartitionInfo:
     METADATA_ORDER_COLUMN_NAME = "Norder"
     METADATA_PIXEL_COLUMN_NAME = "Npix"
 
-    def __init__(self, pixel_list: List[HealpixPixel], catalog_base_dir: str = None) -> None:
+    def __init__(self, pixel_list: list[HealpixPixel], catalog_base_dir: str = None) -> None:
         self.pixel_list = pixel_list
         self.catalog_base_dir = catalog_base_dir
 
-    def get_healpix_pixels(self) -> List[HealpixPixel]:
+    def get_healpix_pixels(self) -> list[HealpixPixel]:
         """Get healpix pixel objects for all pixels represented as partitions.
 
         Returns:
@@ -158,7 +157,7 @@ class PartitionInfo:
     @classmethod
     def _read_from_metadata_file(
         cls, metadata_file: str | Path | UPath, strict: bool = False
-    ) -> List[HealpixPixel]:
+    ) -> list[HealpixPixel]:
         """Read partition info list from a `_metadata` file.
 
         Args:
@@ -260,7 +259,7 @@ class PartitionInfo:
         return pd.DataFrame.from_dict(partition_info_dict)
 
     @classmethod
-    def from_healpix(cls, healpix_pixels: List[HealpixPixel]) -> PartitionInfo:
+    def from_healpix(cls, healpix_pixels: list[HealpixPixel]) -> PartitionInfo:
         """Create a partition info object from a list of constituent healpix pixels.
 
         Args:

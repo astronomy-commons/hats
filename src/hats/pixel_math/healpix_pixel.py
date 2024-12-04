@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List
 
 import numpy as np
 
@@ -60,7 +59,7 @@ class HealpixPixel:
         new_order = self.order - delta_order
         return HealpixPixel(new_order, new_pixel)
 
-    def convert_to_higher_order(self, delta_order: int) -> List[HealpixPixel]:
+    def convert_to_higher_order(self, delta_order: int) -> list[HealpixPixel]:
         """Returns a list of HEALPix pixels making up the current pixel at a higher order
 
         Args:

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List
 
 from upath import UPath
 
@@ -56,7 +55,7 @@ def is_regular_file(pointer: str | Path | UPath) -> bool:
     return pointer.is_file()
 
 
-def find_files_matching_path(pointer: str | Path | UPath, *paths: str) -> List[UPath]:
+def find_files_matching_path(pointer: str | Path | UPath, *paths: str) -> list[UPath]:
     """Find files or directories matching the provided path parts.
 
     Args:
@@ -96,7 +95,7 @@ def directory_has_contents(pointer: str | Path | UPath) -> bool:
     return len(find_files_matching_path(pointer, "*")) > 0
 
 
-def get_directory_contents(pointer: str | Path | UPath) -> List[UPath]:
+def get_directory_contents(pointer: str | Path | UPath) -> list[UPath]:
     """Finds all files and directories in the specified directory.
 
     NB: This is not recursive, and will return only the first level of directory contents.

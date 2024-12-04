@@ -6,7 +6,7 @@ NB: Testing validity of generated plots is currently not tested in our unit test
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, Dict, List, Tuple, Type
+from typing import TYPE_CHECKING, Type
 
 import astropy.units as u
 import astropy.wcs
@@ -106,7 +106,7 @@ def plot_pixels(catalog: HealpixDataset, plot_title: str | None = None, **kwargs
 
 
 def plot_pixel_list(
-    pixels: List[HealpixPixel], plot_title: str = "", projection="MOL", color_by_order=True, **kwargs
+    pixels: list[HealpixPixel], plot_title: str = "", projection="MOL", color_by_order=True, **kwargs
 ):
     """Create a visual map of the pixel density of a list of pixels.
 
@@ -143,14 +143,14 @@ def plot_moc(
     *,
     projection: str = "MOL",
     title: str = "",
-    fov: Quantity | Tuple[Quantity, Quantity] = None,
+    fov: Quantity | tuple[Quantity, Quantity] = None,
     center: SkyCoord | None = None,
     wcs: astropy.wcs.WCS = None,
     frame_class: Type[BaseFrame] | None = None,
     ax: WCSAxes | None = None,
     fig: Figure | None = None,
     **kwargs,
-) -> Tuple[Figure, WCSAxes]:
+) -> tuple[Figure, WCSAxes]:
     """Plots a moc
 
     By default, a new matplotlib figure and axis will be created, and the projection will be a Molleweide
@@ -251,7 +251,7 @@ def get_fov_moc_from_wcs(wcs: WCS) -> MOC | None:
     return moc_viewport
 
 
-def cull_to_fov(depth_ipix_d: Dict[int, Tuple[np.ndarray, np.ndarray]], wcs):
+def cull_to_fov(depth_ipix_d: dict[int, tuple[np.ndarray, np.ndarray]], wcs):
     """Culls a mapping of ipix to values to pixels that are inside the plot window defined by a WCS
 
     Modified from mocpy.moc.plot.utils.build_plotting_moc
@@ -291,7 +291,7 @@ def cull_to_fov(depth_ipix_d: Dict[int, Tuple[np.ndarray, np.ndarray]], wcs):
     return output_dict
 
 
-def _merge_too_small_pixels(depth_ipix_d: Dict[int, Tuple[np.ndarray, np.ndarray]], wcs):
+def _merge_too_small_pixels(depth_ipix_d: dict[int, tuple[np.ndarray, np.ndarray]], wcs):
     """Merges any pixels too small in a map to a lower order, with the map values within a lower order pixel
     being sampled"""
     # Get the WCS cdelt giving the deg.px^(-1) resolution.
@@ -331,7 +331,7 @@ def _merge_too_small_pixels(depth_ipix_d: Dict[int, Tuple[np.ndarray, np.ndarray
     return depth_ipix_d
 
 
-def cull_from_pixel_map(depth_ipix_d: Dict[int, Tuple[np.ndarray, np.ndarray]], wcs, max_split_depth=7):
+def cull_from_pixel_map(depth_ipix_d: dict[int, tuple[np.ndarray, np.ndarray]], wcs, max_split_depth=7):
     """Modified from mocpy.moc.plot.culling_backfacing_cells.from_moc
 
     Create a new MOC that do not contain the HEALPix cells that are backfacing the projection.
@@ -453,7 +453,7 @@ def plot_healpix_map(
     ipix: np.ndarray | None = None,
     depth: np.ndarray | None = None,
     cbar: bool = True,
-    fov: Quantity | Tuple[Quantity, Quantity] = None,
+    fov: Quantity | tuple[Quantity, Quantity] = None,
     center: SkyCoord | None = None,
     wcs: astropy.wcs.WCS = None,
     frame_class: Type[BaseFrame] | None = None,
@@ -536,7 +536,7 @@ def plot_healpix_map(
 
 def initialize_wcs_axes(
     projection: str = "MOL",
-    fov: Quantity | Tuple[Quantity, Quantity] = None,
+    fov: Quantity | tuple[Quantity, Quantity] = None,
     center: SkyCoord | None = None,
     wcs: astropy.wcs.WCS = None,
     frame_class: Type[BaseFrame] | None = None,

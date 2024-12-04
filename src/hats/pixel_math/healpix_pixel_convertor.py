@@ -1,13 +1,9 @@
 from __future__ import annotations
 
-from typing import Tuple, Union
-
 from hats.pixel_math.healpix_pixel import HealpixPixel
 
-HealpixInputTypes = Union[HealpixPixel, Tuple[int, int]]
 
-
-def get_healpix_pixel(pixel: HealpixInputTypes) -> HealpixPixel:
+def get_healpix_pixel(pixel: HealpixPixel | tuple[int, int]) -> HealpixPixel:
     """Function to convert argument of either HealpixPixel or a tuple of (order, pixel) to a
     HealpixPixel
 
@@ -24,7 +20,7 @@ def get_healpix_pixel(pixel: HealpixInputTypes) -> HealpixPixel:
     raise TypeError("pixel must either be of type `HealpixPixel` or tuple (order, pixel)")
 
 
-def get_healpix_tuple(pixel: HealpixInputTypes) -> Tuple[int, int]:
+def get_healpix_tuple(pixel: HealpixPixel | tuple[int, int]) -> tuple[int, int]:
     """Function to convert argument of either HealpixPixel or a tuple of (order, pixel) to a
     tuple of (order, pixel)
 

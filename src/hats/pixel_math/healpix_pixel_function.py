@@ -1,11 +1,9 @@
-from typing import List
-
 import numpy as np
 
 from hats.pixel_math.healpix_pixel import HealpixPixel
 
 
-def get_pixel_argsort(pixels: List[HealpixPixel]):
+def get_pixel_argsort(pixels: list[HealpixPixel]):
     """Perform an indirect sort of a list of HealpixPixels.
 
     This will order the pixels according to a breadth-first traversal of the healpix
@@ -29,7 +27,7 @@ def get_pixel_argsort(pixels: List[HealpixPixel]):
     return np.argsort(constant_breadth_pixel, kind="stable")
 
 
-def sort_pixels(pixels: List[HealpixPixel]):
+def sort_pixels(pixels: list[HealpixPixel]):
     """Perform an sort of a list of HealpixPixels.
 
     This will order the pixels according to a breadth-first traversal of the healpix

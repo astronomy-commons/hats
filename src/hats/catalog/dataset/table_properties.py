@@ -1,6 +1,6 @@
 import re
 from pathlib import Path
-from typing import Iterable, List, Optional, Union
+from typing import Iterable, Optional
 
 from jproperties import Properties
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_validator
@@ -90,7 +90,7 @@ class TableProperties(BaseModel):
 
     ra_column: Optional[str] = Field(default=None, alias="hats_col_ra")
     dec_column: Optional[str] = Field(default=None, alias="hats_col_dec")
-    default_columns: Optional[List[str]] = Field(default=None, alias="hats_cols_default")
+    default_columns: Optional[list[str]] = Field(default=None, alias="hats_cols_default")
     """Which columns should be read from parquet files, when user doesn't otherwise specify."""
 
     primary_catalog: Optional[str] = Field(default=None, alias="hats_primary_table_url")
@@ -120,7 +120,7 @@ class TableProperties(BaseModel):
     indexing_column: Optional[str] = Field(default=None, alias="hats_index_column")
     """Column that we provide an index over."""
 
-    extra_columns: Optional[List[str]] = Field(default=None, alias="hats_index_extra_column")
+    extra_columns: Optional[list[str]] = Field(default=None, alias="hats_index_extra_column")
     """Any additional payload columns included in index."""
 
     ## Allow any extra keyword args to be stored on the properties object.
@@ -128,7 +128,7 @@ class TableProperties(BaseModel):
 
     @field_validator("default_columns", "extra_columns", mode="before")
     @classmethod
-    def space_delimited_list(cls, str_value: str) -> List[str]:
+    def space_delimited_list(cls, str_value: str) -> list[str]:
         """Convert a space-delimited list string into a python list of strings."""
         if isinstance(str_value, str):
             # Split on a few kinds of delimiters (just to be safe), and remove duplicates
@@ -193,7 +193,7 @@ class TableProperties(BaseModel):
         return formatted_string
 
     @classmethod
-    def read_from_dir(cls, catalog_dir: Union[str, Path, UPath]) -> Self:
+    def read_from_dir(cls, catalog_dir: str | Path | UPath) -> Self:
         """Read field values from a java-style properties file."""
         file_path = file_io.get_upath(catalog_dir) / "properties"
         if not file_io.does_file_or_directory_exist(file_path):
@@ -203,7 +203,7 @@ class TableProperties(BaseModel):
             p.load(f, "utf-8")
         return cls(**p.properties)
 
-    def to_properties_file(self, catalog_dir: Union[str, Path, UPath]) -> Self:
+    def to_properties_file(self, catalog_dir: str | Path | UPath) -> Self:
         """Write fields to a java-style properties file."""
         # pylint: disable=protected-access
         parameters = self.model_dump(by_alias=True, exclude_none=True)

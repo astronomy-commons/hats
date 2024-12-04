@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List
 
 import pyarrow as pa
 from upath import UPath
@@ -41,8 +40,8 @@ class Dataset:
     def aggregate_column_statistics(
         self,
         exclude_hats_columns: bool = True,
-        exclude_columns: List[str] = None,
-        include_columns: List[str] = None,
+        exclude_columns: list[str] = None,
+        include_columns: list[str] = None,
     ):
         """Read footer statistics in parquet metadata, and report on global min/max values.
 

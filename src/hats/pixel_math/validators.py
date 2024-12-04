@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import List, Tuple
 
 import numpy as np
 
@@ -34,7 +33,7 @@ def validate_radius(radius_arcsec: float):
         raise ValueError(ValidatorsErrors.INVALID_RADIUS.value)
 
 
-def validate_declination_values(dec: float | List[float]):
+def validate_declination_values(dec: float | list[float]):
     """Validates that declination values are in the [-90,90] degree range
 
     Args:
@@ -97,7 +96,7 @@ def check_polygon_is_valid(vertices: np.ndarray):
         raise ValueError(ValidatorsErrors.INVALID_CONCAVE_SHAPE.value)
 
 
-def validate_box(ra: Tuple[float, float], dec: Tuple[float, float]):
+def validate_box(ra: tuple[float, float], dec: tuple[float, float]):
     """Checks if ra and dec values are valid for the box search.
 
     - Both ranges for ra or dec must have been provided.

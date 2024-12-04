@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 import warnings
-from typing import List
 
 import pandas as pd
 
@@ -218,7 +217,7 @@ class Almanac:
                 return None
         return self.entries[resolved_name]
 
-    def catalogs(self, include_deprecated=False, types: List[str] | None = None):
+    def catalogs(self, include_deprecated=False, types: list[str] | None = None):
         """Get names of catalogs in the almanac, matching the provided conditions.
 
         Catalogs must meet all criteria provided in order to be returned (e.g.

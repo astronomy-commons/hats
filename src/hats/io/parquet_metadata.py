@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import tempfile
 from pathlib import Path
-from typing import List
 
 import numpy as np
 import pandas as pd
@@ -153,7 +152,7 @@ def write_parquet_metadata(
     return total_rows
 
 
-def write_parquet_metadata_for_batches(batches: List[List[pa.RecordBatch]], output_path: str = None):
+def write_parquet_metadata_for_batches(batches: list[list[pa.RecordBatch]], output_path: str = None):
     """Write parquet metadata files for some pyarrow table batches.
     This writes the batches to a temporary parquet dataset using local storage, and
     generates the metadata for the partitioned catalog parquet files.
@@ -196,8 +195,8 @@ def read_row_group_fragments(metadata_file: str):
 def aggregate_column_statistics(
     metadata_file: str | Path | UPath,
     exclude_hats_columns: bool = True,
-    exclude_columns: List[str] = None,
-    include_columns: List[str] = None,
+    exclude_columns: list[str] = None,
+    include_columns: list[str] = None,
 ):
     """Read footer statistics in parquet metadata, and report on global min/max values.
 

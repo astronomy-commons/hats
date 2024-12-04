@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import List
 
 import numpy as np
 from mocpy import MOC
 
-from hats.pixel_math import HealpixInputTypes, HealpixPixel
+from hats.pixel_math import HealpixPixel
 from hats.pixel_math.healpix_pixel_convertor import get_healpix_tuple
 from hats.pixel_math.healpix_pixel_function import get_pixels_from_intervals
 
@@ -48,7 +47,7 @@ class PixelTree:
         """
         return len(self.tree)
 
-    def contains(self, pixel: HealpixInputTypes) -> bool:
+    def contains(self, pixel: HealpixPixel | tuple[int, int]) -> bool:
         """Check if tree contains a node at a given order and pixel
 
         Args:
@@ -80,7 +79,7 @@ class PixelTree:
         """
         return np.max(self.pixels.T[0])
 
-    def get_healpix_pixels(self) -> List[HealpixPixel]:
+    def get_healpix_pixels(self) -> list[HealpixPixel]:
         """Creates a list of HealpixPixels in the tree
 
         Returns (List[HealpixPixel]):
@@ -97,7 +96,9 @@ class PixelTree:
         return self.tree << (2 * (29 - self.tree_order))
 
     @classmethod
-    def from_healpix(cls, healpix_pixels: Sequence[HealpixInputTypes], tree_order=None) -> PixelTree:
+    def from_healpix(
+        cls, healpix_pixels: Sequence[HealpixPixel | tuple[int, int]], tree_order=None
+    ) -> PixelTree:
         """Build a tree from a list of constituent healpix pixels
 
         Args:

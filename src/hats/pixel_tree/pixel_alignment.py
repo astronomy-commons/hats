@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Callable, Dict, List
+from typing import Callable
 
 import numpy as np
 import pandas as pd
@@ -213,7 +213,7 @@ def _add_pixels_until(
     add_to: int,
     matching_pix: np.ndarray,
     is_left_pixel: bool,
-    mapping: List[np.ndarray],
+    mapping: list[np.ndarray],
 ):
     """Adds pixels of the greatest possible order to fill output from `add-from` to `add_to`
 
@@ -256,7 +256,7 @@ def _add_remaining_pixels(
     pixel_list: np.ndarray,
     index: int,
     is_left_pixel: bool,
-    mapping: List[np.ndarray],
+    mapping: list[np.ndarray],
 ):
     """Adds pixels to output and mapping from a given index in a list of pixel intervals
 
@@ -292,7 +292,7 @@ def perform_align_trees(
     right: np.ndarray,
     include_all_left: bool,
     include_all_right: bool,
-) -> List[np.ndarray]:
+) -> list[np.ndarray]:
     """Performs an alignment on arrays of pixel intervals
 
     Pixel interval lists must be of to the same order
@@ -428,7 +428,7 @@ def align_with_mocs(
     """
     left_moc = left_moc if left_moc is not None else left_tree.to_moc()
     right_moc = right_moc if right_moc is not None else right_tree.to_moc()
-    moc_intersection_methods: Dict[PixelAlignmentType, Callable[[MOC, MOC], MOC]] = {
+    moc_intersection_methods: dict[PixelAlignmentType, Callable[[MOC, MOC], MOC]] = {
         PixelAlignmentType.INNER: lambda l, r: l.intersection(r),
         PixelAlignmentType.LEFT: lambda l, r: l,
         PixelAlignmentType.RIGHT: lambda l, r: r,

@@ -1,5 +1,3 @@
-from typing import List
-
 import numpy as np
 import pyarrow.compute as pc
 import pyarrow.dataset as pds
@@ -16,7 +14,7 @@ class IndexCatalog(Dataset):
     Note that this is not a true "HATS Catalog", as it is not partitioned spatially.
     """
 
-    def loc_partitions(self, ids) -> List[HealpixPixel]:
+    def loc_partitions(self, ids) -> list[HealpixPixel]:
         """Find the set of partitions in the primary catalog for the ids provided.
 
         Args:

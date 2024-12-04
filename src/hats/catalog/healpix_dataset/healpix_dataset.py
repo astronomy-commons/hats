@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List, Tuple, Union
 
 import astropy.units as u
 import numpy as np
@@ -30,8 +29,6 @@ from hats.pixel_tree.moc_filter import filter_by_moc
 from hats.pixel_tree.pixel_alignment import align_with_mocs
 from hats.pixel_tree.pixel_tree import PixelTree
 
-PixelInputTypes = Union[PartitionInfo, PixelTree, List[HealpixPixel]]
-
 
 class HealpixDataset(Dataset):
     """A HATS dataset partitioned with a HEALPix partitioning structure.
@@ -45,7 +42,7 @@ class HealpixDataset(Dataset):
     def __init__(
         self,
         catalog_info: TableProperties,
-        pixels: PixelInputTypes,
+        pixels: PartitionInfo | PixelTree | list[HealpixPixel],
         catalog_path: str | Path | UPath | None = None,
         moc: MOC | None = None,
         schema: pa.Schema | None = None,
@@ -66,7 +63,7 @@ class HealpixDataset(Dataset):
         self.pixel_tree = self._get_pixel_tree_from_pixels(pixels)
         self.moc = moc
 
-    def get_healpix_pixels(self) -> List[HealpixPixel]:
+    def get_healpix_pixels(self) -> list[HealpixPixel]:
         """Get healpix pixel objects for all pixels contained in the catalog.
 
         Returns:
@@ -75,7 +72,9 @@ class HealpixDataset(Dataset):
         return self.partition_info.get_healpix_pixels()
 
     @staticmethod
-    def _get_partition_info_from_pixels(pixels: PixelInputTypes) -> PartitionInfo:
+    def _get_partition_info_from_pixels(
+        pixels: PartitionInfo | PixelTree | list[HealpixPixel],
+    ) -> PartitionInfo:
         if isinstance(pixels, PartitionInfo):
             return pixels
         if isinstance(pixels, PixelTree):
@@ -85,7 +84,7 @@ class HealpixDataset(Dataset):
         raise TypeError("Pixels must be of type PartitionInfo, PixelTree, or List[HealpixPixel]")
 
     @staticmethod
-    def _get_pixel_tree_from_pixels(pixels: PixelInputTypes) -> PixelTree:
+    def _get_pixel_tree_from_pixels(pixels: PartitionInfo | PixelTree | list[HealpixPixel]) -> PixelTree:
         if isinstance(pixels, PartitionInfo):
             return PixelTree.from_healpix(pixels.get_healpix_pixels())
         if isinstance(pixels, PixelTree):
@@ -118,7 +117,7 @@ class HealpixDataset(Dataset):
         )
         return max_order
 
-    def filter_from_pixel_list(self, pixels: List[HealpixPixel]) -> Self:
+    def filter_from_pixel_list(self, pixels: list[HealpixPixel]) -> Self:
         """Filter the pixels in the catalog to only include any that overlap with the requested pixels.
 
         Args:
@@ -155,7 +154,7 @@ class HealpixDataset(Dataset):
         )
         return self.filter_by_moc(cone_moc)
 
-    def filter_by_box(self, ra: Tuple[float, float], dec: Tuple[float, float]) -> Self:
+    def filter_by_box(self, ra: tuple[float, float], dec: tuple[float, float]) -> Self:
         """Filter the pixels in the catalog to only include the pixels that overlap with a
         zone, defined by right ascension and declination ranges. The right ascension edges follow
         great arc circles and the declination edges follow small arc circles.
