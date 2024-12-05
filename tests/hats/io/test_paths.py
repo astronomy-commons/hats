@@ -61,10 +61,10 @@ def test_pixel_catalog_file_nonint():
 
 def test_pixel_catalog_files():
     expected = [
-        os.path.join(os.sep, "foo", "dataset", "Norder=0", "Dir=0", "Npix=5.parquet"),
-        os.path.join(os.sep, "foo", "dataset", "Norder=1", "Dir=0", "Npix=16.parquet"),
+        os.path.join("foo", "dataset", "Norder=0", "Dir=0", "Npix=5.parquet"),
+        os.path.join("foo", "dataset", "Norder=1", "Dir=0", "Npix=16.parquet"),
     ]
-    result = paths.pixel_catalog_files("/foo/", [HealpixPixel(0, 5), HealpixPixel(1, 16)])
+    result = paths.pixel_catalog_files("foo", [HealpixPixel(0, 5), HealpixPixel(1, 16)])
     assert expected == result
 
 
