@@ -103,10 +103,10 @@ def test_load_csv_to_pandas_generator_encoding(tmp_path):
 
 
 def test_write_df_to_csv(tmp_path):
-    random_df = pd.DataFrame(np.random.randint(0, 100, size=(100, 4)), columns=list("ABCD"))
+    random_df = pd.DataFrame(np.random.randint(0, 100, size=(100, 4)), columns=list("ABCD")).astype(int)
     test_file_path = tmp_path / "test.csv"
     write_dataframe_to_csv(random_df, test_file_path, index=False)
-    loaded_df = pd.read_csv(test_file_path)
+    loaded_df = pd.read_csv(test_file_path).astype(int)
     pd.testing.assert_frame_equal(loaded_df, random_df)
 
 

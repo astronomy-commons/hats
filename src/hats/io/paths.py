@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict
 from urllib.parse import urlencode
 
 from fsspec.implementations.http import HTTPFileSystem
@@ -88,53 +88,6 @@ def get_healpix_from_path(path: str) -> HealpixPixel:
         return INVALID_PIXEL
     order, pixel = match.groups()
     return HealpixPixel(int(order), int(pixel))
-
-
-def pixel_catalog_files(
-    catalog_base_dir: str | Path | UPath | None,
-    pixels: List[HealpixPixel],
-    query_params: Dict | None = None,
-) -> List[UPath]:
-    """Create a list of path *pointers* for pixel catalog files. This will not create the directory
-    or files.
-
-    The catalog file names will take the HiPS standard form of::
-
-        <catalog_base_dir>/Norder=<pixel_order>/Dir=<directory number>/Npix=<pixel_number>.parquet
-
-    Where the directory number is calculated using integer division as::
-
-        (pixel_number/10000)*10000
-
-    Args:
-        catalog_base_dir (UPath): base directory of the catalog (includes catalog name)
-        pixels (List[HealpixPixel]): the healpix pixels to create pointers to
-        query_params (dict): Params to append to URL. Ex: {'cols': ['ra', 'dec'], 'fltrs': ['r>=10', 'g<18']}
-
-    Returns (List[str]):
-        A list of paths to the pixels, in the same order as the input pixel list.
-    """
-    catalog_base_dir = get_upath(catalog_base_dir) / DATASET_DIR
-    fs = catalog_base_dir.fs
-    base_path = str(catalog_base_dir)
-    if not base_path.endswith(fs.sep):
-        base_path += fs.sep
-
-    url_params = ""
-    if isinstance(fs, HTTPFileSystem) and query_params:
-        url_params = dict_to_query_urlparams(query_params)
-
-    return [
-        base_path
-        + fs.sep.join(
-            [
-                f"{PARTITION_ORDER}={pixel.order}",
-                f"{PARTITION_DIR}={pixel.dir}",
-                f"{PARTITION_PIXEL}={pixel.pixel}.parquet" + url_params,
-            ]
-        )
-        for pixel in pixels
-    ]
 
 
 def dict_to_query_urlparams(query_params: Dict | None = None) -> str:

@@ -11,7 +11,6 @@ import hats.pixel_math as hist
 import hats.pixel_math.healpix_shim as hp
 from hats.catalog import Catalog, PartitionInfo, TableProperties
 from hats.catalog.association_catalog.partition_join_info import PartitionJoinInfo
-from hats.io.paths import pixel_catalog_files
 from hats.pixel_math import HealpixPixel
 from hats.pixel_tree import PixelAlignment, align_trees
 from hats.pixel_tree.pixel_tree import PixelTree
@@ -65,9 +64,6 @@ class Suite:
 
     def time_outer_pixel_alignment(self):
         align_trees(self.pixel_tree_1, self.pixel_tree_2, alignment_type="outer")
-
-    def time_paths_creation(self):
-        pixel_catalog_files("foo/", self.pixel_list)
 
 
 class MetadataSuite:
