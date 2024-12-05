@@ -1,5 +1,7 @@
 """Test pixel path creation"""
 
+import os
+
 import pytest
 
 from hats.io import paths
@@ -8,14 +10,14 @@ from hats.pixel_math.healpix_pixel import INVALID_PIXEL, HealpixPixel
 
 def test_pixel_directory():
     """Simple case with sensical inputs"""
-    expected = "/foo/dataset/Norder=0/Dir=0"
+    expected = os.path.join(os.sep, "foo", "dataset", "Norder=0", "Dir=0")
     result = paths.pixel_directory("/foo", 0, 5)
-    assert str(result) == expected
+    assert str(result) == str(expected)
 
 
 def test_pixel_directory_number():
     """Simple case with sensical inputs"""
-    expected = "/foo/dataset/Norder=0/Dir=0"
+    expected = os.path.join(os.sep, "foo", "dataset", "Norder=0", "Dir=0")
     result = paths.pixel_directory("/foo", pixel_order=0, pixel_number=5, directory_number=0)
     assert str(result) == expected
 
@@ -37,7 +39,7 @@ def test_pixel_directory_nonint():
 
 def test_pixel_catalog_file():
     """Simple case with sensical inputs"""
-    expected = "/foo/dataset/Norder=0/Dir=0/Npix=5.parquet"
+    expected = os.path.join(os.sep, "foo", "dataset", "Norder=0", "Dir=0", "Npix=5.parquet")
     result = paths.pixel_catalog_file("/foo", HealpixPixel(0, 5))
     assert str(result) == expected
 
@@ -58,7 +60,10 @@ def test_pixel_catalog_file_nonint():
 
 
 def test_pixel_catalog_files():
-    expected = ["/foo/dataset/Norder=0/Dir=0/Npix=5.parquet", "/foo/dataset/Norder=1/Dir=0/Npix=16.parquet"]
+    expected = [
+        os.path.join(os.sep, "foo", "dataset", "Norder=0", "Dir=0", "Npix=5.parquet"),
+        os.path.join(os.sep, "foo", "dataset", "Norder=1", "Dir=0", "Npix=16.parquet"),
+    ]
     result = paths.pixel_catalog_files("/foo/", [HealpixPixel(0, 5), HealpixPixel(1, 16)])
     assert expected == result
 
@@ -104,6 +109,9 @@ def test_get_healpix_from_path():
 
     # Test a few ways we could represent the path.
     result = paths.get_healpix_from_path("/foo/dataset/Norder=5/Dir=0/Npix=34.parquet")
+    assert result == expected
+
+    result = paths.get_healpix_from_path("C:\\foo\\dataset\\Norder=5\\Dir=0\\Npix=34.parquet")
     assert result == expected
 
     result = paths.get_healpix_from_path("Norder=5/Dir=0/Npix=34.pq")
