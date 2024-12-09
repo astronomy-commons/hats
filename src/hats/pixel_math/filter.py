@@ -1,11 +1,9 @@
-from typing import List
-
 from hats.pixel_math import HealpixPixel
 from hats.pixel_tree import PixelAlignment, PixelAlignmentType, align_trees
 from hats.pixel_tree.pixel_tree import PixelTree
 
 
-def get_filtered_pixel_list(pixel_tree: PixelTree, search_tree: PixelTree) -> List[HealpixPixel]:
+def get_filtered_pixel_list(pixel_tree: PixelTree, search_tree: PixelTree) -> list[HealpixPixel]:
     """Aligns the catalog pixel tree with another pixel tree of interest, and
     extracts the HEALPix pixels that overlap. This method is useful to obtain
     the pixels intersecting a pre-defined search space.

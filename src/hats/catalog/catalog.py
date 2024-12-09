@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import List
-
 from hats.catalog.healpix_dataset.healpix_dataset import HealpixDataset
 from hats.pixel_math import HealpixPixel
 from hats.pixel_tree.negative_tree import compute_negative_tree_pixels
@@ -17,7 +15,7 @@ class Catalog(HealpixDataset):
     `Norder=/Dir=/Npix=.parquet`
     """
 
-    def generate_negative_tree_pixels(self) -> List[HealpixPixel]:
+    def generate_negative_tree_pixels(self) -> list[HealpixPixel]:
         """Get the leaf nodes at each healpix order that have zero catalog data.
 
         For example, if an example catalog only had data points in pixel 0 at

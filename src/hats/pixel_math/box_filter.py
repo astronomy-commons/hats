@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import Tuple
 
 import numpy as np
 from astropy.coordinates import SkyCoord
 from mocpy import MOC
 
 
-def generate_box_moc(ra: Tuple[float, float], dec: Tuple[float, float], order: int) -> MOC:
+def generate_box_moc(ra: tuple[float, float], dec: tuple[float, float], order: int) -> MOC:
     """Generates a MOC object that covers the specified box. A box is delimited
     by right ascension and declination ranges. The right ascension edges follow
     great arc circles and the declination edges follow small arc circles.

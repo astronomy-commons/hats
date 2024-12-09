@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Dict
 from urllib.parse import urlencode
 
 from fsspec.implementations.http import HTTPFileSystem
@@ -90,7 +89,7 @@ def get_healpix_from_path(path: str) -> HealpixPixel:
     return HealpixPixel(int(order), int(pixel))
 
 
-def dict_to_query_urlparams(query_params: Dict | None = None) -> str:
+def dict_to_query_urlparams(query_params: dict | None = None) -> str:
     """Converts a dictionary to a url query parameter string
 
     Args:
@@ -119,7 +118,7 @@ def dict_to_query_urlparams(query_params: Dict | None = None) -> str:
 
 
 def pixel_catalog_file(
-    catalog_base_dir: str | Path | UPath | None, pixel: HealpixPixel, query_params: Dict | None = None
+    catalog_base_dir: str | Path | UPath | None, pixel: HealpixPixel, query_params: dict | None = None
 ) -> UPath:
     """Create path *pointer* for a pixel catalog file. This will not create the directory
     or file.
