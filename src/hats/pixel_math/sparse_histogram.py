@@ -1,34 +1,19 @@
 """Sparse 1-D histogram of healpix pixel counts."""
 
 import numpy as np
-from scipy.sparse import csc_array, load_npz, save_npz, sparray
 
 import hats.pixel_math.healpix_shim as hp
 
 
 class SparseHistogram:
-    """Wrapper around scipy's sparse array."""
+    """Wrapper around a naive sparse array, that is just non-zero indexes and counts."""
 
-    def __init__(self, sparse_array):
-        if not isinstance(sparse_array, sparray):
-            raise ValueError("The sparse array must be a scipy sparse array.")
-        if sparse_array.format != "csc":
-            raise ValueError("The sparse array must be a Compressed Sparse Column array.")
-        self.sparse_array = sparse_array
-
-    def add(self, other):
-        """Add in another sparse histogram, updating this wrapper's array.
-
-        Args:
-            other (SparseHistogram): the wrapper containing the addend
-        """
-        if not isinstance(other, SparseHistogram):
-            raise ValueError("Both addends should be SparseHistogram.")
-        if self.sparse_array.shape != other.sparse_array.shape:
-            raise ValueError(
-                "The histogram partials have incompatible sizes due to different healpix orders."
-            )
-        self.sparse_array += other.sparse_array
+    def __init__(self, indexes, counts, order):
+        if len(indexes) != len(counts):
+            raise ValueError("indexes and counts must be same length")
+        self.indexes = indexes
+        self.counts = counts
+        self.order = order
 
     def to_array(self):
         """Convert the sparse array to a dense numpy array.
@@ -36,7 +21,9 @@ class SparseHistogram:
         Returns:
             dense 1-d numpy array.
         """
-        return self.sparse_array.toarray()[0]
+        dense = np.zeros(hp.order2npix(self.order), dtype=np.int64)
+        dense[self.indexes] = self.counts
+        return dense
 
     def to_file(self, file_name):
         """Persist the sparse array to disk.
@@ -44,7 +31,7 @@ class SparseHistogram:
         NB: this saves as a sparse array, and so will likely have lower space requirements
         than saving the corresponding dense 1-d numpy array.
         """
-        save_npz(file_name, self.sparse_array)
+        np.savez(file_name, indexes=self.indexes, counts=self.counts, order=self.order)
 
     def to_dense_file(self, file_name):
         """Persist the DENSE array to disk as a numpy array."""
@@ -61,8 +48,7 @@ class SparseHistogram:
         Returns:
             new sparse histogram
         """
-        histo = csc_array((1, hp.order2npix(healpix_order)), dtype=np.int64)
-        return cls(histo)
+        return cls([], [], healpix_order)
 
     @classmethod
     def make_from_counts(cls, indexes, counts_at_indexes, healpix_order=10):
@@ -86,9 +72,7 @@ class SparseHistogram:
         Returns:
             new sparse histogram
         """
-        row = np.array(np.zeros(len(indexes), dtype=np.int64))
-        histo = csc_array((counts_at_indexes, (row, indexes)), shape=(1, hp.order2npix(healpix_order)))
-        return cls(histo)
+        return cls(indexes, counts_at_indexes, healpix_order)
 
     @classmethod
     def from_file(cls, file_name):
@@ -97,5 +81,35 @@ class SparseHistogram:
         Returns:
             new sparse histogram
         """
-        histo = load_npz(file_name)
-        return cls(histo)
+        npzfile = np.load(file_name)
+        return cls(npzfile["indexes"], npzfile["counts"], npzfile["order"])
+
+
+class HistogramAggregator:
+    """Utility for aggregating sparse histograms."""
+
+    def __init__(self, order):
+        self.order = order
+        self.full_histogram = np.zeros(hp.order2npix(order), dtype=np.int64)
+
+    def add(self, other):
+        """Add in another sparse histogram, updating this wrapper's array.
+
+        Args:
+            other (SparseHistogram): the wrapper containing the addend
+        """
+        if not isinstance(other, SparseHistogram):
+            raise ValueError("Both addends should be SparseHistogram.")
+        if self.order != other.order:
+            raise ValueError(
+                "The histogram partials have incompatible sizes due to different healpix orders."
+            )
+        if len(other.indexes) == 0:
+            return
+        self.full_histogram[other.indexes] += other.counts
+
+    def to_sparse(self):
+        """Return a SparseHistogram, based on non-zero values in this aggregation."""
+        indexes = self.full_histogram.nonzero()[0]
+        counts = self.full_histogram[indexes]
+        return SparseHistogram(indexes, counts, self.order)
