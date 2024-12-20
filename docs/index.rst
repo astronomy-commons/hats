@@ -44,7 +44,8 @@ Getting Started
 For the most part, we recommend accessing and processing HATS data using the `LSDB package
 <https://github.com/astronomy-commons/lsdb>`_ framework. LSDB provides a variety of utility
 functions as well as a lazy, distributed execution framework using Dask. However if you are are
-interested in using just the HATS package, you can find installation instructions at the :ref:`getting started page<getting_started>`
+interested in using just the HATS package, you can find installation instructions at the 
+:doc:`getting started page</getting_started>`.
 
 Acknowledgements
 -------------------------------------------------------------------------------
