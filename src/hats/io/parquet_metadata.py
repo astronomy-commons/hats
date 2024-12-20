@@ -276,5 +276,5 @@ def aggregate_column_statistics(
             "max_value": stats_lists[1],
             "null_count": stats_lists[2],
         }
-    )
+    ).set_index("column_names")
     return frame
