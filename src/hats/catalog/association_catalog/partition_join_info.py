@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import warnings
+import logging
 from pathlib import Path
 
 import numpy as np
@@ -18,6 +18,8 @@ from hats.io.parquet_metadata import (
     write_parquet_metadata_for_batches,
 )
 from hats.pixel_math.healpix_pixel import HealpixPixel
+
+logger = logging.getLogger(__name__)
 
 
 class PartitionJoinInfo:
@@ -158,7 +160,7 @@ class PartitionJoinInfo:
         if file_io.does_file_or_directory_exist(partition_join_info_file):
             pixel_frame = PartitionJoinInfo._read_from_csv(partition_join_info_file)
         elif file_io.does_file_or_directory_exist(metadata_file):
-            warnings.warn("Reading partitions from parquet metadata. This is typically slow.")
+            logger.info("Reading partitions from parquet metadata. This is typically slow.")
             pixel_frame = PartitionJoinInfo._read_from_metadata_file(metadata_file)
         else:
             raise FileNotFoundError(
