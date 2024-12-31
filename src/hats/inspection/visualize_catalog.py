@@ -5,7 +5,7 @@ NB: Testing validity of generated plots is currently not tested in our unit test
 
 from __future__ import annotations
 
-import warnings
+import logging
 from typing import TYPE_CHECKING, Type
 
 import astropy.units as u
@@ -35,6 +35,8 @@ from hats.pixel_tree.pixel_tree import PixelTree
 if TYPE_CHECKING:
     from hats.catalog import Catalog
     from hats.catalog.healpix_dataset.healpix_dataset import HealpixDataset
+
+logger = logging.getLogger(__name__)
 
 
 def _read_point_map(catalog_base_dir):
@@ -235,13 +237,10 @@ def get_fov_moc_from_wcs(wcs: WCS) -> MOC | None:
     y_px = np.append(y_px, y[-1, :-1])
     y_px = np.append(y_px, y[1:, 0][::-1])
 
-    # Disable the output of warnings when encoutering NaNs.
-    warnings.filterwarnings("ignore")
     # Inverse projection from pixel coordinate space to the world coordinate space
     viewport = pixel_to_skycoord(x_px, y_px, wcs)
     # If one coordinate is a NaN we exit the function and do not go further
     ra_deg, dec_deg = viewport.icrs.ra.deg, viewport.icrs.dec.deg
-    warnings.filterwarnings("default")
 
     if np.isnan(ra_deg).any() or np.isnan(dec_deg).any():
         return None
@@ -306,7 +305,7 @@ def _merge_too_small_pixels(depth_ipix_d: dict[int, tuple[np.ndarray, np.ndarray
 
     # Combine healpix pixels smaller than 1px in the plot
     if max_depth > depth_res:
-        warnings.warn(
+        logger.info(
             "This plot contains HEALPix pixels smaller than a pixel of the plot. Some values may be lost"
         )
         new_ipix_d = {}
@@ -592,7 +591,7 @@ def initialize_wcs_axes(
                 wcs = ax.wcs
                 return fig, ax, wcs
             # Plot onto new axes on new figure if current axes is not correct type
-            warnings.warn("Current axes is not of correct type WCSAxes. A new figure and axes will be used.")
+            logger.warning("Current axes is not of correct type WCSAxes. A new figure and axes will be used.")
             fig = plt.figure(**kwargs)
         if wcs is None:
             # Initialize wcs with params if no WCS provided

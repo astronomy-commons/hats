@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import warnings
+import logging
 from pathlib import Path
 
 import numpy as np
@@ -17,6 +17,8 @@ from hats.io.paths import get_healpix_from_path
 from hats.loaders import read_hats
 from hats.pixel_math.healpix_pixel import INVALID_PIXEL
 from hats.pixel_math.healpix_pixel_function import sort_pixels
+
+logger = logging.getLogger(__name__)
 
 
 # pylint: disable=too-many-statements,too-many-locals
@@ -63,7 +65,7 @@ def is_valid_catalog(
         if verbose:
             print(msg)
         else:
-            warnings.warn(msg)
+            logger.warning(msg)
         is_valid = False
 
     if not is_catalog_info_valid(pointer):

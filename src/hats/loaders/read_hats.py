@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import warnings
+import logging
 from pathlib import Path
 
 import numpy as np
@@ -25,6 +25,8 @@ DATASET_TYPE_TO_CLASS = {
     CatalogType.MARGIN: MarginCatalog,
     CatalogType.MAP: MapCatalog,
 }
+
+logger = logging.getLogger(__name__)
 
 
 def read_hats(catalog_path: str | Path | UPath) -> Dataset:
@@ -88,7 +90,7 @@ def _read_schema_from_metadata(catalog_base_dir: str | Path | UPath) -> pa.Schem
     metadata_file = paths.get_parquet_metadata_pointer(catalog_base_dir)
     metadata_exists = file_io.does_file_or_directory_exist(metadata_file)
     if not (common_metadata_exists or metadata_exists):
-        warnings.warn(
+        logger.warning(
             "_common_metadata or _metadata files not found for this catalog."
             "The arrow schema will not be set."
         )
