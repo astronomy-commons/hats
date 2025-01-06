@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+import logging
 import os
-import warnings
 
 import pandas as pd
 
@@ -37,6 +37,7 @@ class Almanac:
         self.files = {}
         self.entries = {}
         self.dir_to_catalog_name = {}
+        self.logger = logging.getLogger(__name__)
         self._init_files(include_default_dir=include_default_dir, dirs=dirs)
         self._init_catalog_objects()
         self._init_catalog_links()
@@ -102,7 +103,7 @@ class Almanac:
                 else:
                     full_name = catalog_info.catalog_name
                 if full_name in self.entries:
-                    warnings.warn(f"Duplicate catalog name ({full_name}). Try using namespaces.")
+                    self.logger.warning(f"Duplicate catalog name ({full_name}). Try using namespaces.")
                 else:
                     self.entries[full_name] = catalog_info
                     self.dir_to_catalog_name[catalog_info.catalog_path] = full_name
@@ -124,7 +125,7 @@ class Almanac:
                 if catalog_entry.primary:
                     object_catalog = self._get_linked_catalog(catalog_entry.primary, catalog_entry.namespace)
                     if not object_catalog:
-                        warnings.warn(
+                        self.logger.warning(
                             f"source catalog {catalog_entry.catalog_name} missing "
                             f"object catalog {catalog_entry.primary}"
                         )
@@ -136,7 +137,7 @@ class Almanac:
                 ## Association table MUST have a primary and join catalog
                 primary_catalog = self._get_linked_catalog(catalog_entry.primary, catalog_entry.namespace)
                 if not primary_catalog:
-                    warnings.warn(
+                    self.logger.warning(
                         f"association table {catalog_entry.catalog_name} missing "
                         f"primary catalog {catalog_entry.primary}"
                     )
@@ -149,7 +150,7 @@ class Almanac:
                     catalog_entry.namespace,
                 )
                 if not join_catalog:
-                    warnings.warn(
+                    self.logger.warning(
                         f"association table {catalog_entry.catalog_name} missing "
                         f"join catalog {catalog_entry.join}"
                     )
@@ -160,7 +161,7 @@ class Almanac:
                 ## Margin catalogs MUST have a primary catalog
                 primary_catalog = self._get_linked_catalog(catalog_entry.primary, catalog_entry.namespace)
                 if not primary_catalog:
-                    warnings.warn(
+                    self.logger.warning(
                         f"margin table {catalog_entry.catalog_name} missing "
                         f"primary catalog {catalog_entry.primary}"
                     )
@@ -171,7 +172,7 @@ class Almanac:
                 ## Index tables MUST have a primary catalog
                 primary_catalog = self._get_linked_catalog(catalog_entry.primary, catalog_entry.namespace)
                 if not primary_catalog:
-                    warnings.warn(
+                    self.logger.warning(
                         f"index table {catalog_entry.catalog_name} missing "
                         f"primary catalog {catalog_entry.primary}"
                     )
@@ -179,7 +180,7 @@ class Almanac:
                     catalog_entry.primary_link = primary_catalog
                     primary_catalog.indexes.append(catalog_entry)
             else:  # pragma: no cover
-                warnings.warn(f"Unknown catalog type {catalog_entry.catalog_type}")
+                self.logger.warning(f"Unknown catalog type {catalog_entry.catalog_type}")
 
     def _get_linked_catalog(self, linked_text, namespace) -> AlmanacInfo | None:
         """Find a catalog to be used for linking catalogs within the almanac.
