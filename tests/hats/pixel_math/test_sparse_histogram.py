@@ -11,14 +11,14 @@ from hats.pixel_math.sparse_histogram import HistogramAggregator, SparseHistogra
 
 def test_make_empty():
     """Tests the initialization of an empty histogram at the specified order"""
-    histogram = SparseHistogram.make_empty(5)
+    histogram = SparseHistogram([], [], 5)
     expected_hist = np.zeros(hp.order2npix(5))
     npt.assert_array_equal(expected_hist, histogram.to_array())
 
 
 def test_read_write_round_trip(tmp_path):
     """Test that we can read what we write into a histogram file."""
-    histogram = SparseHistogram.make_from_counts([11], [131], 0)
+    histogram = SparseHistogram([11], [131], 0)
 
     # Write as a sparse array
     file_name = tmp_path / "round_trip_sparse.npz"
@@ -37,9 +37,9 @@ def test_read_write_round_trip(tmp_path):
 def test_add_same_order():
     """Test that we can add two histograms created from the same order, and get
     the expected results."""
-    partial_histogram_left = SparseHistogram.make_from_counts([11], [131], 0)
+    partial_histogram_left = SparseHistogram([11], [131], 0)
 
-    partial_histogram_right = SparseHistogram.make_from_counts([10, 11], [4, 15], 0)
+    partial_histogram_right = SparseHistogram([10, 11], [4, 15], 0)
 
     total_histogram = HistogramAggregator(0)
     total_histogram.add(partial_histogram_left)
@@ -56,8 +56,8 @@ def test_add_same_order():
 
 def test_add_different_order():
     """Test that we can NOT add histograms of different healpix orders."""
-    partial_histogram_left = SparseHistogram.make_from_counts([11], [131], 0)
-    partial_histogram_right = SparseHistogram.make_from_counts([10, 11], [4, 15], 1)
+    partial_histogram_left = SparseHistogram([11], [131], 0)
+    partial_histogram_right = SparseHistogram([10, 11], [4, 15], 1)
 
     total_histogram = HistogramAggregator(0)
     total_histogram.add(partial_histogram_left)
@@ -67,7 +67,7 @@ def test_add_different_order():
 
 def test_add_different_type():
     """Test that we can NOT add histograms of different healpix orders."""
-    partial_histogram_left = SparseHistogram.make_from_counts([11], [131], 0)
+    partial_histogram_left = SparseHistogram([11], [131], 0)
 
     total_histogram = HistogramAggregator(0)
     total_histogram.add(partial_histogram_left)

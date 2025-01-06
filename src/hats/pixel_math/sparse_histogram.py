@@ -6,7 +6,17 @@ import hats.pixel_math.healpix_shim as hp
 
 
 class SparseHistogram:
-    """Wrapper around a naive sparse array, that is just non-zero indexes and counts."""
+    """Wrapper around a naive sparse array, that is just non-zero indexes and counts.
+
+    e.g. for a dense 1-d numpy histogram of order 0, you might see::
+
+        [0, 4, 0, 0, 0, 0, 0, 0, 9, 0, 0]
+
+    There are only elements at [1, 8], and they have respective values [4, 9]. You
+    would create the sparse histogram like::
+
+        SparseHistogram([1, 8], [4, 9], 0)
+    """
 
     def __init__(self, indexes, counts, order):
         if len(indexes) != len(counts):
@@ -37,42 +47,6 @@ class SparseHistogram:
         """Persist the DENSE array to disk as a numpy array."""
         with open(file_name, "wb+") as file_handle:
             file_handle.write(self.to_array().data)
-
-    @classmethod
-    def make_empty(cls, healpix_order=10):
-        """Create an empty sparse array for a given healpix order.
-
-        Args:
-            healpix_order (int): healpix order
-
-        Returns:
-            new sparse histogram
-        """
-        return cls([], [], healpix_order)
-
-    @classmethod
-    def make_from_counts(cls, indexes, counts_at_indexes, healpix_order=10):
-        """Create an sparse array for a given healpix order, prefilled with counts at
-        the provided indexes.
-
-        e.g. for a dense 1-d numpy histogram of order 0, you might see::
-
-            [0, 4, 0, 0, 0, 0, 0, 0, 9, 0, 0]
-
-        There are only elements at [1, 8], and they have respective values [4, 9]. You
-        would create the sparse histogram like::
-
-            make_from_counts([1, 8], [4, 9], 0)
-
-        Args:
-            indexes (int[]): index locations of non-zero values
-            counts_at_indexes (int[]): values at the ``indexes``
-            healpix_order (int): healpix order
-
-        Returns:
-            new sparse histogram
-        """
-        return cls(indexes, counts_at_indexes, healpix_order)
 
     @classmethod
     def from_file(cls, file_name):
