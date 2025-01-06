@@ -166,6 +166,22 @@ def test_radec2pix_lonlat():
         assert np.all(pixels == expected_pixels)
 
 
+def test_radec2pix_lonlat_float32():
+    orders = [0, 1, 5, 10, 20, 29]
+    ras = np.arange(-180.0, 180.0, 10.0)
+    ras_f = ras.astype(np.float32)
+    decs = np.arange(-90.0, 90.0, 180 // len(ras))
+    decs_f = decs.astype(np.float32)
+    for order in orders:
+        expected_pixels = cdshealpix.lonlat_to_healpix(
+            Longitude(ras, unit="deg"), Latitude(decs, unit="deg"), order
+        )
+        # Verify that healpixshim can work with float32 versions
+        # Fixes https://github.com/astronomy-commons/hats-import/issues/458
+        pixels = hps.radec2pix(order, ras_f, decs_f)
+        assert np.all(pixels == expected_pixels)
+
+
 def test_radec2pix_invalid():
     orders = [0, 1, 5, 10, 20, 29]
     invalid_orders = [-1000, -1, 30, 40]
