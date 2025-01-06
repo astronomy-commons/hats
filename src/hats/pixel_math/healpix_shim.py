@@ -62,8 +62,8 @@ def radec2pix(order: int, ra: float, dec: float) -> np.ndarray[np.int64]:
     if not is_order_valid(order):
         raise ValueError("Invalid value for order")
 
-    ra = Longitude(ra, unit="deg")
-    dec = Latitude(dec, unit="deg")
+    ra = Longitude(np.asarray(ra, dtype=np.float64), unit="deg")
+    dec = Latitude(np.asarray(dec, dtype=np.float64), unit="deg")
 
     return cdshealpix.lonlat_to_healpix(ra, dec, order).astype(np.int64)
 

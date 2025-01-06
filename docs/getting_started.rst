@@ -33,7 +33,7 @@ The latest release version of HATS is available to install with `pip <https://py
                 pyenv virtualenv 3.11 hats_env
                 pyenv local hats_env
 
-    We recommend Python versions **>=3.9, <=3.12**.
+    We recommend Python versions **>=3.10, <=3.12**.
 
 HATS can also be installed from source on `GitHub <https://github.com/astronomy-commons/hats>`_.
 
