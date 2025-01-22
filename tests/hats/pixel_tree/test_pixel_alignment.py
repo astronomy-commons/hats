@@ -44,6 +44,8 @@ def assert_mapping_matches_tree(alignment: PixelAlignment):
             )
 
 
+# First test using numba-compiled stuff. Give it time to compile.
+@pytest.mark.timeout(20)
 def test_pixel_tree_alignment_same_tree(pixel_tree_1):
     alignment = align_trees(pixel_tree_1, pixel_tree_1, "inner")
     assert_trees_equal(pixel_tree_1, alignment.pixel_tree)
