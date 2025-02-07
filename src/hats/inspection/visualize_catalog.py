@@ -236,12 +236,12 @@ def get_fov_moc_from_wcs(wcs: WCS) -> MOC | None:
     y_px = np.append(y_px, y[1:, 0][::-1])
 
     # Disable the output of warnings when encoutering NaNs.
-    warnings.filterwarnings("ignore")
-    # Inverse projection from pixel coordinate space to the world coordinate space
-    viewport = pixel_to_skycoord(x_px, y_px, wcs)
-    # If one coordinate is a NaN we exit the function and do not go further
-    ra_deg, dec_deg = viewport.icrs.ra.deg, viewport.icrs.dec.deg
-    warnings.filterwarnings("default")
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        # Inverse projection from pixel coordinate space to the world coordinate space
+        viewport = pixel_to_skycoord(x_px, y_px, wcs)
+        # If one coordinate is a NaN we exit the function and do not go further
+        ra_deg, dec_deg = viewport.icrs.ra.deg, viewport.icrs.dec.deg
 
     if np.isnan(ra_deg).any() or np.isnan(dec_deg).any():
         return None
