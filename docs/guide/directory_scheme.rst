@@ -4,7 +4,7 @@ HATS Directory Scheme
 Partitioning Scheme
 -------------------------------------------------------------------------------
 
-We use healpix (`Hierarchical Equal Area isoLatitude Pixelization <https://healpix.jpl.nasa.gov/>`_)
+We use healpix (`Hierarchical Equal Area isoLatitude Pixelization <https://healpix.jpl.nasa.gov/>`__)
 for the spherical pixelation, and adaptively size the partitions based on the number of objects.
 
 In areas of the sky with more objects, we use smaller pixels, so that all the 
