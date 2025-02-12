@@ -142,13 +142,16 @@ def write_parquet_metadata(
     metadata_file_pointer = paths.get_parquet_metadata_pointer(catalog_base_dir)
     common_metadata_file_pointer = paths.get_common_metadata_pointer(catalog_base_dir)
 
+    # Remove pandas metadata from the schema
+    schema = dataset.schema.remove_metadata()
+
     file_io.write_parquet_metadata(
-        dataset.schema,
+        schema,
         metadata_file_pointer,
         metadata_collector=metadata_collector,
         write_statistics=True,
     )
-    file_io.write_parquet_metadata(dataset.schema, common_metadata_file_pointer)
+    file_io.write_parquet_metadata(schema, common_metadata_file_pointer)
     return total_rows
 
 
