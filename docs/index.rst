@@ -5,7 +5,7 @@ HATS is a directory structure and metadata for spatially arranging large catalog
 This was originally motivated by a desire to perform spatial cross-matching between surveys 
 at large scale, but is applicable to a range of spatial analysis and algorithms.
 
-We use healpix (`Hierarchical Equal Area isoLatitude Pixelization <https://healpix.jpl.nasa.gov/_)
+We use healpix (`Hierarchical Equal Area isoLatitude Pixelization <https://healpix.jpl.nasa.gov/>`__)
 for the spherical pixelation, and adaptively size the partitions based on the number of objects.
 Each partition will have roughly the same number of objects, instead of dividing into equal area. 
 Because each partition is roughly the same size on disk, we can expect reasonable performance of 
