@@ -50,11 +50,11 @@ Notes:
 2) ``pre-commit install`` will initialize pre-commit for this local repository, so
    that a set of tests will be run prior to completing a local commit. For more
    information, see the Python Project Template documentation on
-   `pre-commit <https://lincc-ppt.readthedocs.io/en/stable/practices/precommit.html>`_.
+   `pre-commit <https://lincc-ppt.readthedocs.io/en/stable/practices/precommit.html>`__.
 3) Install ``pandoc`` allows you to verify that automatic rendering of Jupyter notebooks
    into documentation for ReadTheDocs works as expected. For more information, see
    the Python Project Template documentation on
-   `Sphinx and Python Notebooks <https://lincc-ppt.readthedocs.io/en/stable/practices/sphinx.html#python-notebooks>`_.
+   `Sphinx and Python Notebooks <https://lincc-ppt.readthedocs.io/en/stable/practices/sphinx.html#python-notebooks>`__.
 
 .. tip::
     Installing on Mac
@@ -100,6 +100,6 @@ Optional - Release a new version
 -------------------------------------------------------------------------------
 
 Once your PR is merged you can create a new release to make your changes available. 
-GitHub's `instructions <https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository>`_ 
+GitHub's `instructions <https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository>`__ 
 for doing so are here. 
 Use your best judgement when incrementing the version. i.e. is this a major, minor, or patch fix.

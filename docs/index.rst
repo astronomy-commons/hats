@@ -5,7 +5,7 @@ HATS is a directory structure and metadata for spatially arranging large catalog
 This was originally motivated by a desire to perform spatial cross-matching between surveys 
 at large scale, but is applicable to a range of spatial analysis and algorithms.
 
-We use healpix (`Hierarchical Equal Area isoLatitude Pixelization <https://healpix.jpl.nasa.gov/>`_)
+We use healpix (`Hierarchical Equal Area isoLatitude Pixelization <https://healpix.jpl.nasa.gov/>`__)
 for the spherical pixelation, and adaptively size the partitions based on the number of objects.
 Each partition will have roughly the same number of objects, instead of dividing into equal area. 
 Because each partition is roughly the same size on disk, we can expect reasonable performance of 
@@ -18,9 +18,9 @@ The ``hats`` python package provides basic access to a catalog's metadata, and s
 for interacting with the healpix space. This allows for multiple libraries to implement parallel 
 operations on top of these utilities. Some known extensions:
 
-* `LSDB <https://lsdb.readthedocs.io/>`_ - Large Survey Database - A framework for scalable 
+* `LSDB <https://lsdb.readthedocs.io/>`__ - Large Survey Database - A framework for scalable 
   spatial analysis using ``dask`` for job scheduling and execution.
-* `hats-import <https://hats-import.readthedocs.io/>`_ - map reduce pipelines for converting
+* `hats-import <https://hats-import.readthedocs.io/>`__ - map reduce pipelines for converting
   large or custom catalogs into HATS format.
 
 .. toctree::
@@ -42,7 +42,7 @@ Getting Started
 -------------------------------------------------------------------------------
 
 For the most part, we recommend accessing and processing HATS data using the `LSDB package
-<https://github.com/astronomy-commons/lsdb>`_ framework. LSDB provides a variety of utility
+<https://github.com/astronomy-commons/lsdb>`__ framework. LSDB provides a variety of utility
 functions as well as a lazy, distributed execution framework using Dask. However if you are are
 interested in using just the HATS package, you can find installation instructions at the 
 :doc:`getting started page</getting_started>`.
