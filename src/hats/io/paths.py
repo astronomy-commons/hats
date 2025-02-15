@@ -118,7 +118,10 @@ def dict_to_query_urlparams(query_params: dict | None = None) -> str:
 
 
 def pixel_catalog_file(
-    catalog_base_dir: str | Path | UPath | None, pixel: HealpixPixel, query_params: dict | None = None
+    catalog_base_dir: str | Path | UPath | None,
+    pixel: HealpixPixel,
+    query_params: dict | None = None,
+    npix_suffix: str = ".parquet",
 ) -> UPath:
     """Create path *pointer* for a pixel catalog file. This will not create the directory
     or file.
@@ -139,6 +142,7 @@ def pixel_catalog_file(
         string catalog file name
     """
     catalog_base_dir = get_upath(catalog_base_dir)
+    suffix = npix_suffix if npix_suffix not in ["/", "\\"] else ""
 
     url_params = ""
     if isinstance(catalog_base_dir.fs, HTTPFileSystem) and query_params:
@@ -149,7 +153,7 @@ def pixel_catalog_file(
         / DATASET_DIR
         / f"{PARTITION_ORDER}={pixel.order}"
         / f"{PARTITION_DIR}={pixel.dir}"
-        / f"{PARTITION_PIXEL}={pixel.pixel}.parquet{url_params}"
+        / f"{PARTITION_PIXEL}={pixel.pixel}{suffix}{url_params}"
     )
 
 
