@@ -32,8 +32,15 @@ def read_hats(catalog_path: str | Path | UPath) -> Dataset:
 
     Args:
         catalog_path (str): path to the root directory of the catalog
+
     Returns:
         The initialized catalog object
+
+    Examples:
+        To read a catalog from a public S3 bucket, call it as follows::
+
+            from upath import UPath
+            catalog = hats.read_hats(UPath(..., anon=True))
     """
     catalog_path = file_io.get_upath(catalog_path)
     try:
