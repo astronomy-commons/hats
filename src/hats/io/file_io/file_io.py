@@ -284,4 +284,4 @@ def read_parquet_file_to_pandas(
     file_pointer = get_upath(file_pointer)
     if file_open_kwargs is None:
         file_open_kwargs = {}
-    return pd.read_parquet(file_pointer, **kwargs)
+    return pd.read_parquet(file_pointer, storage_options=file_pointer.storage_options, **kwargs)
