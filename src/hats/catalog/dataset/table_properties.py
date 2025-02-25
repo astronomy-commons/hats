@@ -126,6 +126,16 @@ class TableProperties(BaseModel):
     ## Allow any extra keyword args to be stored on the properties object.
     model_config = ConfigDict(extra="allow", populate_by_name=True, use_enum_values=True)
 
+    npix_suffix: str = Field(default=".parquet", alias="hats_npix_suffix")
+    """Suffix of the Npix partitions.
+    In the standard HATS directory structure, this is '.parquet' because there is a single file
+    in each Npix partition and it is named like 'Npix=313.parquet'.
+    Other valid directory structures include those with the same single file per partition but
+    which use a different suffix (e.g., `npix_suffix` = '.parq' or '.snappy.parquet'),
+    and also those in which the Npix partitions are actually directories containing 1+ files
+    underneath (and then `npix_suffix` = '/').
+    """
+
     @field_validator("default_columns", "extra_columns", mode="before")
     @classmethod
     def space_delimited_list(cls, str_value: str) -> list[str]:
@@ -151,7 +161,8 @@ class TableProperties(BaseModel):
         )
 
         allowed_keys = set(
-            CATALOG_TYPE_ALLOWED_FIELDS[self.catalog_type] + ["catalog_name", "catalog_type", "total_rows"]
+            CATALOG_TYPE_ALLOWED_FIELDS[self.catalog_type]
+            + ["catalog_name", "catalog_type", "total_rows", "npix_suffix"]
         )
         non_allowed = explicit_keys - allowed_keys
         if len(non_allowed) > 0:

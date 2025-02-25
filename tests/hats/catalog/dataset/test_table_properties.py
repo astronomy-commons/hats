@@ -38,6 +38,7 @@ def test_properties_parsing():
   primary_catalog bar
   indexing_column a
   extra_columns a b
+  npix_suffix .parquet
 """
     )
     table_properties_using_list = TableProperties(
