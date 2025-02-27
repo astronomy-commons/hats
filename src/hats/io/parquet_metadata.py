@@ -192,6 +192,28 @@ def read_row_group_fragments(metadata_file: str):
         yield from frag.row_groups
 
 
+def _nonemin(value1, value2):
+    """Similar to numpy's nanmin, but excludes `None` values.
+
+    NB: If both values are `None`, this will still return `None`"""
+    if value1 is None:
+        return value2
+    if value2 is None:
+        return value1
+    return min(value1, value2)
+
+
+def _nonemax(value1, value2):
+    """Similar to numpy's nanmax, but excludes `None` values.
+
+    NB: If both values are `None`, this will still return `None`"""
+    if value1 is None:
+        return value2
+    if value2 is None:
+        return value1
+    return max(value1, value2)
+
+
 def aggregate_column_statistics(
     metadata_file: str | Path | UPath,
     exclude_hats_columns: bool = True,
@@ -229,12 +251,18 @@ def aggregate_column_statistics(
         if (len(include_columns) == 0 or name in include_columns)
         and not (len(exclude_columns) > 0 and name in exclude_columns)
     ]
+    if not good_column_indexes:
+        return pd.DataFrame()
     column_names = [column_names[i] for i in good_column_indexes]
     extrema = [
         (
-            first_row_group.column(col).statistics.min,
-            first_row_group.column(col).statistics.max,
-            first_row_group.column(col).statistics.null_count,
+            (None, None, 0)
+            if first_row_group.column(col).statistics is None
+            else (
+                first_row_group.column(col).statistics.min,
+                first_row_group.column(col).statistics.max,
+                first_row_group.column(col).statistics.null_count,
+            )
         )
         for col in good_column_indexes
     ]
@@ -243,25 +271,21 @@ def aggregate_column_statistics(
         row_group = total_metadata.row_group(row_group_index)
         row_stats = [
             (
-                row_group.column(col).statistics.min,
-                row_group.column(col).statistics.max,
-                row_group.column(col).statistics.null_count,
+                (None, None, 0)
+                if row_group.column(col).statistics is None
+                else (
+                    row_group.column(col).statistics.min,
+                    row_group.column(col).statistics.max,
+                    row_group.column(col).statistics.null_count,
+                )
             )
             for col in good_column_indexes
         ]
         ## This is annoying, but avoids extra copies, or none comparison.
         extrema = [
             (
-                (
-                    min(extrema[col][0], row_stats[col][0])
-                    if row_stats[col][0] is not None
-                    else extrema[col][0]
-                ),
-                (
-                    max(extrema[col][1], row_stats[col][1])
-                    if row_stats[col][1] is not None
-                    else extrema[col][1]
-                ),
+                (_nonemin(extrema[col][0], row_stats[col][0])),
+                (_nonemax(extrema[col][1], row_stats[col][1])),
                 extrema[col][2] + row_stats[col][2],
             )
             for col in range(0, len(good_column_indexes))
