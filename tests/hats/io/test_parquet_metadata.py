@@ -4,6 +4,7 @@ import shutil
 
 import pandas as pd
 import pyarrow as pa
+import pyarrow.parquet as pq
 import pytest
 
 from hats.io import file_io, paths
@@ -156,6 +157,44 @@ def test_aggregate_column_statistics(small_sky_order1_dir):
 
     result_frame = aggregate_column_statistics(partition_info_file, include_columns=["ra", "dec"])
     assert len(result_frame) == 2
+
+    result_frame = aggregate_column_statistics(partition_info_file, include_columns=["does", "not", "exist"])
+    assert len(result_frame) == 0
+
+
+def test_aggregate_column_statistics_with_nulls(tmp_path):
+    file_io.make_directory(tmp_path / "dataset")
+
+    metadata_filename = tmp_path / "dataset" / "dataframe_01.parquet"
+    table_with_schema = pa.Table.from_arrays([[-1.0], [1.0]], names=["data", "Npix"])
+    pq.write_table(table_with_schema, metadata_filename)
+
+    icky_table = pa.Table.from_arrays([[2.0, None], [None, 6.0]], schema=table_with_schema.schema)
+    metadata_filename = tmp_path / "dataset" / "dataframe_02.parquet"
+    pq.write_table(icky_table, metadata_filename)
+
+    icky_table = pa.Table.from_arrays([[None], [None]], schema=table_with_schema.schema)
+    metadata_filename = tmp_path / "dataset" / "dataframe_00.parquet"
+    pq.write_table(icky_table, metadata_filename)
+
+    icky_table = pa.Table.from_arrays([[None, None], [None, None]], schema=table_with_schema.schema)
+    metadata_filename = tmp_path / "dataset" / "dataframe_03.parquet"
+    pq.write_table(icky_table, metadata_filename)
+
+    assert write_parquet_metadata(tmp_path, order_by_healpix=False) == 6
+
+    result_frame = aggregate_column_statistics(tmp_path / "dataset" / "_metadata", exclude_hats_columns=False)
+    assert len(result_frame) == 2
+
+    data_stats = result_frame.loc["data"]
+    assert data_stats["min_value"] == -1
+    assert data_stats["max_value"] == 2
+    assert data_stats["null_count"] == 4
+
+    data_stats = result_frame.loc["Npix"]
+    assert data_stats["min_value"] == 1
+    assert data_stats["max_value"] == 6
+    assert data_stats["null_count"] == 4
 
 
 def test_row_group_stats(small_sky_dir):
