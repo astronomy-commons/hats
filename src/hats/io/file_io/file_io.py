@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import pyarrow.dataset as pds
 import pyarrow.parquet as pq
+import upath.implementations.http
 import yaml
 from cdshealpix.skymap.skymap import Skymap
 from pyarrow.dataset import Dataset
@@ -283,15 +284,26 @@ def unnest_headers_for_pandas(storage_options: dict | None) -> dict | None:
 
 
 def read_parquet_file_to_pandas(file_pointer: str | Path | UPath, **kwargs) -> pd.DataFrame:
-    """Reads a parquet file to a pandas DataFrame
+    """Reads parquet file(s) to a pandas DataFrame
 
     Args:
-        file_pointer (UPath): File Pointer to a parquet file
+        file_pointer (UPath): File Pointer to a parquet file or a directory containing parquet files
         **kwargs: Additional arguments to pass to pandas read_parquet method
 
     Returns:
-        Pandas DataFrame with the data from the parquet file
+        Pandas DataFrame with the data from the parquet file(s)
     """
     file_pointer = get_upath(file_pointer)
     storage_options = unnest_headers_for_pandas(file_pointer.storage_options)
+    # If we are trying to read a directory over http, we need to send the explicit list of files instead.
+    # We don't want to get the list unnecessarily because it can be expensive.
+    if isinstance(file_pointer, upath.implementations.http.HTTPPath) and len(file_pointer.suffixes) == 0:
+        file_pointers = [f for f in file_pointer.iterdir() if f.is_file()]
+        return pd.read_parquet(
+            file_pointers,
+            storage_options=storage_options,
+            filesystem=file_pointer.fs,
+            partitioning=None,  # Avoid the ArrowTypeError described in #367
+            **kwargs,
+        )
     return pd.read_parquet(file_pointer, storage_options=storage_options, **kwargs)
