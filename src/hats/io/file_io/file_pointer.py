@@ -2,16 +2,31 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import botocore.exceptions
 from upath import UPath
 
 
-def get_upath(path: str | Path | UPath) -> UPath:
+def get_upath(path: str | Path | UPath) -> UPath | None:
     """Returns a file pointer from a path string"""
     if not path:
         return None
     if isinstance(path, UPath):
         return path
-    return UPath(path)
+    return get_upath_for_protocol(path)
+
+
+def get_upath_for_protocol(path: str | Path) -> UPath:
+    """Create UPath with protocol-specific configurations.
+
+    If we access pointers on S3 and credentials are not found we assume
+    an anonymous access, i.e., that the bucket is public.
+    """
+    upath = UPath(path)
+    try:
+        upath.exists()
+    except botocore.exceptions.NoCredentialsError:
+        upath = UPath(path, anon=True)
+    return upath
 
 
 def append_paths_to_pointer(pointer: str | Path | UPath, *paths: str) -> UPath:
