@@ -12,6 +12,7 @@ from hats.io.file_io import (
     read_parquet_dataset,
     read_parquet_file_to_pandas,
     remove_directory,
+    unnest_headers_for_pandas,
     write_dataframe_to_csv,
     write_fits_image,
     write_string_to_file,
@@ -146,3 +147,27 @@ def test_write_point_map_roundtrip(small_sky_order1_dir, tmp_path):
     write_fits_image(expected_counts_skymap, output_map_pointer)
     counts_skymap = read_fits_image(output_map_pointer)
     np.testing.assert_array_equal(counts_skymap, expected_counts_skymap)
+
+
+def test_unnest_headers_for_pandas():
+    storage_options = {
+        "headers": {"Authorization": "Bearer my_token"},
+    }
+    storage_options_str = {"Authorization": "Bearer my_token"}
+    assert storage_options_str == unnest_headers_for_pandas(storage_options)
+
+    storage_options = {
+        "key1": "value1",
+        "headers": {"Authorization": "Bearer my_token", "Content": "X"},
+    }
+    storage_options_str = {"key1": "value1", "Authorization": "Bearer my_token", "Content": "X"}
+    assert storage_options_str == unnest_headers_for_pandas(storage_options)
+
+    storage_options = {
+        "key1": "value1",
+        "key2": None,
+    }
+    storage_options_str = {"key1": "value1", "key2": None}
+    assert storage_options_str == unnest_headers_for_pandas(storage_options)
+
+    assert None is unnest_headers_for_pandas(None)

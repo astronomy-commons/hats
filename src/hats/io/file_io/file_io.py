@@ -269,6 +269,19 @@ def delete_file(file_handle: str | Path | UPath):
     file_handle.unlink()
 
 
+def unnest_headers_for_pandas(storage_options: dict | None) -> dict | None:
+    """Handle storage options for pandas read/write methods.
+    This is needed because fsspec http storage options are nested under the "headers" key,
+    see https://github.com/astronomy-commons/hipscat/issues/295
+    """
+    if storage_options is not None and "headers" in storage_options:
+        # Copy the storage options to avoid modifying the original dictionary
+        storage_options_copy = storage_options.copy()
+        headers = storage_options_copy.pop("headers")
+        return {**storage_options_copy, **headers}
+    return storage_options
+
+
 def read_parquet_file_to_pandas(file_pointer: str | Path | UPath, **kwargs) -> pd.DataFrame:
     """Reads a parquet file to a pandas DataFrame
 
@@ -280,4 +293,5 @@ def read_parquet_file_to_pandas(file_pointer: str | Path | UPath, **kwargs) -> p
         Pandas DataFrame with the data from the parquet file
     """
     file_pointer = get_upath(file_pointer)
-    return pd.read_parquet(file_pointer, storage_options=file_pointer.storage_options, **kwargs)
+    storage_options = unnest_headers_for_pandas(file_pointer.storage_options)
+    return pd.read_parquet(file_pointer, storage_options=storage_options, **kwargs)
