@@ -32,3 +32,11 @@ def test_read_hats_initializes_upath_once(small_sky_dir, mocker):
 def test_read_hats_with_s3_anonymous_access():
     upath = get_upath_for_protocol("s3://bucket/catalog")
     assert upath.storage_options.get("anon")
+
+
+def test_read_hats_nonstandard_npix_suffix(
+    small_sky_npix_alt_suffix_dir,
+    small_sky_npix_as_dir_dir,
+):
+    read_hats(small_sky_npix_alt_suffix_dir)
+    read_hats(small_sky_npix_as_dir_dir)
