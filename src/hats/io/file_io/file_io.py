@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import pyarrow.dataset as pds
 import pyarrow.parquet as pq
+import upath.implementations.http
 import yaml
 from cdshealpix.skymap.skymap import Skymap
 from pyarrow.dataset import Dataset
@@ -269,20 +270,40 @@ def delete_file(file_handle: str | Path | UPath):
     file_handle.unlink()
 
 
-def read_parquet_file_to_pandas(
-    file_pointer: str | Path | UPath, file_open_kwargs: dict = None, **kwargs
-) -> pd.DataFrame:
-    """Reads a parquet file to a pandas DataFrame
+def unnest_headers_for_pandas(storage_options: dict | None) -> dict | None:
+    """Handle storage options for pandas read/write methods.
+    This is needed because fsspec http storage options are nested under the "headers" key,
+    see https://github.com/astronomy-commons/hipscat/issues/295
+    """
+    if storage_options is not None and "headers" in storage_options:
+        # Copy the storage options to avoid modifying the original dictionary
+        storage_options_copy = storage_options.copy()
+        headers = storage_options_copy.pop("headers")
+        return {**storage_options_copy, **headers}
+    return storage_options
+
+
+def read_parquet_file_to_pandas(file_pointer: str | Path | UPath, **kwargs) -> pd.DataFrame:
+    """Reads parquet file(s) to a pandas DataFrame
 
     Args:
-        file_pointer (UPath): File Pointer to a parquet file
+        file_pointer (UPath): File Pointer to a parquet file or a directory containing parquet files
         **kwargs: Additional arguments to pass to pandas read_parquet method
 
     Returns:
-        Pandas DataFrame with the data from the parquet file
+        Pandas DataFrame with the data from the parquet file(s)
     """
     file_pointer = get_upath(file_pointer)
-    if file_open_kwargs is None:
-        file_open_kwargs = {}
-    with file_pointer.open("rb", **file_open_kwargs) as parquet_file:
-        return pd.read_parquet(parquet_file, **kwargs)
+    storage_options = unnest_headers_for_pandas(file_pointer.storage_options)
+    # If we are trying to read a directory over http, we need to send the explicit list of files instead.
+    # We don't want to get the list unnecessarily because it can be expensive.
+    if isinstance(file_pointer, upath.implementations.http.HTTPPath) and len(file_pointer.suffixes) == 0:
+        file_pointers = [f for f in file_pointer.iterdir() if f.is_file()]
+        return pd.read_parquet(
+            file_pointers,
+            storage_options=storage_options,
+            filesystem=file_pointer.fs,
+            partitioning=None,  # Avoid the ArrowTypeError described in #367
+            **kwargs,
+        )
+    return pd.read_parquet(file_pointer, storage_options=storage_options, **kwargs)
