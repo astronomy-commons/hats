@@ -118,7 +118,7 @@ def load_csv_to_pandas_generator(
         pandas dataframe loaded from CSV
     """
     file_pointer = get_upath(file_pointer)
-    with file_pointer.open(mode="rb", compression=compression, **kwargs) as csv_file:
+    with file_pointer.open(mode="rb", compression=compression) as csv_file:
         with pd.read_csv(csv_file, chunksize=chunksize, **kwargs) as reader:
             yield from reader
 
