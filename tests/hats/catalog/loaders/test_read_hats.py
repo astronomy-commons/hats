@@ -22,6 +22,13 @@ def test_read_hats_branches(
 
 def test_read_hats_initializes_upath_once(small_sky_dir, mocker):
     mock_method = "hats.io.file_io.file_pointer.get_upath_for_protocol"
+    # Setting the side effect allows us to run the mocked function's code
     mocked_upath_call = mocker.patch(mock_method, side_effect=get_upath_for_protocol)
     read_hats(small_sky_dir)
+    # The construction of the UPath is called once, at the start of `read_hats`
     mocked_upath_call.assert_called_once_with(small_sky_dir)
+
+
+def test_read_hats_with_s3_anonymous_access():
+    upath = get_upath_for_protocol("s3://bucket/catalog")
+    assert upath.storage_options.get("anon")
