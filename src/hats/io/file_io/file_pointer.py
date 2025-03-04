@@ -5,7 +5,7 @@ from pathlib import Path
 from upath import UPath
 
 
-def get_upath(path: str | Path | UPath) -> UPath | None:
+def get_upath(path: str | Path | UPath) -> UPath:
     """Returns a file pointer from a path string"""
     if not path:
         return None
