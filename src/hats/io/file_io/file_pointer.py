@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import botocore.exceptions
 from upath import UPath
 
 
@@ -22,9 +21,7 @@ def get_upath_for_protocol(path: str | Path) -> UPath:
     an anonymous access, i.e., that the bucket is public.
     """
     upath = UPath(path)
-    try:
-        upath.exists()
-    except botocore.exceptions.NoCredentialsError:
+    if upath.protocol == "s3":
         upath = UPath(path, anon=True)
     return upath
 
