@@ -12,6 +12,7 @@ from hats.io.file_io import (
     read_parquet_dataset,
     read_parquet_file_to_pandas,
     remove_directory,
+    unnest_headers_for_pandas,
     write_dataframe_to_csv,
     write_fits_image,
     write_string_to_file,
@@ -117,6 +118,18 @@ def test_read_parquet_data(tmp_path):
     dataframe = read_parquet_file_to_pandas(test_file_path)
     pd.testing.assert_frame_equal(dataframe, random_df)
 
+    # Show that it also works given a directory.
+    test_dir = tmp_path / "test_dir"
+    test_dir.mkdir()
+    random_df.to_parquet(test_dir / "test.parquet")
+    # Add a second file to show that they'll both be read.
+    random_df2 = pd.DataFrame(np.random.randint(0, 100, size=(100, 4)), columns=list("ABCD"))
+    random_df2.to_parquet(test_dir / "test2.parquet")
+    random_dfs = pd.concat([random_df, random_df2]).sort_values(list("ABCD")).reset_index(drop=True)
+    dataframe_from_dir = read_parquet_file_to_pandas(test_dir)
+    dataframe_from_dir = dataframe_from_dir.sort_values(list("ABCD")).reset_index(drop=True)
+    pd.testing.assert_frame_equal(dataframe_from_dir, random_dfs)
+
 
 def test_read_parquet_dataset(small_sky_dir, small_sky_order1_dir):
     (_, ds) = read_parquet_dataset(small_sky_dir / "dataset" / "Norder=0")
@@ -146,3 +159,27 @@ def test_write_point_map_roundtrip(small_sky_order1_dir, tmp_path):
     write_fits_image(expected_counts_skymap, output_map_pointer)
     counts_skymap = read_fits_image(output_map_pointer)
     np.testing.assert_array_equal(counts_skymap, expected_counts_skymap)
+
+
+def test_unnest_headers_for_pandas():
+    storage_options = {
+        "headers": {"Authorization": "Bearer my_token"},
+    }
+    storage_options_str = {"Authorization": "Bearer my_token"}
+    assert storage_options_str == unnest_headers_for_pandas(storage_options)
+
+    storage_options = {
+        "key1": "value1",
+        "headers": {"Authorization": "Bearer my_token", "Content": "X"},
+    }
+    storage_options_str = {"key1": "value1", "Authorization": "Bearer my_token", "Content": "X"}
+    assert storage_options_str == unnest_headers_for_pandas(storage_options)
+
+    storage_options = {
+        "key1": "value1",
+        "key2": None,
+    }
+    storage_options_str = {"key1": "value1", "key2": None}
+    assert storage_options_str == unnest_headers_for_pandas(storage_options)
+
+    assert None is unnest_headers_for_pandas(None)
