@@ -11,7 +11,19 @@ def get_upath(path: str | Path | UPath) -> UPath:
         return None
     if isinstance(path, UPath):
         return path
-    return UPath(path)
+    return get_upath_for_protocol(path)
+
+
+def get_upath_for_protocol(path: str | Path) -> UPath:
+    """Create UPath with protocol-specific configurations.
+
+    If we access pointers on S3 and credentials are not found we assume
+    an anonymous access, i.e., that the bucket is public.
+    """
+    upath = UPath(path)
+    if upath.protocol == "s3":
+        upath = UPath(path, anon=True)
+    return upath
 
 
 def append_paths_to_pointer(pointer: str | Path | UPath, *paths: str) -> UPath:
