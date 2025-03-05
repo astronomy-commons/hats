@@ -116,6 +116,7 @@ def margin_catalog_info(margin_cache_catalog_info_data) -> TableProperties:
 def small_sky_schema() -> pa.Schema:
     return pa.schema(
         [
+            pa.field("_healpix_29", pa.int64()),
             pa.field("id", pa.int64()),
             pa.field("ra", pa.float64()),
             pa.field("dec", pa.float64()),
@@ -124,7 +125,6 @@ def small_sky_schema() -> pa.Schema:
             pa.field("Norder", pa.uint8()),
             pa.field("Dir", pa.uint64()),
             pa.field("Npix", pa.uint64()),
-            pa.field("_healpix_29", pa.int64()),
         ]
     )
 
@@ -133,6 +133,7 @@ def small_sky_schema() -> pa.Schema:
 def small_sky_source_schema() -> pa.Schema:
     return pa.schema(
         [
+            pa.field("_healpix_29", pa.int64()),
             pa.field("source_id", pa.int64()),
             pa.field("source_ra", pa.float64()),
             pa.field("source_dec", pa.float64()),
@@ -145,7 +146,6 @@ def small_sky_source_schema() -> pa.Schema:
             pa.field("Norder", pa.uint8()),
             pa.field("Dir", pa.uint64()),
             pa.field("Npix", pa.uint64()),
-            pa.field("_healpix_29", pa.int64()),
         ]
     )
 
@@ -166,18 +166,18 @@ def association_catalog_schema() -> pa.Schema:
 def margin_catalog_schema() -> pa.Schema:
     return pa.schema(
         [
+            pa.field("_healpix_29", pa.int64()),
             pa.field("id", pa.int64()),
             pa.field("ra", pa.float64()),
             pa.field("dec", pa.float64()),
             pa.field("ra_error", pa.int64()),
             pa.field("dec_error", pa.int64()),
-            pa.field("Norder", pa.uint8()),
-            pa.field("Dir", pa.uint64()),
-            pa.field("Npix", pa.uint64()),
-            pa.field("_healpix_29", pa.int64()),
             pa.field("margin_Norder", pa.uint8()),
             pa.field("margin_Dir", pa.uint64()),
             pa.field("margin_Npix", pa.uint64()),
+            pa.field("Norder", pa.uint8()),
+            pa.field("Dir", pa.uint64()),
+            pa.field("Npix", pa.uint64()),
         ]
     )
 
@@ -196,6 +196,8 @@ def catalog_path(test_data_dir) -> str:
 def margin_catalog_pixels() -> list[HealpixPixel]:
     return [
         HealpixPixel(0, 4),
+        HealpixPixel(0, 7),
+        HealpixPixel(0, 8),
         HealpixPixel(1, 44),
         HealpixPixel(1, 45),
         HealpixPixel(1, 46),
