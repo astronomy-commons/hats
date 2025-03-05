@@ -76,6 +76,7 @@ def test_margin_filter(margin_catalog_info, margin_catalog_pixels):
     pixels = [HealpixPixel(1, 44)]
     filtered_catalog = catalog.filter_from_pixel_list(pixels)
     assert filtered_catalog.get_healpix_pixels() == [
+        HealpixPixel(0, 8),
         HealpixPixel(1, 44),
         HealpixPixel(1, 45),
         HealpixPixel(1, 46),
