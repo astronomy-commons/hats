@@ -294,11 +294,11 @@ def read_parquet_file_to_pandas(file_pointer: str | Path | UPath, **kwargs) -> p
         Pandas DataFrame with the data from the parquet file(s)
     """
     file_pointer = get_upath(file_pointer)
-    storage_options = unnest_headers_for_pandas(file_pointer.storage_options)
     # If we are trying to read a directory over http, we need to send the explicit list of files instead.
     # We don't want to get the list unnecessarily because it can be expensive.
     if isinstance(file_pointer, upath.implementations.http.HTTPPath) and len(file_pointer.suffixes) == 0:
         file_pointers = [f for f in file_pointer.iterdir() if f.is_file()]
+        storage_options = unnest_headers_for_pandas(file_pointer.storage_options)
         return pd.read_parquet(
             file_pointers,
             storage_options=storage_options,
@@ -307,9 +307,8 @@ def read_parquet_file_to_pandas(file_pointer: str | Path | UPath, **kwargs) -> p
             **kwargs,
         )
     return pd.read_parquet(
-        file_pointer,
+        file_pointer.path,
         filesystem=file_pointer.fs,
-        storage_options=storage_options,
         partitioning=None,  # Avoid the ArrowTypeError described in #367
         **kwargs,
     )
