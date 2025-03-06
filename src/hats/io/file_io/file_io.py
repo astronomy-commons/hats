@@ -306,4 +306,10 @@ def read_parquet_file_to_pandas(file_pointer: str | Path | UPath, **kwargs) -> p
             partitioning=None,  # Avoid the ArrowTypeError described in #367
             **kwargs,
         )
-    return pd.read_parquet(file_pointer, storage_options=storage_options, **kwargs)
+    return pd.read_parquet(
+        file_pointer,
+        filesystem=file_pointer.fs,
+        storage_options=storage_options,
+        partitioning=None,  # Avoid the ArrowTypeError described in #367
+        **kwargs,
+    )
