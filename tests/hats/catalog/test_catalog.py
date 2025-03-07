@@ -105,6 +105,13 @@ def test_aggregate_column_statistics(small_sky_order1_dir):
     assert len(result_frame) == 2
 
 
+def test_aggregate_column_statistics_inmemory(catalog_info, catalog_pixels):
+    catalog = Catalog(catalog_info, catalog_pixels)
+    with pytest.warns(UserWarning, match="in-memory"):
+        result_frame = catalog.aggregate_column_statistics(include_columns=["ra", "dec"])
+    assert len(result_frame) == 0
+
+
 def test_load_catalog_small_sky_order1_moc(small_sky_order1_dir):
     """Instantiate a catalog with 4 pixels"""
     cat = read_hats(small_sky_order1_dir)
@@ -309,6 +316,7 @@ def test_box_filter(small_sky_order1_catalog):
     assert (1, 47) in filtered_catalog.pixel_tree
     assert len(filtered_catalog.pixel_tree.pixels[1]) == 2
     assert filtered_catalog.catalog_info.total_rows == 0
+    assert filtered_catalog.catalog_path is not None
 
     # Check that the previous filter is the same as intersecting the ra and dec filters
     assert filtered_catalog.moc is not None

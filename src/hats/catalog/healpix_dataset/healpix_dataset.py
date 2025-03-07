@@ -200,7 +200,13 @@ class HealpixDataset(Dataset):
         filtered_tree = filter_by_moc(self.pixel_tree, moc)
         filtered_moc = self.moc.intersection(moc) if self.moc is not None else None
         filtered_catalog_info = self.catalog_info.copy_and_update(total_rows=0)
-        return self.__class__(filtered_catalog_info, filtered_tree, moc=filtered_moc, schema=self.schema)
+        return self.__class__(
+            filtered_catalog_info,
+            pixels=filtered_tree,
+            catalog_path=self.catalog_path,
+            moc=filtered_moc,
+            schema=self.schema,
+        )
 
     def align(
         self, other_cat: Self, alignment_type: PixelAlignmentType = PixelAlignmentType.INNER

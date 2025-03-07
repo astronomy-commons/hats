@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import warnings
 from pathlib import Path
 
+import pandas as pd
 import pyarrow as pa
 from upath import UPath
 
@@ -52,6 +54,9 @@ class Dataset:
             include_columns (List[str]): if specified, only return statistics for the column
                 names provided. Defaults to None, and returns all non-hats columns.
         """
+        if not self.on_disk:
+            warnings.warn("Calling aggregate_column_statistics on an in-memory catalog. No results.")
+            return pd.DataFrame()
         return aggregate_column_statistics(
             self.catalog_base_dir / "dataset" / "_metadata",
             exclude_hats_columns=exclude_hats_columns,
