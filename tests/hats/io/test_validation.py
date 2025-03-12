@@ -20,7 +20,7 @@ def test_is_valid_catalog(tmp_path, small_sky_catalog, small_sky_pixels):
 
     # The catalog is valid if both the catalog_info and _metadata files exist,
     # and the catalog_info is in a valid format
-    total_rows = PartitionInfo.from_healpix(small_sky_pixels).write_to_metadata_files(tmp_path)
+    total_rows, _TODO = PartitionInfo.from_healpix(small_sky_pixels).write_to_metadata_files(tmp_path)
     assert total_rows == 1
     assert is_valid_catalog(tmp_path)
 
@@ -53,7 +53,7 @@ def test_is_valid_catalog_strict(tmp_path, small_sky_catalog, small_sky_pixels, 
         assert not is_valid_catalog(tmp_path, **flags)
 
     # Adds the _metadata and _common_metadata, but that's not enough.
-    total_rows = PartitionInfo.from_healpix(small_sky_pixels).write_to_metadata_files(tmp_path)
+    total_rows, _TODO = PartitionInfo.from_healpix(small_sky_pixels).write_to_metadata_files(tmp_path)
     assert total_rows == 1
     with pytest.warns():
         assert not is_valid_catalog(tmp_path, **flags)
@@ -92,14 +92,14 @@ def test_is_valid_catalog_fail_fast(tmp_path, small_sky_catalog, small_sky_pixel
     with pytest.raises(ValueError, match="_metadata"):
         is_valid_catalog(tmp_path, **flags)
 
-    total_rows = PartitionInfo.from_healpix(small_sky_pixels).write_to_metadata_files(tmp_path)
+    total_rows, _TODO = PartitionInfo.from_healpix(small_sky_pixels).write_to_metadata_files(tmp_path)
     with pytest.raises(ValueError, match="partition_info.csv"):
         is_valid_catalog(tmp_path, **flags)
 
     PartitionInfo.from_healpix(small_sky_pixels).write_to_file(catalog_path=tmp_path)
 
     assert total_rows == 1
-    with pytest.raises(ValueError, match="parquet path"):
+    with pytest.raises(ValueError, match="_metadata file"):
         is_valid_catalog(tmp_path, **flags)
 
     shutil.copytree(small_sky_catalog.catalog_path / "dataset", tmp_path / "dataset", dirs_exist_ok=True)

@@ -25,7 +25,7 @@ def test_write_parquet_metadata(tmp_path, small_sky_dir, small_sky_schema, check
         small_sky_dir,
         catalog_base_dir,
     )
-    total_rows = write_parquet_metadata(catalog_base_dir)
+    total_rows, _TODO = write_parquet_metadata(catalog_base_dir)
     assert total_rows == 131
     check_parquet_schema(catalog_base_dir / "dataset" / "_metadata", small_sky_schema)
     ## _common_metadata has 0 row groups
@@ -35,7 +35,7 @@ def test_write_parquet_metadata(tmp_path, small_sky_dir, small_sky_schema, check
         0,
     )
     ## Re-write - should still have the same properties.
-    total_rows = write_parquet_metadata(catalog_base_dir)
+    total_rows, _TODO = write_parquet_metadata(catalog_base_dir)
     assert total_rows == 131
     check_parquet_schema(catalog_base_dir / "dataset" / "_metadata", small_sky_schema)
     ## _common_metadata has 0 row groups
@@ -57,7 +57,7 @@ def test_write_parquet_metadata_order1(
         temp_path,
     )
 
-    total_rows = write_parquet_metadata(temp_path)
+    total_rows, _TODO = write_parquet_metadata(temp_path)
     assert total_rows == 131
     ## 4 row groups for 4 partitioned parquet files
     check_parquet_schema(
@@ -84,7 +84,7 @@ def test_write_parquet_metadata_sorted(
         temp_path,
     )
 
-    total_rows = write_parquet_metadata(temp_path)
+    total_rows, _TODO = write_parquet_metadata(temp_path)
     assert total_rows == 131
     ## 4 row groups for 4 partitioned parquet files
     check_parquet_schema(
@@ -116,7 +116,7 @@ def test_write_index_parquet_metadata(tmp_path, check_parquet_schema):
         ]
     )
 
-    total_rows = write_parquet_metadata(temp_path, order_by_healpix=False)
+    total_rows, _TODO = write_parquet_metadata(temp_path, order_by_healpix=False)
     assert total_rows == 2
 
     check_parquet_schema(tmp_path / "index" / "dataset" / "_metadata", index_catalog_parquet_metadata)
@@ -181,7 +181,8 @@ def test_aggregate_column_statistics_with_nulls(tmp_path):
     metadata_filename = tmp_path / "dataset" / "dataframe_03.parquet"
     pq.write_table(icky_table, metadata_filename)
 
-    assert write_parquet_metadata(tmp_path, order_by_healpix=False) == 6
+    total_rows, _TODO = write_parquet_metadata(tmp_path, order_by_healpix=False)
+    assert total_rows == 6
 
     result_frame = aggregate_column_statistics(tmp_path / "dataset" / "_metadata", exclude_hats_columns=False)
     assert len(result_frame) == 2

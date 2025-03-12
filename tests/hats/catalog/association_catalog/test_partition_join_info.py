@@ -86,7 +86,7 @@ def test_primary_to_join_map(association_catalog_join_pixels):
 def test_metadata_file_round_trip(association_catalog_join_pixels, tmp_path):
     info = PartitionJoinInfo(association_catalog_join_pixels)
     pd.testing.assert_frame_equal(info.data_frame, association_catalog_join_pixels)
-    total_rows = info.write_to_metadata_files(tmp_path)
+    total_rows, _ = info.write_to_metadata_files(tmp_path)
     assert total_rows == 4
 
     new_info = PartitionJoinInfo.read_from_file(tmp_path / "dataset" / "_metadata")
@@ -133,8 +133,8 @@ def test_load_partition_info_from_dir_and_write(tmp_path, association_catalog_jo
     ## Can write out the _metadata file by providing:
     ##  - no arguments
     ##  - new catalog directory
-    total_rows = info.write_to_metadata_files()
+    total_rows, _TODO = info.write_to_metadata_files()
     assert total_rows == 4
 
-    total_rows = info.write_to_metadata_files(catalog_path=tmp_path)
+    total_rows, _TODO = info.write_to_metadata_files(catalog_path=tmp_path)
     assert total_rows == 4

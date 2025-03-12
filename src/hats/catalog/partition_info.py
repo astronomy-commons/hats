@@ -16,6 +16,7 @@ from hats.io.parquet_metadata import (
     read_row_group_fragments,
     row_group_stat_single_value,
     write_parquet_metadata_for_batches,
+    write_parquet_metadata_for_pixels,
 )
 from hats.pixel_math import HealpixPixel
 
@@ -94,20 +95,9 @@ class PartitionInfo:
                 raise ValueError("catalog_path is required if partition info was not loaded from a directory")
             catalog_path = self.catalog_base_dir
 
-        batches = [
-            [
-                pa.RecordBatch.from_arrays(
-                    [[pixel.order], [pixel.pixel]],
-                    names=[
-                        self.METADATA_ORDER_COLUMN_NAME,
-                        self.METADATA_PIXEL_COLUMN_NAME,
-                    ],
-                )
-            ]
-            for pixel in self.get_healpix_pixels()
-        ]
+        write_parquet_metadata_for_pixels(self.get_healpix_pixels(), catalog_path)
 
-        return write_parquet_metadata_for_batches(batches, catalog_path)
+        return len(self.get_healpix_pixels())
 
     @classmethod
     def read_from_dir(cls, catalog_base_dir: str | Path | UPath | None) -> PartitionInfo:
@@ -141,7 +131,7 @@ class PartitionInfo:
         return cls(pixel_list, catalog_base_dir)
 
     @classmethod
-    def read_from_file(cls, metadata_file: str | Path | UPath, strict: bool = False) -> PartitionInfo:
+    def read_from_file(cls, metadata_file: str | Path | UPath) -> PartitionInfo:
         """Read partition info from a `_metadata` file to create an object
 
         Args:
@@ -152,12 +142,10 @@ class PartitionInfo:
         Returns:
             A `PartitionInfo` object with the data from the file
         """
-        return cls(cls._read_from_metadata_file(metadata_file, strict))
+        return cls(cls._read_from_metadata_file(metadata_file))
 
     @classmethod
-    def _read_from_metadata_file(
-        cls, metadata_file: str | Path | UPath, strict: bool = False
-    ) -> list[HealpixPixel]:
+    def _read_from_metadata_file(cls, metadata_file: str | Path | UPath) -> list[HealpixPixel]:
         """Read partition info list from a `_metadata` file.
 
         Args:
@@ -168,44 +156,16 @@ class PartitionInfo:
         Returns:
             A `PartitionInfo` object with the data from the file
         """
-        if strict:
-            pixel_list = [
-                HealpixPixel(
-                    row_group_stat_single_value(row_group, cls.METADATA_ORDER_COLUMN_NAME),
-                    row_group_stat_single_value(row_group, cls.METADATA_PIXEL_COLUMN_NAME),
-                )
-                for row_group in read_row_group_fragments(metadata_file)
-            ]
-        else:
-            total_metadata = file_io.read_parquet_metadata(metadata_file)
-            num_row_groups = total_metadata.num_row_groups
+        total_metadata = file_io.read_parquet_metadata(metadata_file)
+        if total_metadata.num_row_groups == 0 or total_metadata.row_group(0).num_columns == 0:
+            raise ValueError(f"Insufficient metadata in file {metadata_file}")
 
-            first_row_group = total_metadata.row_group(0)
-            norder_column = -1
-            npix_column = -1
-
-            for i in range(0, first_row_group.num_columns):
-                column = first_row_group.column(i)
-                if column.path_in_schema == cls.METADATA_ORDER_COLUMN_NAME:
-                    norder_column = i
-                elif column.path_in_schema == cls.METADATA_PIXEL_COLUMN_NAME:
-                    npix_column = i
-
-            if norder_column == -1 or npix_column == -1:
-                raise ValueError("Metadata missing Norder or Npix column")
-
-            row_group_index = np.arange(0, num_row_groups)
-
-            pixel_list = [
-                HealpixPixel(
-                    total_metadata.row_group(index).column(norder_column).statistics.min,
-                    total_metadata.row_group(index).column(npix_column).statistics.min,
-                )
-                for index in row_group_index
-            ]
+        pixel_list = [
+            paths.get_healpix_from_path(total_metadata.row_group(index).column(0).file_path)
+            for index in range(0, total_metadata.num_row_groups)
+        ]
+        pixel_list = [p for p in pixel_list where p != HealpixPixel.I]
         ## Remove duplicates, preserving order.
-        ## In the case of association partition join info, we may have multiple entries
-        ## for the primary order/pixels.
         return list(dict.fromkeys(pixel_list))
 
     @classmethod

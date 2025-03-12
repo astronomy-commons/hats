@@ -124,8 +124,8 @@ def write_parquet_metadata(
 
         if order_by_healpix:
             healpix_pixel = paths.get_healpix_from_path(relative_path)
-            if healpix_pixel == INVALID_PIXEL:
-                healpix_pixel = get_healpix_pixel_from_metadata(single_metadata)
+            # if healpix_pixel == INVALID_PIXEL:
+            #     healpix_pixel = get_healpix_pixel_from_metadata(single_metadata)
 
             healpix_pixels.append(healpix_pixel)
         metadata_collector.append(single_metadata)
@@ -134,8 +134,9 @@ def write_parquet_metadata(
     ## Write out the two metadata files
     if output_path is None:
         output_path = catalog_path
+    argsort = get_pixel_argsort(healpix_pixels)
+    healpix_pixels = np.array(healpix_pixels)[argsort]
     if order_by_healpix:
-        argsort = get_pixel_argsort(healpix_pixels)
         metadata_collector = np.array(metadata_collector)[argsort]
     catalog_base_dir = get_upath(output_path)
     file_io.make_directory(catalog_base_dir / "dataset", exist_ok=True)
@@ -149,7 +150,7 @@ def write_parquet_metadata(
         write_statistics=True,
     )
     file_io.write_parquet_metadata(dataset.schema, common_metadata_file_pointer)
-    return total_rows
+    return total_rows, healpix_pixels
 
 
 def write_parquet_metadata_for_batches(batches: list[list[pa.RecordBatch]], output_path: str = None):
@@ -174,6 +175,56 @@ def write_parquet_metadata_for_batches(batches: list[list[pa.RecordBatch]], outp
             temp_info_table = pa.Table.from_batches(batch_list)
             pq.write_to_dataset(temp_info_table, temp_dataset_dir)
         return write_parquet_metadata(temp_pq_file, output_path=output_path)
+
+
+def write_parquet_metadata_for_pixels(healpix_pixels: list[HealpixPixel], output_path: str = None):
+    """Write parquet metadata files that will mimic a catalog with the given
+    set of pixels.
+
+    Args:
+        batches (List[List[pa.RecordBatch]]): create one row group per RecordBatch, grouped
+            into tables by the inner list.
+        output_path (str): base path for writing out metadata files
+            defaults to `catalog_path` if unspecified
+
+    Returns:
+        sum of the number of rows in the dataset.
+    """
+
+    schema = pa.schema([pa.field("_healpix_29", pa.int64())])
+
+    argsort = get_pixel_argsort(healpix_pixels)
+    healpix_pixels = np.array(healpix_pixels)[argsort]
+
+    if len(healpix_pixels) == 0
+
+    with tempfile.TemporaryDirectory() as temp_pq_file:
+        metadata_filename = get_upath(temp_pq_file) /"_metadata"
+
+        table_with_schema = pa.Table.from_arrays([ [1.0]], names=["dummy_value"])
+        pq.write_table(table_with_schema, metadata_filename)
+
+
+        # file_io.write_parquet_metadata(schema, metadata_filename)
+
+        base_metadata = file_io.read_parquet_metadata(metadata_filename)
+        single_metadata.set_file_path(f"Norder={pixel.order}/Dir={pixel.dir}/Npix={pixel.pixel}.parquet")
+
+        for pixel in healpix_pixels[1:]:
+            single_metadata = file_io.read_parquet_metadata(metadata_filename)
+            single_metadata.set_file_path(f"Norder={pixel.order}/Dir={pixel.dir}/Npix={pixel.pixel}.parquet")
+            base_metadata.append_row_groups(single_metadata)
+
+        print("base_metadata", base_metadata)
+        catalog_base_dir = get_upath(output_path)
+        file_io.make_directory(catalog_base_dir / "dataset", exist_ok=True)
+        metadata_file_pointer = paths.get_parquet_metadata_pointer(catalog_base_dir)
+        common_metadata_file_pointer = paths.get_common_metadata_pointer(catalog_base_dir)
+
+        with metadata_file_pointer.open("wb") as file_handle:
+            base_metadata.write_metadata_file(file_handle)
+            # file_io.write_parquet_metadata(base_metadata, metadata_file_pointer)
+        file_io.write_parquet_metadata(schema, common_metadata_file_pointer)
 
 
 def read_row_group_fragments(metadata_file: str):

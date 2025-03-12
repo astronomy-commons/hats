@@ -134,9 +134,9 @@ def small_sky_schema() -> pa.Schema:
             pa.field("dec", pa.float64()),
             pa.field("ra_error", pa.int64()),
             pa.field("dec_error", pa.int64()),
-            pa.field("Norder", pa.uint8()),
-            pa.field("Dir", pa.uint64()),
-            pa.field("Npix", pa.uint64()),
+            # pa.field("Norder", pa.uint8()),
+            # pa.field("Dir", pa.uint64()),
+            # pa.field("Npix", pa.uint64()),
         ]
     )
 
@@ -155,9 +155,9 @@ def small_sky_source_schema() -> pa.Schema:
             pa.field("object_id", pa.int64()),
             pa.field("object_ra", pa.float64()),
             pa.field("object_dec", pa.float64()),
-            pa.field("Norder", pa.uint8()),
-            pa.field("Dir", pa.uint64()),
-            pa.field("Npix", pa.uint64()),
+            # pa.field("Norder", pa.uint8()),
+            # pa.field("Dir", pa.uint64()),
+            # pa.field("Npix", pa.uint64()),
         ]
     )
 
@@ -187,9 +187,9 @@ def margin_catalog_schema() -> pa.Schema:
             pa.field("margin_Norder", pa.uint8()),
             pa.field("margin_Dir", pa.uint64()),
             pa.field("margin_Npix", pa.uint64()),
-            pa.field("Norder", pa.uint8()),
-            pa.field("Dir", pa.uint64()),
-            pa.field("Npix", pa.uint64()),
+            # pa.field("Norder", pa.uint8()),
+            # pa.field("Dir", pa.uint64()),
+            # pa.field("Npix", pa.uint64()),
         ]
     )
 
