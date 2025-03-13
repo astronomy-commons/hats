@@ -93,7 +93,6 @@ def test_load_catalog_small_sky_order1(small_sky_order1_dir):
 
 
 def test_aggregate_column_statistics(small_sky_order1_dir):
-
     def assert_column_stat_as_floats(
         result_frame, column_name, min_value=None, max_value=None, row_count=None
     ):
