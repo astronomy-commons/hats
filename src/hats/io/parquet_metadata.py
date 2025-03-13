@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-import tempfile
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import pyarrow as pa
 import pyarrow.dataset as pds
 import pyarrow.parquet as pq
 from upath import UPath
@@ -150,30 +148,6 @@ def write_parquet_metadata(
     )
     file_io.write_parquet_metadata(dataset.schema, common_metadata_file_pointer)
     return total_rows
-
-
-def write_parquet_metadata_for_batches(batches: list[list[pa.RecordBatch]], output_path: str = None):
-    """Write parquet metadata files for some pyarrow table batches.
-    This writes the batches to a temporary parquet dataset using local storage, and
-    generates the metadata for the partitioned catalog parquet files.
-
-    Args:
-        batches (List[List[pa.RecordBatch]]): create one row group per RecordBatch, grouped
-            into tables by the inner list.
-        output_path (str): base path for writing out metadata files
-            defaults to `catalog_path` if unspecified
-
-    Returns:
-        sum of the number of rows in the dataset.
-    """
-
-    with tempfile.TemporaryDirectory() as temp_pq_file:
-        temp_dataset_dir = get_upath(temp_pq_file) / "dataset"
-        temp_dataset_dir.mkdir()
-        for batch_list in batches:
-            temp_info_table = pa.Table.from_batches(batch_list)
-            pq.write_to_dataset(temp_info_table, temp_dataset_dir)
-        return write_parquet_metadata(temp_pq_file, output_path=output_path)
 
 
 def read_row_group_fragments(metadata_file: str):

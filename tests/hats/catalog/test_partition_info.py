@@ -1,6 +1,5 @@
 """Tests of partition info functionality"""
 
-import numpy.testing as npt
 import pandas as pd
 import pytest
 
@@ -128,28 +127,12 @@ def test_write_to_file(tmp_path, small_sky_pixels):
     assert partition_info.get_healpix_pixels() == new_partition_info.get_healpix_pixels()
 
 
-def test_write_to_file_sorted(tmp_path, pixel_list_depth_first, pixel_list_breadth_first):
-    """Write out the partition info to file and make sure that it's sorted by breadth-first healpix,
-    even though the original pixel list is in Norder-major sorting (depth-first)."""
-    partition_info = PartitionInfo.from_healpix(pixel_list_depth_first)
-    npt.assert_array_equal(pixel_list_depth_first, partition_info.get_healpix_pixels())
-    total_rows = partition_info.write_to_metadata_files(tmp_path)
-    assert total_rows == 9
-
-    partition_info_pointer = paths.get_parquet_metadata_pointer(tmp_path)
-    new_partition_info = PartitionInfo.read_from_file(partition_info_pointer)
-
-    npt.assert_array_equal(pixel_list_breadth_first, new_partition_info.get_healpix_pixels())
-
-
 def test_load_partition_info_from_dir_and_write(tmp_path, pixel_list_depth_first):
     partition_info = PartitionInfo.from_healpix(pixel_list_depth_first)
 
     ## Path arguments are required if the info was not created from a `read_from_dir` call
     with pytest.raises(ValueError):
         partition_info.write_to_file()
-    with pytest.raises(ValueError):
-        partition_info.write_to_metadata_files()
 
     partition_info.write_to_file(catalog_path=tmp_path)
     info = PartitionInfo.read_from_dir(tmp_path)
@@ -161,11 +144,3 @@ def test_load_partition_info_from_dir_and_write(tmp_path, pixel_list_depth_first
     info.write_to_file()
     info.write_to_file(catalog_path=tmp_path)
     info.write_to_file(partition_info_file=tmp_path / "new_csv.csv")
-
-    ## Can write out the _metadata file by providing:
-    ##  - no arguments
-    ##  - new catalog directory
-    total_rows = info.write_to_metadata_files()
-    assert total_rows == 9
-    total_rows = info.write_to_metadata_files(catalog_path=tmp_path)
-    assert total_rows == 9

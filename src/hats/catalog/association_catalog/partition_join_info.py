@@ -2,21 +2,13 @@
 
 from __future__ import annotations
 
-import warnings
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
-import pyarrow as pa
 from upath import UPath
 
 from hats.catalog.partition_info import PartitionInfo
 from hats.io import file_io, paths
-from hats.io.parquet_metadata import (
-    read_row_group_fragments,
-    row_group_stat_single_value,
-    write_parquet_metadata_for_batches,
-)
 from hats.pixel_math.healpix_pixel import HealpixPixel
 
 
@@ -71,41 +63,6 @@ class PartitionJoinInfo:
         primary_to_join = dict(primary_to_join)
         return primary_to_join
 
-    def write_to_metadata_files(self, catalog_path: str | Path | UPath | None = None):
-        """Generate parquet metadata, using the known joint partitions.
-
-        Args:
-            catalog_path (UPath): base path for the catalog
-
-        Returns:
-            sum of the number of rows in the dataset.
-
-        Raises:
-            ValueError: if no path is provided, and could not be inferred.
-        """
-        if catalog_path is None:
-            if self.catalog_base_dir is None:
-                raise ValueError("catalog_path is required if join info was not loaded from a directory")
-            catalog_path = self.catalog_base_dir
-
-        batches = [
-            [
-                pa.RecordBatch.from_arrays(
-                    [
-                        [primary_pixel.order],
-                        [primary_pixel.pixel],
-                        [join_pixel.order],
-                        [join_pixel.pixel],
-                    ],
-                    names=self.COLUMN_NAMES,
-                )
-                for join_pixel in join_pixels
-            ]
-            for primary_pixel, join_pixels in self.primary_to_join_map().items()
-        ]
-
-        return write_parquet_metadata_for_batches(batches, catalog_path)
-
     def write_to_csv(self, catalog_path: str | Path | UPath | None = None):
         """Write all partition data to CSV files.
 
@@ -137,12 +94,7 @@ class PartitionJoinInfo:
 
     @classmethod
     def read_from_dir(cls, catalog_base_dir: str | Path | UPath | None = None) -> PartitionJoinInfo:
-        """Read partition join info from a file within a hats directory.
-
-        This will look for a `partition_join_info.csv` file, and if not found, will look for
-        a `_metadata` file. The second approach is typically slower for large catalogs
-        therefore a warning is issued to the user. In internal testing with large catalogs,
-        the first approach takes less than a second, while the second can take 10-20 seconds.
+        """Read partition join info from a partition_join_info file within a hats directory.
 
         Args:
             catalog_base_dir: path to the root directory of the catalog
@@ -151,111 +103,16 @@ class PartitionJoinInfo:
             A `PartitionJoinInfo` object with the data from the file
 
         Raises:
-            FileNotFoundError: if neither desired file is found in the catalog_base_dir
+            FileNotFoundError: if the desired file is found in the catalog_base_dir
         """
-        metadata_file = paths.get_parquet_metadata_pointer(catalog_base_dir)
         partition_join_info_file = paths.get_partition_join_info_pointer(catalog_base_dir)
         if file_io.does_file_or_directory_exist(partition_join_info_file):
             pixel_frame = PartitionJoinInfo._read_from_csv(partition_join_info_file)
-        elif file_io.does_file_or_directory_exist(metadata_file):
-            warnings.warn("Reading partitions from parquet metadata. This is typically slow.")
-            pixel_frame = PartitionJoinInfo._read_from_metadata_file(metadata_file)
         else:
             raise FileNotFoundError(
-                f"_metadata or partition join info file is required in catalog directory {catalog_base_dir}"
+                f"partition join info file is required in catalog directory {catalog_base_dir}"
             )
         return cls(pixel_frame, catalog_base_dir)
-
-    @classmethod
-    def read_from_file(cls, metadata_file: str | Path | UPath, strict: bool = False) -> PartitionJoinInfo:
-        """Read partition join info from a `_metadata` file to create an object
-
-        Args:
-            metadata_file (UPath): path to the `_metadata` file
-            strict (bool): use strict parsing of _metadata file. this is slower, but
-                gives more helpful error messages in the case of invalid data.
-
-        Returns:
-            A `PartitionJoinInfo` object with the data from the file
-        """
-        return cls(cls._read_from_metadata_file(metadata_file, strict))
-
-    @classmethod
-    def _read_from_metadata_file(
-        cls, metadata_file: str | Path | UPath, strict: bool = False
-    ) -> pd.DataFrame:
-        """Read partition join info from a `_metadata` file to create an object
-
-        Args:
-            metadata_file (UPath): path to the `_metadata` file
-            strict (bool): use strict parsing of _metadata file. this is slower, but
-                gives more helpful error messages in the case of invalid data.
-
-        Returns:
-            A `PartitionJoinInfo` object with the data from the file
-        """
-        if strict:
-            pixel_frame = pd.DataFrame(
-                [
-                    (
-                        row_group_stat_single_value(row_group, cls.PRIMARY_ORDER_COLUMN_NAME),
-                        row_group_stat_single_value(row_group, cls.PRIMARY_PIXEL_COLUMN_NAME),
-                        row_group_stat_single_value(row_group, cls.JOIN_ORDER_COLUMN_NAME),
-                        row_group_stat_single_value(row_group, cls.JOIN_PIXEL_COLUMN_NAME),
-                    )
-                    for row_group in read_row_group_fragments(metadata_file)
-                ],
-                columns=cls.COLUMN_NAMES,
-            )
-        else:
-            total_metadata = file_io.read_parquet_metadata(metadata_file)
-            num_row_groups = total_metadata.num_row_groups
-
-            first_row_group = total_metadata.row_group(0)
-            norder_column = -1
-            npix_column = -1
-            join_norder_column = -1
-            join_npix_column = -1
-
-            for i in range(0, first_row_group.num_columns):
-                column = first_row_group.column(i)
-                if column.path_in_schema == cls.PRIMARY_ORDER_COLUMN_NAME:
-                    norder_column = i
-                elif column.path_in_schema == cls.PRIMARY_PIXEL_COLUMN_NAME:
-                    npix_column = i
-                elif column.path_in_schema == cls.JOIN_ORDER_COLUMN_NAME:
-                    join_norder_column = i
-                elif column.path_in_schema == cls.JOIN_PIXEL_COLUMN_NAME:
-                    join_npix_column = i
-
-            missing_columns = []
-            if norder_column == -1:
-                missing_columns.append(cls.PRIMARY_ORDER_COLUMN_NAME)
-            if npix_column == -1:
-                missing_columns.append(cls.PRIMARY_PIXEL_COLUMN_NAME)
-            if join_norder_column == -1:
-                missing_columns.append(cls.JOIN_ORDER_COLUMN_NAME)
-            if join_npix_column == -1:
-                missing_columns.append(cls.JOIN_PIXEL_COLUMN_NAME)
-
-            if len(missing_columns) != 0:
-                raise ValueError(f"Metadata missing columns ({missing_columns})")
-
-            row_group_index = np.arange(0, num_row_groups)
-            pixel_frame = pd.DataFrame(
-                [
-                    (
-                        total_metadata.row_group(index).column(norder_column).statistics.min,
-                        total_metadata.row_group(index).column(npix_column).statistics.min,
-                        total_metadata.row_group(index).column(join_norder_column).statistics.min,
-                        total_metadata.row_group(index).column(join_npix_column).statistics.min,
-                    )
-                    for index in row_group_index
-                ],
-                columns=cls.COLUMN_NAMES,
-            )
-
-        return pixel_frame
 
     @classmethod
     def read_from_csv(cls, partition_join_info_file: str | Path | UPath) -> PartitionJoinInfo:

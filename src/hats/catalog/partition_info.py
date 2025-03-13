@@ -7,16 +7,11 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import pyarrow as pa
 from upath import UPath
 
 import hats.pixel_math.healpix_shim as hp
 from hats.io import file_io, paths
-from hats.io.parquet_metadata import (
-    read_row_group_fragments,
-    row_group_stat_single_value,
-    write_parquet_metadata_for_batches,
-)
+from hats.io.parquet_metadata import read_row_group_fragments, row_group_stat_single_value
 from hats.pixel_math import HealpixPixel
 
 
@@ -74,40 +69,6 @@ class PartitionInfo:
                 raise ValueError("partition_info_file is required if info was not loaded from a directory")
 
         file_io.write_dataframe_to_csv(self.as_dataframe(), partition_info_file, index=False)
-
-    def write_to_metadata_files(self, catalog_path: str | Path | UPath | None = None):
-        """Generate parquet metadata, using the known partitions.
-
-        If no catalog_path is provided, the catalog base directory from the `read_from_dir` call is used.
-
-        Args:
-            catalog_path (UPath): base path for the catalog
-
-        Returns:
-            sum of the number of rows in the dataset.
-
-        Raises:
-            ValueError: if no path is provided, and could not be inferred.
-        """
-        if catalog_path is None:
-            if self.catalog_base_dir is None:
-                raise ValueError("catalog_path is required if partition info was not loaded from a directory")
-            catalog_path = self.catalog_base_dir
-
-        batches = [
-            [
-                pa.RecordBatch.from_arrays(
-                    [[pixel.order], [pixel.pixel]],
-                    names=[
-                        self.METADATA_ORDER_COLUMN_NAME,
-                        self.METADATA_PIXEL_COLUMN_NAME,
-                    ],
-                )
-            ]
-            for pixel in self.get_healpix_pixels()
-        ]
-
-        return write_parquet_metadata_for_batches(batches, catalog_path)
 
     @classmethod
     def read_from_dir(cls, catalog_base_dir: str | Path | UPath | None) -> PartitionInfo:

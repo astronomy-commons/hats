@@ -1,7 +1,6 @@
 import os
 
 import pandas as pd
-import pyarrow as pa
 import pytest
 
 from hats.catalog.association_catalog.association_catalog import AssociationCatalog
@@ -37,9 +36,7 @@ def test_different_join_pixels_type(association_catalog_info, association_catalo
     pd.testing.assert_frame_equal(catalog.get_join_pixels(), association_catalog_join_pixels)
 
 
-def test_read_from_file(
-    association_catalog_path, association_catalog_join_pixels, association_catalog_schema
-):
+def test_read_from_file(association_catalog_path, association_catalog_join_pixels):
     catalog = read_hats(association_catalog_path)
 
     assert isinstance(catalog, AssociationCatalog)
@@ -55,9 +52,6 @@ def test_read_from_file(
     assert info.primary_column == "id"
     assert info.join_catalog == "small_sky_order1"
     assert info.join_column == "id"
-
-    assert isinstance(catalog.schema, pa.Schema)
-    assert catalog.schema.equals(association_catalog_schema)
 
 
 def test_empty_directory(tmp_path, association_catalog_info_data, association_catalog_join_pixels):
@@ -80,11 +74,10 @@ def test_empty_directory(tmp_path, association_catalog_info_data, association_ca
     with pytest.raises(FileNotFoundError):
         read_hats(catalog_path)
 
-    ## Now we create the needed _metadata and everything is right.
+    ## Now we create the needed partition_join_info and everything is right.
     part_info = PartitionJoinInfo(association_catalog_join_pixels)
-    part_info.write_to_metadata_files(catalog_path=catalog_path)
-    with pytest.warns(UserWarning, match="slow"):
-        catalog = read_hats(catalog_path)
+    part_info.write_to_csv(catalog_path=catalog_path)
+    catalog = read_hats(catalog_path)
     assert catalog.catalog_name == association_catalog_info_data["catalog_name"]
 
 
