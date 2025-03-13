@@ -260,7 +260,7 @@ def aggregate_column_statistics(
 
     for row_group_index in range(0, num_row_groups):
         row_group = total_metadata.row_group(row_group_index)
-        if include_pixels:
+        if include_pixels is not None:
             pixel = paths.get_healpix_from_path(row_group.column(0).file_path)
             if pixel not in include_pixels:
                 continue

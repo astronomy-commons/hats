@@ -264,6 +264,7 @@ class HealpixDataset(Dataset):
         exclude_hats_columns: bool = True,
         exclude_columns: list[str] = None,
         include_columns: list[str] = None,
+        include_pixels: list[HealpixPixel] = None,
     ):
         """Read footer statistics in parquet metadata, and report on global min/max values.
 
@@ -277,10 +278,13 @@ class HealpixDataset(Dataset):
         if not self.on_disk:
             warnings.warn("Calling aggregate_column_statistics on an in-memory catalog. No results.")
             return pd.DataFrame()
+
+        if include_pixels is None:
+            include_pixels = self.get_healpix_pixels()
         return aggregate_column_statistics(
             self.catalog_base_dir / "dataset" / "_metadata",
             exclude_hats_columns=exclude_hats_columns,
             exclude_columns=exclude_columns,
             include_columns=include_columns,
-            include_pixels=self.get_healpix_pixels(),
+            include_pixels=include_pixels,
         )
