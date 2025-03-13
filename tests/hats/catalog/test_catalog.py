@@ -93,16 +93,33 @@ def test_load_catalog_small_sky_order1(small_sky_order1_dir):
 
 
 def test_aggregate_column_statistics(small_sky_order1_dir):
+    def assert_column_stat_as_floats(
+        result_frame, column_name, min_value=None, max_value=None, row_count=None
+    ):
+        assert column_name in result_frame.index
+        data_stats = result_frame.loc[column_name]
+        assert float(data_stats["min_value"]) >= min_value
+        assert float(data_stats["max_value"]) <= max_value
+        assert int(data_stats["null_count"]) == 0
+        assert int(data_stats["row_count"]) == row_count
+
     cat = read_hats(small_sky_order1_dir)
 
     result_frame = cat.aggregate_column_statistics()
     assert len(result_frame) == 5
+    assert_column_stat_as_floats(result_frame, "dec", min_value=-69.5, max_value=-25.5, row_count=131)
 
     result_frame = cat.aggregate_column_statistics(exclude_hats_columns=False)
+    assert_column_stat_as_floats(result_frame, "Norder", min_value=1, max_value=1, row_count=131)
     assert len(result_frame) == 9
 
     result_frame = cat.aggregate_column_statistics(include_columns=["ra", "dec"])
     assert len(result_frame) == 2
+
+    filtered_catalog = cat.filter_by_cone(315, -66.443, 0.1)
+    result_frame = filtered_catalog.aggregate_column_statistics()
+    assert len(result_frame) == 5
+    assert_column_stat_as_floats(result_frame, "dec", min_value=-69.5, max_value=-47.5, row_count=42)
 
 
 def test_aggregate_column_statistics_inmemory(catalog_info, catalog_pixels):
