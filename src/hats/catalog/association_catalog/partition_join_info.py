@@ -2,12 +2,9 @@
 
 from __future__ import annotations
 
-import warnings
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
-import pyarrow as pa
 from upath import UPath
 
 from hats.catalog.partition_info import PartitionInfo
@@ -97,12 +94,7 @@ class PartitionJoinInfo:
 
     @classmethod
     def read_from_dir(cls, catalog_base_dir: str | Path | UPath | None = None) -> PartitionJoinInfo:
-        """Read partition join info from a file within a hats directory.
-
-        This will look for a `partition_join_info.csv` file, and if not found, will look for
-        a `_metadata` file. The second approach is typically slower for large catalogs
-        therefore a warning is issued to the user. In internal testing with large catalogs,
-        the first approach takes less than a second, while the second can take 10-20 seconds.
+        """Read partition join info from a partition_join_info file within a hats directory.
 
         Args:
             catalog_base_dir: path to the root directory of the catalog
@@ -111,7 +103,7 @@ class PartitionJoinInfo:
             A `PartitionJoinInfo` object with the data from the file
 
         Raises:
-            FileNotFoundError: if neither desired file is found in the catalog_base_dir
+            FileNotFoundError: if the desired file is found in the catalog_base_dir
         """
         partition_join_info_file = paths.get_partition_join_info_pointer(catalog_base_dir)
         if not file_io.does_file_or_directory_exist(partition_join_info_file):
@@ -120,7 +112,6 @@ class PartitionJoinInfo:
             )
         pixel_frame = PartitionJoinInfo._read_from_csv(partition_join_info_file)
         return cls(pixel_frame, catalog_base_dir)
-
 
     @classmethod
     def read_from_csv(cls, partition_join_info_file: str | Path | UPath) -> PartitionJoinInfo:

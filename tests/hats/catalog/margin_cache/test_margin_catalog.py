@@ -64,10 +64,9 @@ def test_empty_directory(tmp_path, margin_cache_catalog_info_data, margin_catalo
 
     ## Now we create the needed _metadata and everything is right.
     part_info = PartitionInfo.from_healpix(margin_catalog_pixels)
-    part_info.write_to_metadata_files(catalog_path=catalog_path)
+    part_info.write_to_file(catalog_path=catalog_path)
 
-    with pytest.warns(UserWarning, match="slow"):
-        catalog = read_hats(catalog_path)
+    catalog = read_hats(catalog_path)
     assert catalog.catalog_name == margin_cache_catalog_info_data["catalog_name"]
 
 

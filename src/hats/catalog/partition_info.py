@@ -7,7 +7,6 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import pyarrow as pa
 from upath import UPath
 
 import hats.pixel_math.healpix_shim as hp
@@ -70,7 +69,6 @@ class PartitionInfo:
 
         file_io.write_dataframe_to_csv(self.as_dataframe(), partition_info_file, index=False)
 
-
     @classmethod
     def read_from_dir(cls, catalog_base_dir: str | Path | UPath | None) -> PartitionInfo:
         """Read partition info from a file within a hats directory.
@@ -91,7 +89,6 @@ class PartitionInfo:
             )
         pixel_list = PartitionInfo._read_from_csv(partition_info_file)
         return cls(pixel_list, catalog_base_dir)
-
 
     @classmethod
     def read_from_csv(cls, partition_info_file: str | Path | UPath) -> PartitionInfo:

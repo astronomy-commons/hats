@@ -163,18 +163,6 @@ def small_sky_source_schema() -> pa.Schema:
 
 
 @pytest.fixture
-def association_catalog_schema() -> pa.Schema:
-    return pa.schema(
-        [
-            pa.field("Norder", pa.int64()),
-            pa.field("Npix", pa.int64()),
-            pa.field("join_Norder", pa.int64()),
-            pa.field("join_Npix", pa.int64()),
-        ]
-    )
-
-
-@pytest.fixture
 def margin_catalog_schema() -> pa.Schema:
     return pa.schema(
         [
@@ -184,12 +172,6 @@ def margin_catalog_schema() -> pa.Schema:
             pa.field("dec", pa.float64()),
             pa.field("ra_error", pa.int64()),
             pa.field("dec_error", pa.int64()),
-            pa.field("margin_Norder", pa.uint8()),
-            pa.field("margin_Dir", pa.uint64()),
-            pa.field("margin_Npix", pa.uint64()),
-            # pa.field("Norder", pa.uint8()),
-            # pa.field("Dir", pa.uint64()),
-            # pa.field("Npix", pa.uint64()),
         ]
     )
 

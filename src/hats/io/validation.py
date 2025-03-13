@@ -102,10 +102,6 @@ def is_valid_catalog(
             print(f"Found {len(expected_pixels)} partitions.")
 
         ## Compare the pixels in _metadata with partition_info.csv
-        metadata_pixels = sort_pixels(PartitionInfo.read_from_file(metadata_file).get_healpix_pixels())
-        if not np.array_equal(expected_pixels, metadata_pixels):
-            handle_error("Partition pixels differ between catalog and _metadata file")
-
         partition_info_file = get_partition_info_pointer(pointer)
         partition_info = PartitionInfo.read_from_csv(partition_info_file)
         csv_pixels = sort_pixels(partition_info.get_healpix_pixels())

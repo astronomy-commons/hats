@@ -99,7 +99,7 @@ def test_aggregate_column_statistics(small_sky_order1_dir):
     assert len(result_frame) == 5
 
     result_frame = cat.aggregate_column_statistics(exclude_hats_columns=False)
-    assert len(result_frame) == 9
+    assert len(result_frame) == 6
 
     result_frame = cat.aggregate_column_statistics(include_columns=["ra", "dec"])
     assert len(result_frame) == 2
@@ -441,10 +441,9 @@ def test_empty_directory(tmp_path, catalog_info_data):
 
     ## Now we create the needed _metadata and everything is right.
     part_info = PartitionInfo.from_healpix([HealpixPixel(0, 11)])
-    part_info.write_to_metadata_files(catalog_path=catalog_path)
+    part_info.write_to_file(catalog_path=catalog_path)
 
-    with pytest.warns(UserWarning, match="slow"):
-        catalog = read_hats(catalog_path)
+    catalog = read_hats(catalog_path)
     assert catalog.catalog_name == "test_name"
 
 
