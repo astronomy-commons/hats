@@ -17,6 +17,7 @@ SMALL_SKY_NPIX_ALT_SUFFIX_NAME = "small_sky_npix_alt_suffix"
 SMALL_SKY_NPIX_AS_DIR_NAME = "small_sky_npix_as_dir"
 SMALL_SKY_ORDER1_DIR_NAME = "small_sky_order1"
 SMALL_SKY_SOURCE_OBJECT_INDEX_DIR_NAME = "small_sky_source_object_index"
+SMALL_SKY_NESTED_DIR_NAME = "small_sky_nested"
 
 TEST_DIR = os.path.dirname(__file__)
 
@@ -51,6 +52,11 @@ def small_sky_npix_as_dir_dir(test_data_dir):
 @pytest.fixture
 def small_sky_order1_dir(test_data_dir):
     return test_data_dir / SMALL_SKY_ORDER1_DIR_NAME
+
+
+@pytest.fixture
+def small_sky_nested_dir(test_data_dir):
+    return test_data_dir / SMALL_SKY_NESTED_DIR_NAME
 
 
 @pytest.fixture
