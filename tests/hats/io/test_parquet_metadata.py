@@ -5,15 +5,9 @@ import shutil
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
-import pytest
 
 from hats.io import file_io, paths
-from hats.io.parquet_metadata import (
-    aggregate_column_statistics,
-    read_row_group_fragments,
-    row_group_stat_single_value,
-    write_parquet_metadata,
-)
+from hats.io.parquet_metadata import aggregate_column_statistics, write_parquet_metadata
 
 
 def test_write_parquet_metadata(tmp_path, small_sky_dir, small_sky_schema, check_parquet_schema):
@@ -126,24 +120,6 @@ def test_write_index_parquet_metadata(tmp_path, check_parquet_schema):
     )
 
 
-def test_row_group_fragments(small_sky_order1_dir):
-    partition_info_file = paths.get_parquet_metadata_pointer(small_sky_order1_dir)
-
-    num_row_groups = 0
-    for _ in read_row_group_fragments(partition_info_file):
-        num_row_groups += 1
-
-    assert num_row_groups == 4
-
-
-def test_row_group_fragments_with_dir(small_sky_order1_dir):
-    num_row_groups = 0
-    for _ in read_row_group_fragments(small_sky_order1_dir):
-        num_row_groups += 1
-
-    assert num_row_groups == 4
-
-
 def test_aggregate_column_statistics(small_sky_order1_dir):
     partition_info_file = paths.get_parquet_metadata_pointer(small_sky_order1_dir)
 
@@ -193,83 +169,3 @@ def test_aggregate_column_statistics_with_nulls(tmp_path):
     assert data_stats["min_value"] == 1
     assert data_stats["max_value"] == 6
     assert data_stats["null_count"] == 4
-
-
-def test_row_group_stats(small_sky_dir):
-    partition_info_file = paths.get_parquet_metadata_pointer(small_sky_dir)
-    first_row_group = next(read_row_group_fragments(partition_info_file))
-
-    assert row_group_stat_single_value(first_row_group, "Norder") == 0
-    assert row_group_stat_single_value(first_row_group, "Npix") == 11
-
-    with pytest.raises(ValueError, match="doesn't have expected key"):
-        row_group_stat_single_value(first_row_group, "NOT HERE")
-
-    with pytest.raises(ValueError, match="stat min != max"):
-        row_group_stat_single_value(first_row_group, "ra")
-
-
-# def test_get_healpix_pixel_from_metadata(small_sky_dir):
-#     partition_info_file = paths.get_parquet_metadata_pointer(small_sky_dir)
-#     single_metadata = file_io.read_parquet_metadata(partition_info_file)
-#     pixel = get_healpix_pixel_from_metadata(single_metadata)
-#     assert pixel == HealpixPixel(0, 11)
-
-
-# def test_get_healpix_pixel_from_metadata_min_max(tmp_path):
-#     good_healpix_dataframe = pd.DataFrame({"data": [0, 1], "Norder": [1, 1], "Npix": [44, 44]})
-#     metadata_filename = tmp_path / "non_healpix_metadata.parquet"
-#     good_healpix_dataframe.to_parquet(metadata_filename)
-#     single_metadata = file_io.read_parquet_metadata(metadata_filename)
-#     pixel = get_healpix_pixel_from_metadata(single_metadata)
-#     assert pixel == HealpixPixel(1, 44)
-
-#     non_healpix_dataframe = pd.DataFrame({"data": [0, 1], "Npix": [45, 44]})
-#     non_healpix_dataframe.to_parquet(metadata_filename)
-#     single_metadata = file_io.read_parquet_metadata(metadata_filename)
-#     with pytest.raises(ValueError, match="Npix stat min != max"):
-#         get_healpix_pixel_from_metadata(single_metadata)
-
-#     non_healpix_dataframe = pd.DataFrame({"data": [0, 1], "Norder": [5, 6]})
-#     non_healpix_dataframe.to_parquet(metadata_filename)
-#     single_metadata = file_io.read_parquet_metadata(metadata_filename)
-#     with pytest.raises(ValueError, match="Norder stat min != max"):
-#         get_healpix_pixel_from_metadata(single_metadata)
-
-
-# def test_get_healpix_pixel_from_metadata_fail(tmp_path):
-#     empty_dataframe = pd.DataFrame()
-#     metadata_filename = tmp_path / "empty_metadata.parquet"
-#     empty_dataframe.to_parquet(metadata_filename)
-#     single_metadata = file_io.read_parquet_metadata(metadata_filename)
-#     with pytest.raises(ValueError, match="empty table"):
-#         get_healpix_pixel_from_metadata(single_metadata)
-
-#     non_healpix_dataframe = pd.DataFrame({"data": [0], "Npix": [45]})
-#     metadata_filename = tmp_path / "non_healpix_metadata.parquet"
-#     non_healpix_dataframe.to_parquet(metadata_filename)
-#     single_metadata = file_io.read_parquet_metadata(metadata_filename)
-#     with pytest.raises(ValueError, match="missing Norder"):
-#         get_healpix_pixel_from_metadata(single_metadata)
-
-
-# def test_get_healpix_pixel_from_metadata_columns(tmp_path):
-#     """Test fetching the healpix pixel from columns with non-default names."""
-#     non_healpix_dataframe = pd.DataFrame({"data": [1], "Npix": [45], "join_Norder": [2], "join_Npix": [3]})
-#     metadata_filename = tmp_path / "non_healpix_metadata.parquet"
-#     non_healpix_dataframe.to_parquet(metadata_filename)
-#     single_metadata = file_io.read_parquet_metadata(metadata_filename)
-#     with pytest.raises(ValueError, match="missing Norder"):
-#         get_healpix_pixel_from_metadata(single_metadata)
-
-#     pixel = get_healpix_pixel_from_metadata(single_metadata, norder_column="data")
-#     assert pixel == HealpixPixel(1, 45)
-
-#     pixel = get_healpix_pixel_from_metadata(
-#         single_metadata, norder_column="join_Norder", npix_column="join_Npix"
-#     )
-#     assert pixel == HealpixPixel(2, 3)
-
-#     ## People can do silly things!
-#     pixel = get_healpix_pixel_from_metadata(single_metadata, norder_column="data", npix_column="join_Npix")
-#     assert pixel == HealpixPixel(1, 3)

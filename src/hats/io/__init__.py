@@ -1,6 +1,6 @@
 """Utilities for reading and writing catalog files"""
 
-from .parquet_metadata import read_row_group_fragments, row_group_stat_single_value, write_parquet_metadata
+from .parquet_metadata import write_parquet_metadata
 from .paths import (
     get_common_metadata_pointer,
     get_parquet_metadata_pointer,

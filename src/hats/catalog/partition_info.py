@@ -11,8 +11,7 @@ from upath import UPath
 
 import hats.pixel_math.healpix_shim as hp
 from hats.io import file_io, paths
-from hats.io.parquet_metadata import read_row_group_fragments, row_group_stat_single_value
-from hats.pixel_math import HealpixPixel
+from hats.pixel_math.healpix_pixel import INVALID_PIXEL, HealpixPixel
 
 
 class PartitionInfo:
@@ -102,71 +101,39 @@ class PartitionInfo:
         return cls(pixel_list, catalog_base_dir)
 
     @classmethod
-    def read_from_file(cls, metadata_file: str | Path | UPath, strict: bool = False) -> PartitionInfo:
+    def read_from_file(cls, metadata_file: str | Path | UPath) -> PartitionInfo:
         """Read partition info from a `_metadata` file to create an object
 
         Args:
             metadata_file (UPath): path to the `_metadata` file
-            strict (bool): use strict parsing of _metadata file. this is slower, but
-                gives more helpful error messages in the case of invalid data.
 
         Returns:
             A `PartitionInfo` object with the data from the file
         """
-        return cls(cls._read_from_metadata_file(metadata_file, strict))
+        return cls(cls._read_from_metadata_file(metadata_file))
 
     @classmethod
-    def _read_from_metadata_file(
-        cls, metadata_file: str | Path | UPath, strict: bool = False
-    ) -> list[HealpixPixel]:
+    def _read_from_metadata_file(cls, metadata_file: str | Path | UPath) -> list[HealpixPixel]:
         """Read partition info list from a `_metadata` file.
 
         Args:
             metadata_file (UPath): path to the `_metadata` file
-            strict (bool): use strict parsing of _metadata file. this is slower, but
-                gives more helpful error messages in the case of invalid data.
 
         Returns:
             A `PartitionInfo` object with the data from the file
         """
-        if strict:
-            pixel_list = [
-                HealpixPixel(
-                    row_group_stat_single_value(row_group, cls.METADATA_ORDER_COLUMN_NAME),
-                    row_group_stat_single_value(row_group, cls.METADATA_PIXEL_COLUMN_NAME),
-                )
-                for row_group in read_row_group_fragments(metadata_file)
-            ]
-        else:
-            total_metadata = file_io.read_parquet_metadata(metadata_file)
-            num_row_groups = total_metadata.num_row_groups
+        total_metadata = file_io.read_parquet_metadata(metadata_file)
+        if total_metadata.num_row_groups == 0 or total_metadata.row_group(0).num_columns == 0:
+            raise ValueError(f"Insufficient metadata in file {metadata_file}")
 
-            first_row_group = total_metadata.row_group(0)
-            norder_column = -1
-            npix_column = -1
-
-            for i in range(0, first_row_group.num_columns):
-                column = first_row_group.column(i)
-                if column.path_in_schema == cls.METADATA_ORDER_COLUMN_NAME:
-                    norder_column = i
-                elif column.path_in_schema == cls.METADATA_PIXEL_COLUMN_NAME:
-                    npix_column = i
-
-            if norder_column == -1 or npix_column == -1:
-                raise ValueError("Metadata missing Norder or Npix column")
-
-            row_group_index = np.arange(0, num_row_groups)
-
-            pixel_list = [
-                HealpixPixel(
-                    total_metadata.row_group(index).column(norder_column).statistics.min,
-                    total_metadata.row_group(index).column(npix_column).statistics.min,
-                )
-                for index in row_group_index
-            ]
+        pixel_list = [
+            paths.get_healpix_from_path(total_metadata.row_group(index).column(0).file_path)
+            for index in range(0, total_metadata.num_row_groups)
+        ]
+        pixel_list = [p for p in pixel_list if p != INVALID_PIXEL]
+        if len(pixel_list) == 0:
+            raise ValueError(f"Insufficient metadata in file {metadata_file}")
         ## Remove duplicates, preserving order.
-        ## In the case of association partition join info, we may have multiple entries
-        ## for the primary order/pixels.
         return list(dict.fromkeys(pixel_list))
 
     @classmethod
