@@ -82,7 +82,8 @@ def get_healpix_from_path(path: str) -> HealpixPixel:
         Constructed HealpixPixel object representing the pixel in the path.
         `INVALID_PIXEL` if the path doesn't match the expected pattern for any reason.
     """
-    match = re.match(r".*Norder=(\d*).*Npix=(\d*).*", path)
+    healpix_path_pattern = re.compile(r".*Norder=(\d*).*Npix=(\d*).*")
+    match = healpix_path_pattern.match(path)
     if not match:
         return INVALID_PIXEL
     order, pixel = match.groups()
