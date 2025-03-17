@@ -7,71 +7,11 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import pyarrow.dataset as pds
-import pyarrow.parquet as pq
 from upath import UPath
 
 from hats.io import file_io, paths
 from hats.io.file_io.file_pointer import get_upath
-from hats.pixel_math.healpix_pixel import INVALID_PIXEL, HealpixPixel
 from hats.pixel_math.healpix_pixel_function import get_pixel_argsort
-
-
-def row_group_stat_single_value(row_group, stat_key: str):
-    """Convenience method to find the min and max inside a statistics dictionary,
-    and raise an error if they're unequal.
-
-    Args:
-        row_group: dataset fragment row group
-        stat_key (str): column name of interest.
-    Returns:
-        The value of the specified row group statistic
-    """
-    if stat_key not in row_group.statistics:
-        raise ValueError(f"row group doesn't have expected key {stat_key}")
-    stat_dict = row_group.statistics[stat_key]
-    min_val = stat_dict["min"]
-    max_val = stat_dict["max"]
-    if min_val != max_val:
-        raise ValueError(f"stat min != max ({min_val} != {max_val})")
-    return min_val
-
-
-def get_healpix_pixel_from_metadata(
-    metadata: pq.FileMetaData, norder_column: str = "Norder", npix_column: str = "Npix"
-) -> HealpixPixel:
-    """Get the healpix pixel according to a parquet file's metadata.
-
-    This is determined by the value of Norder and Npix in the table's data
-
-    Args:
-        metadata (pyarrow.parquet.FileMetaData): full metadata for a single file.
-
-    Returns:
-        Healpix pixel representing the Norder and Npix from the first row group.
-    """
-    if metadata.num_row_groups <= 0 or metadata.num_columns <= 0:
-        raise ValueError("metadata is for empty table")
-    order = -1
-    pixel = -1
-    first_row_group = metadata.row_group(0)
-    for i in range(0, first_row_group.num_columns):
-        column = first_row_group.column(i)
-        if column.path_in_schema == norder_column:
-            if column.statistics.min != column.statistics.max:
-                raise ValueError(
-                    f"{norder_column} stat min != max ({column.statistics.min} != {column.statistics.max})"
-                )
-            order = column.statistics.min
-        elif column.path_in_schema == npix_column:
-            if column.statistics.min != column.statistics.max:
-                raise ValueError(
-                    f"{npix_column} stat min != max ({column.statistics.min} != {column.statistics.max})"
-                )
-            pixel = column.statistics.min
-
-    if order == -1 or pixel == -1:
-        raise ValueError(f"Metadata missing Norder ({norder_column}) or Npix ({npix_column}) column")
-    return HealpixPixel(order, pixel)
 
 
 def write_parquet_metadata(
@@ -122,8 +62,6 @@ def write_parquet_metadata(
 
         if order_by_healpix:
             healpix_pixel = paths.get_healpix_from_path(relative_path)
-            if healpix_pixel == INVALID_PIXEL:
-                healpix_pixel = get_healpix_pixel_from_metadata(single_metadata)
 
             healpix_pixels.append(healpix_pixel)
         metadata_collector.append(single_metadata)
