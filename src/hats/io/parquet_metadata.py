@@ -11,6 +11,7 @@ from upath import UPath
 
 from hats.io import file_io, paths
 from hats.io.file_io.file_pointer import get_upath
+from hats.pixel_math.healpix_pixel import HealpixPixel
 from hats.pixel_math.healpix_pixel_function import get_pixel_argsort
 
 
