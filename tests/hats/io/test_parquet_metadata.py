@@ -8,6 +8,7 @@ import pyarrow.parquet as pq
 
 from hats.io import file_io, paths
 from hats.io.parquet_metadata import aggregate_column_statistics, write_parquet_metadata
+from hats.pixel_math.healpix_pixel import HealpixPixel
 
 
 def test_write_parquet_metadata(tmp_path, small_sky_dir, small_sky_schema, check_parquet_schema):
