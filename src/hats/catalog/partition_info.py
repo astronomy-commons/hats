@@ -120,7 +120,7 @@ class PartitionInfo:
             metadata_file (UPath): path to the `_metadata` file
 
         Returns:
-            A `PartitionInfo` object with the data from the file
+            The list of `HealpixPixel` extracted from the data in the metadata file
         """
         total_metadata = file_io.read_parquet_metadata(metadata_file)
         if total_metadata.num_row_groups == 0 or total_metadata.row_group(0).num_columns == 0:
