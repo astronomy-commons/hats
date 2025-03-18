@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from pathlib import Path
 
 import astropy.units as u
@@ -16,6 +17,7 @@ from hats.catalog.dataset.table_properties import TableProperties
 from hats.catalog.partition_info import PartitionInfo
 from hats.inspection import plot_pixels
 from hats.inspection.visualize_catalog import plot_moc
+from hats.io.parquet_metadata import aggregate_column_statistics
 from hats.pixel_math import HealpixPixel
 from hats.pixel_math.box_filter import generate_box_moc, wrap_ra_angles
 from hats.pixel_math.validators import (
@@ -256,3 +258,33 @@ class HealpixDataset(Dataset):
         plot_args = {"title": default_title}
         plot_args.update(kwargs)
         return plot_moc(self.moc, **plot_args)
+
+    def aggregate_column_statistics(
+        self,
+        exclude_hats_columns: bool = True,
+        exclude_columns: list[str] = None,
+        include_columns: list[str] = None,
+        include_pixels: list[HealpixPixel] = None,
+    ):
+        """Read footer statistics in parquet metadata, and report on global min/max values.
+
+        Args:
+            exclude_hats_columns (bool): exclude HATS spatial and partitioning fields
+                from the statistics. Defaults to True.
+            exclude_columns (List[str]): additional columns to exclude from the statistics.
+            include_columns (List[str]): if specified, only return statistics for the column
+                names provided. Defaults to None, and returns all non-hats columns.
+        """
+        if not self.on_disk:
+            warnings.warn("Calling aggregate_column_statistics on an in-memory catalog. No results.")
+            return pd.DataFrame()
+
+        if include_pixels is None:
+            include_pixels = self.get_healpix_pixels()
+        return aggregate_column_statistics(
+            self.catalog_base_dir / "dataset" / "_metadata",
+            exclude_hats_columns=exclude_hats_columns,
+            exclude_columns=exclude_columns,
+            include_columns=include_columns,
+            include_pixels=include_pixels,
+        )

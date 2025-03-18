@@ -11,6 +11,7 @@ from upath import UPath
 
 from hats.io import file_io, paths
 from hats.io.file_io.file_pointer import get_upath
+from hats.pixel_math.healpix_pixel import HealpixPixel
 from hats.pixel_math.healpix_pixel_function import get_pixel_argsort
 
 
@@ -131,6 +132,7 @@ def aggregate_column_statistics(
     exclude_hats_columns: bool = True,
     exclude_columns: list[str] = None,
     include_columns: list[str] = None,
+    include_pixels: list[HealpixPixel] = None,
 ):
     """Read footer statistics in parquet metadata, and report on global min/max values.
 
@@ -157,6 +159,7 @@ def aggregate_column_statistics(
     column_names = [
         first_row_group.column(col).path_in_schema for col in range(0, first_row_group.num_columns)
     ]
+    column_names = [name.removesuffix(".list.element") for name in column_names]
     good_column_indexes = [
         index
         for index, name in enumerate(column_names)
@@ -166,42 +169,43 @@ def aggregate_column_statistics(
     if not good_column_indexes:
         return pd.DataFrame()
     column_names = [column_names[i] for i in good_column_indexes]
-    extrema = [
-        (
-            (None, None, 0)
-            if first_row_group.column(col).statistics is None
-            else (
-                first_row_group.column(col).statistics.min,
-                first_row_group.column(col).statistics.max,
-                first_row_group.column(col).statistics.null_count,
-            )
-        )
-        for col in good_column_indexes
-    ]
+    extrema = None
 
-    for row_group_index in range(1, num_row_groups):
+    for row_group_index in range(0, num_row_groups):
         row_group = total_metadata.row_group(row_group_index)
+        if include_pixels is not None:
+            pixel = paths.get_healpix_from_path(row_group.column(0).file_path)
+            if pixel not in include_pixels:
+                continue
         row_stats = [
             (
-                (None, None, 0)
+                (None, None, 0, 0)
                 if row_group.column(col).statistics is None
                 else (
                     row_group.column(col).statistics.min,
                     row_group.column(col).statistics.max,
                     row_group.column(col).statistics.null_count,
+                    row_group.column(col).num_values,
                 )
             )
             for col in good_column_indexes
         ]
+        if extrema is None:
+            extrema = row_stats
         ## This is annoying, but avoids extra copies, or none comparison.
-        extrema = [
-            (
-                (_nonemin(extrema[col][0], row_stats[col][0])),
-                (_nonemax(extrema[col][1], row_stats[col][1])),
-                extrema[col][2] + row_stats[col][2],
-            )
-            for col in range(0, len(good_column_indexes))
-        ]
+        else:
+            extrema = [
+                (
+                    (_nonemin(extrema[col][0], row_stats[col][0])),
+                    (_nonemax(extrema[col][1], row_stats[col][1])),
+                    extrema[col][2] + row_stats[col][2],
+                    extrema[col][3] + row_stats[col][3],
+                )
+                for col in range(0, len(good_column_indexes))
+            ]
+
+    if extrema is None:
+        return pd.DataFrame()
 
     stats_lists = np.array(extrema).T
 
@@ -211,6 +215,7 @@ def aggregate_column_statistics(
             "min_value": stats_lists[0],
             "max_value": stats_lists[1],
             "null_count": stats_lists[2],
+            "row_count": stats_lists[3],
         }
     ).set_index("column_names")
     return frame

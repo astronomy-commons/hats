@@ -8,6 +8,7 @@ import pyarrow.parquet as pq
 
 from hats.io import file_io, paths
 from hats.io.parquet_metadata import aggregate_column_statistics, write_parquet_metadata
+from hats.pixel_math.healpix_pixel import HealpixPixel
 
 
 def test_write_parquet_metadata(tmp_path, small_sky_dir, small_sky_schema, check_parquet_schema):
@@ -136,6 +137,75 @@ def test_aggregate_column_statistics(small_sky_order1_dir):
     assert len(result_frame) == 0
 
 
+def assert_column_stat_as_floats(
+    result_frame, column_name, min_value=None, max_value=None, null_count=0, row_count=None
+):
+    assert column_name in result_frame.index
+    data_stats = result_frame.loc[column_name]
+    assert float(data_stats["min_value"]) >= min_value
+    assert float(data_stats["max_value"]) <= max_value
+    assert int(data_stats["null_count"]) == null_count
+    assert int(data_stats["row_count"]) == row_count
+
+
+def test_aggregate_column_statistics_with_pixel(small_sky_order1_dir):
+    partition_info_file = paths.get_parquet_metadata_pointer(small_sky_order1_dir)
+
+    result_frame = aggregate_column_statistics(partition_info_file)
+    assert len(result_frame) == 5
+    assert_column_stat_as_floats(result_frame, "dec", min_value=-69.5, max_value=-25.5, row_count=131)
+
+    result_frame = aggregate_column_statistics(partition_info_file, include_pixels=[HealpixPixel(1, 45)])
+    assert len(result_frame) == 5
+    assert_column_stat_as_floats(result_frame, "dec", min_value=-60.5, max_value=-25.5, row_count=29)
+
+    result_frame = aggregate_column_statistics(partition_info_file, include_pixels=[HealpixPixel(1, 47)])
+    assert len(result_frame) == 5
+    assert_column_stat_as_floats(result_frame, "dec", min_value=-36.5, max_value=-25.5, row_count=18)
+
+    result_frame = aggregate_column_statistics(
+        partition_info_file, include_pixels=[HealpixPixel(1, 45), HealpixPixel(1, 47)]
+    )
+    assert len(result_frame) == 5
+    assert_column_stat_as_floats(result_frame, "dec", min_value=-60.5, max_value=-25.5, row_count=47)
+
+    result_frame = aggregate_column_statistics(partition_info_file, include_pixels=[HealpixPixel(1, 4)])
+    assert len(result_frame) == 0
+
+
+def test_aggregate_column_statistics_with_nested(small_sky_nested_dir):
+    partition_info_file = paths.get_parquet_metadata_pointer(small_sky_nested_dir)
+
+    ## Will have 13 returned columns (5 object and 8 light curve)
+    ## Since object_dec is copied from object.dec, the min/max are the same,
+    ## but there are MANY more rows of light curve dec values.
+    result_frame = aggregate_column_statistics(partition_info_file)
+    assert len(result_frame) == 13
+    assert_column_stat_as_floats(result_frame, "dec", min_value=-69.5, max_value=-25.5, row_count=131)
+    assert_column_stat_as_floats(
+        result_frame, "lc.object_dec", min_value=-69.5, max_value=-25.5, row_count=16135
+    )
+
+    ## Only peeking at a single pixel, we should see the same dec min/max as
+    ## we see above for the flat object table.
+    result_frame = aggregate_column_statistics(partition_info_file, include_pixels=[HealpixPixel(1, 47)])
+    assert len(result_frame) == 13
+    assert_column_stat_as_floats(result_frame, "dec", min_value=-36.5, max_value=-25.5, row_count=18)
+    assert_column_stat_as_floats(
+        result_frame, "lc.source_id", min_value=70008, max_value=87148, row_count=2358
+    )
+    assert_column_stat_as_floats(result_frame, "lc.mag", min_value=15, max_value=21, row_count=2358)
+
+    ## Test that we can request light curve columns, using the shorter name
+    ## e.g. full path in the file is "lc.source_id.list.element"
+    result_frame = aggregate_column_statistics(
+        partition_info_file, include_columns=["ra", "dec", "lc.source_ra", "lc.source_dec", "lc.mag"]
+    )
+    assert len(result_frame) == 5
+    assert_column_stat_as_floats(result_frame, "dec", min_value=-69.5, max_value=-25.5, row_count=131)
+    assert_column_stat_as_floats(result_frame, "lc.mag", min_value=15, max_value=21, row_count=16135)
+
+
 def test_aggregate_column_statistics_with_nulls(tmp_path):
     file_io.make_directory(tmp_path / "dataset")
 
@@ -160,12 +230,5 @@ def test_aggregate_column_statistics_with_nulls(tmp_path):
     result_frame = aggregate_column_statistics(tmp_path / "dataset" / "_metadata", exclude_hats_columns=False)
     assert len(result_frame) == 2
 
-    data_stats = result_frame.loc["data"]
-    assert data_stats["min_value"] == -1
-    assert data_stats["max_value"] == 2
-    assert data_stats["null_count"] == 4
-
-    data_stats = result_frame.loc["Npix"]
-    assert data_stats["min_value"] == 1
-    assert data_stats["max_value"] == 6
-    assert data_stats["null_count"] == 4
+    assert_column_stat_as_floats(result_frame, "data", min_value=-1, max_value=2, null_count=4, row_count=6)
+    assert_column_stat_as_floats(result_frame, "Npix", min_value=1, max_value=6, null_count=4, row_count=6)
