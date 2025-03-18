@@ -20,6 +20,15 @@ MARGIN_ORDER = "margin_Norder"
 MARGIN_DIR = "margin_Dir"
 MARGIN_PIXEL = "margin_Npix"
 
+HIVE_COLUMNS = [
+    PARTITION_ORDER,
+    PARTITION_DIR,
+    PARTITION_PIXEL,
+    MARGIN_ORDER,
+    MARGIN_DIR,
+    MARGIN_PIXEL,
+]
+
 DATASET_DIR = "dataset"
 PARTITION_INFO_FILENAME = "partition_info.csv"
 PARTITION_JOIN_INFO_FILENAME = "partition_join_info.csv"
