@@ -262,9 +262,9 @@ class HealpixDataset(Dataset):
     def aggregate_column_statistics(
         self,
         exclude_hats_columns: bool = True,
-        exclude_columns: list[str] = None,
-        include_columns: list[str] = None,
-        include_pixels: list[HealpixPixel] = None,
+        exclude_columns: list[str] | None = None,
+        include_columns: list[str] | None = None,
+        include_pixels: list[HealpixPixel] | None = None,
     ):
         """Read footer statistics in parquet metadata, and report on global min/max values.
 
@@ -292,11 +292,11 @@ class HealpixDataset(Dataset):
     def per_pixel_statistics(
         self,
         exclude_hats_columns: bool = True,
-        exclude_columns: list[str] = None,
-        include_columns: list[str] = None,
-        include_stats: list[str] = None,
+        exclude_columns: list[str] | None = None,
+        include_columns: list[str] | None = None,
+        include_stats: list[str] | None = None,
         multiindex=False,
-        include_pixels: list[HealpixPixel] = None,
+        include_pixels: list[HealpixPixel] | None = None,
     ):
         """Read footer statistics in parquet metadata, and report on statistics about
         each pixel partition.
