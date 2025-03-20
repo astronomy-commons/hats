@@ -175,6 +175,10 @@ def aggregate_column_statistics(
         exclude_columns (List[str]): additional columns to exclude from the statistics.
         include_columns (List[str]): if specified, only return statistics for the column
             names provided. Defaults to None, and returns all non-hats columns.
+        include_pixels (list[HealpixPixel]): if specified, only return statistics
+            for the pixels indicated. Defaults to none, and returns all pixels.
+    Returns:
+        dataframe with global summary statistics
     """
     total_metadata = file_io.read_parquet_metadata(metadata_file)
     num_row_groups = total_metadata.num_row_groups
@@ -246,12 +250,12 @@ def per_pixel_statistics(
     exclude_hats_columns: bool = True,
     exclude_columns: list[str] = None,
     include_columns: list[str] = None,
-    include_pixels: list[HealpixPixel] = None,
     include_stats: list[str] = None,
     multiindex=False,
+    include_pixels: list[HealpixPixel] = None,
 ):
-    """Read footer statistics in parquet metadata, and report on min/max values
-    within individual pixel partitions.
+    """Read footer statistics in parquet metadata, and report on statistics about
+    each pixel partition.
 
     Args:
         metadata_file (str | Path | UPath): path to `_metadata` file
@@ -260,6 +264,15 @@ def per_pixel_statistics(
         exclude_columns (List[str]): additional columns to exclude from the statistics.
         include_columns (List[str]): if specified, only return statistics for the column
             names provided. Defaults to None, and returns all non-hats columns.
+        include_pixels (list[HealpixPixel]): if specified, only return statistics
+            for the pixels indicated. Defaults to none, and returns all pixels.
+        include_stats (List[str]): if specified, only return the kinds of values from list
+            (min_value, max_value, null_count, row_count). Defaults to None, and returns all values.
+        multiindex (bool): should the returned frame be created with a multi-index, first on
+            pixel, then on column name? Default is False, and instead indexes on pixel, with
+            separate columns per-data-column and stat value combination.
+    Returns:
+        dataframe with granular per-pixel statistics
     """
     total_metadata = file_io.read_parquet_metadata(metadata_file)
     num_row_groups = total_metadata.num_row_groups
@@ -311,6 +324,7 @@ def per_pixel_statistics(
 
     stats_lists = np.array(leaf_stats)
     original_shape = stats_lists.shape
+
     if multiindex:
         stats_lists = stats_lists.reshape((original_shape[0] * original_shape[1], original_shape[2]))
         frame = pd.DataFrame(
