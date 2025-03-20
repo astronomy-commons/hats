@@ -84,7 +84,8 @@ class Dataset:
             include_stats (List[str]): if specified, only return the kinds of values from list
                 (min_value, max_value, null_count, row_count). Defaults to None, and returns all values.
             multiindex (bool): should the returned frame be created with a multi-index, first on
-                pixel, then on column name?
+                pixel, then on column name? Default is False, and instead indexes on pixel, with
+            separate columns per-data-column and stat value combination.
         """
         if not self.on_disk:
             warnings.warn("Calling per_pixel_statistics on an in-memory catalog. No results.")
