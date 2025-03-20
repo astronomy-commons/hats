@@ -496,7 +496,7 @@ score=yes
 ignore-comments=yes
 
 # Docstrings are removed from the similarity computation
-ignore-docstrings=no
+ignore-docstrings=yes
 
 # Imports are removed from the similarity computation
 ignore-imports=yes

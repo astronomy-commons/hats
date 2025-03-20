@@ -92,7 +92,7 @@ def test_load_catalog_small_sky_order1(small_sky_order1_dir):
     assert len(cat.get_healpix_pixels()) == 4
 
 
-def test_aggregate_column_statistics(small_sky_order1_dir):
+def test_catalog_statistics(small_sky_order1_dir):
     def assert_column_stat_as_floats(
         result_frame, column_name, min_value=None, max_value=None, row_count=None
     ):
@@ -121,11 +121,32 @@ def test_aggregate_column_statistics(small_sky_order1_dir):
     assert len(result_frame) == 5
     assert_column_stat_as_floats(result_frame, "dec", min_value=-69.5, max_value=-47.5, row_count=42)
 
+    result_frame = cat.per_pixel_statistics()
+    # 20 = 5 columns * 4 pixels
+    assert result_frame.shape == (4, 20)
 
-def test_aggregate_column_statistics_inmemory(catalog_info, catalog_pixels):
+    result_frame = cat.per_pixel_statistics(exclude_hats_columns=False)
+    # 36 = 9 columns * 4 stats per-column
+    assert result_frame.shape == (4, 36)
+
+    result_frame = cat.per_pixel_statistics(
+        include_columns=["ra", "dec"], include_stats=["min_value", "max_value"]
+    )
+    # 4 = 2 columns * 2 stats per-column
+    assert result_frame.shape == (4, 4)
+
+    result_frame = filtered_catalog.per_pixel_statistics()
+    assert result_frame.shape == (1, 20)
+
+
+def test_catalog_statistics_inmemory(catalog_info, catalog_pixels):
     catalog = Catalog(catalog_info, catalog_pixels)
     with pytest.warns(UserWarning, match="in-memory"):
         result_frame = catalog.aggregate_column_statistics(include_columns=["ra", "dec"])
+    assert len(result_frame) == 0
+
+    with pytest.warns(UserWarning, match="in-memory"):
+        result_frame = catalog.per_pixel_statistics(include_columns=["ra", "dec"])
     assert len(result_frame) == 0
 
 

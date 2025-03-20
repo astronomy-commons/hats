@@ -127,26 +127,14 @@ def _nonemax(value1, value2):
     return max(value1, value2)
 
 
-def aggregate_column_statistics(
-    metadata_file: str | Path | UPath,
+def _pick_columns(
+    first_row_group,
     exclude_hats_columns: bool = True,
     exclude_columns: list[str] = None,
     include_columns: list[str] = None,
-    include_pixels: list[HealpixPixel] = None,
 ):
-    """Read footer statistics in parquet metadata, and report on global min/max values.
-
-    Args:
-        metadata_file (str | Path | UPath): path to `_metadata` file
-        exclude_hats_columns (bool): exclude HATS spatial and partitioning fields
-            from the statistics. Defaults to True.
-        exclude_columns (List[str]): additional columns to exclude from the statistics.
-        include_columns (List[str]): if specified, only return statistics for the column
-            names provided. Defaults to None, and returns all non-hats columns.
-    """
-    total_metadata = file_io.read_parquet_metadata(metadata_file)
-    num_row_groups = total_metadata.num_row_groups
-    first_row_group = total_metadata.row_group(0)
+    """Convenience method to find the desired columns and their indexes, given
+    some conventional user preferences."""
 
     if include_columns is None:
         include_columns = []
@@ -166,9 +154,45 @@ def aggregate_column_statistics(
         if (len(include_columns) == 0 or name in include_columns)
         and not (len(exclude_columns) > 0 and name in exclude_columns)
     ]
+    column_names = [column_names[i] for i in good_column_indexes]
+
+    return good_column_indexes, column_names
+
+
+def aggregate_column_statistics(
+    metadata_file: str | Path | UPath,
+    exclude_hats_columns: bool = True,
+    exclude_columns: list[str] = None,
+    include_columns: list[str] = None,
+    include_pixels: list[HealpixPixel] = None,
+):
+    """Read footer statistics in parquet metadata, and report on global min/max values.
+
+    Args:
+        metadata_file (str | Path | UPath): path to `_metadata` file
+        exclude_hats_columns (bool): exclude HATS spatial and partitioning fields
+            from the statistics. Defaults to True.
+        exclude_columns (List[str]): additional columns to exclude from the statistics.
+        include_columns (List[str]): if specified, only return statistics for the column
+            names provided. Defaults to None, and returns all non-hats columns.
+        include_pixels (list[HealpixPixel]): if specified, only return statistics
+            for the pixels indicated. Defaults to none, and returns all pixels.
+    Returns:
+        dataframe with global summary statistics
+    """
+    total_metadata = file_io.read_parquet_metadata(metadata_file)
+    num_row_groups = total_metadata.num_row_groups
+    first_row_group = total_metadata.row_group(0)
+
+    good_column_indexes, column_names = _pick_columns(
+        first_row_group=first_row_group,
+        exclude_hats_columns=exclude_hats_columns,
+        exclude_columns=exclude_columns,
+        include_columns=include_columns,
+    )
     if not good_column_indexes:
         return pd.DataFrame()
-    column_names = [column_names[i] for i in good_column_indexes]
+
     extrema = None
 
     for row_group_index in range(0, num_row_groups):
@@ -218,4 +242,99 @@ def aggregate_column_statistics(
             "row_count": stats_lists[3],
         }
     ).set_index("column_names")
+    return frame
+
+
+def per_pixel_statistics(
+    metadata_file: str | Path | UPath,
+    exclude_hats_columns: bool = True,
+    exclude_columns: list[str] = None,
+    include_columns: list[str] = None,
+    include_stats: list[str] = None,
+    multiindex=False,
+    include_pixels: list[HealpixPixel] = None,
+):
+    """Read footer statistics in parquet metadata, and report on statistics about
+    each pixel partition.
+
+    Args:
+        metadata_file (str | Path | UPath): path to `_metadata` file
+        exclude_hats_columns (bool): exclude HATS spatial and partitioning fields
+            from the statistics. Defaults to True.
+        exclude_columns (List[str]): additional columns to exclude from the statistics.
+        include_columns (List[str]): if specified, only return statistics for the column
+            names provided. Defaults to None, and returns all non-hats columns.
+        include_pixels (list[HealpixPixel]): if specified, only return statistics
+            for the pixels indicated. Defaults to none, and returns all pixels.
+        include_stats (List[str]): if specified, only return the kinds of values from list
+            (min_value, max_value, null_count, row_count). Defaults to None, and returns all values.
+        multiindex (bool): should the returned frame be created with a multi-index, first on
+            pixel, then on column name? Default is False, and instead indexes on pixel, with
+            separate columns per-data-column and stat value combination.
+    Returns:
+        dataframe with granular per-pixel statistics
+    """
+    total_metadata = file_io.read_parquet_metadata(metadata_file)
+    num_row_groups = total_metadata.num_row_groups
+    first_row_group = total_metadata.row_group(0)
+
+    good_column_indexes, column_names = _pick_columns(
+        first_row_group=first_row_group,
+        exclude_hats_columns=exclude_hats_columns,
+        exclude_columns=exclude_columns,
+        include_columns=include_columns,
+    )
+    if not good_column_indexes:
+        return pd.DataFrame()
+
+    all_stats = ["min_value", "max_value", "null_count", "row_count"]
+
+    if include_stats is None or len(include_stats) == 0:
+        include_stats = all_stats
+    else:
+        for stat in include_stats:
+            if stat not in all_stats:
+                raise ValueError(f"include_stats must be from list {all_stats} (found {stat})")
+
+    stat_mask = np.array([ind for ind, stat in enumerate(all_stats) if stat in include_stats])
+    pixels = []
+    leaf_stats = []
+
+    for row_group_index in range(0, num_row_groups):
+        row_group = total_metadata.row_group(row_group_index)
+        pixel = paths.get_healpix_from_path(row_group.column(0).file_path)
+        if include_pixels is not None and pixel not in include_pixels:
+            continue
+        row_stats = [
+            (
+                [None, None, 0, 0]
+                if row_group.column(col).statistics is None
+                else [
+                    row_group.column(col).statistics.min,
+                    row_group.column(col).statistics.max,
+                    row_group.column(col).statistics.null_count,
+                    row_group.column(col).num_values,
+                ]
+            )
+            for col in good_column_indexes
+        ]
+        row_stats = np.take(row_stats, stat_mask, axis=1)
+        pixels.append(pixel)
+        leaf_stats.append(row_stats)
+
+    stats_lists = np.array(leaf_stats)
+    original_shape = stats_lists.shape
+
+    if multiindex:
+        stats_lists = stats_lists.reshape((original_shape[0] * original_shape[1], original_shape[2]))
+        frame = pd.DataFrame(
+            stats_lists,
+            index=pd.MultiIndex.from_product([pixels, column_names], names=["pixel", "column"]),
+            columns=include_stats,
+        )
+    else:
+        stats_lists = stats_lists.reshape((original_shape[0], original_shape[1] * original_shape[2]))
+        mod_col_names = [[f"{col_name}: {stat}" for stat in include_stats] for col_name in column_names]
+        mod_col_names = np.array(mod_col_names).flatten()
+        frame = pd.DataFrame(stats_lists, index=pixels, columns=mod_col_names)
     return frame
