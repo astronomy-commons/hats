@@ -295,7 +295,7 @@ class HealpixDataset(Dataset):
         exclude_columns: list[str] | None = None,
         include_columns: list[str] | None = None,
         include_stats: list[str] | None = None,
-        multiindex=False,
+        multi_index=False,
         include_pixels: list[HealpixPixel] | None = None,
     ):
         """Read footer statistics in parquet metadata, and report on statistics about
@@ -311,7 +311,7 @@ class HealpixDataset(Dataset):
                 for the pixels indicated. Defaults to none, and returns all pixels.
             include_stats (List[str]): if specified, only return the kinds of values from list
                 (min_value, max_value, null_count, row_count). Defaults to None, and returns all values.
-            multiindex (bool): should the returned frame be created with a multi-index, first on
+            multi_index (bool): should the returned frame be created with a multi-index, first on
                 pixel, then on column name?
         """
         if not self.on_disk:
@@ -326,6 +326,6 @@ class HealpixDataset(Dataset):
             exclude_columns=exclude_columns,
             include_columns=include_columns,
             include_stats=include_stats,
-            multiindex=multiindex,
+            multi_index=multi_index,
             include_pixels=include_pixels,
         )

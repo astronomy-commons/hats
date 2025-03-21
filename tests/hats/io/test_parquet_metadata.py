@@ -253,14 +253,14 @@ def test_per_pixel_statistics(small_sky_order1_dir):
     assert len(result_frame) == 0
 
 
-def test_per_pixel_statistics_multiindex(small_sky_order1_dir):
+def test_per_pixel_statistics_multi_index(small_sky_order1_dir):
     partition_info_file = paths.get_parquet_metadata_pointer(small_sky_order1_dir)
 
-    result_frame = per_pixel_statistics(partition_info_file, multiindex=True)
+    result_frame = per_pixel_statistics(partition_info_file, multi_index=True)
     # 20 = 5 columns * 4 pixels
     assert result_frame.shape == (20, 4)
 
-    result_frame = per_pixel_statistics(partition_info_file, exclude_hats_columns=False, multiindex=True)
+    result_frame = per_pixel_statistics(partition_info_file, exclude_hats_columns=False, multi_index=True)
     # 36 = 9 columns * 4 stats per-column
     assert result_frame.shape == (36, 4)
 
@@ -279,7 +279,7 @@ def test_per_pixel_statistics_include_stats(small_sky_order1_dir):
     assert result_frame.shape == (4, 1)
 
     result_frame = per_pixel_statistics(
-        partition_info_file, include_stats=["row_count"], include_columns=["id"], multiindex=True
+        partition_info_file, include_stats=["row_count"], include_columns=["id"], multi_index=True
     )
     # 1 = 1 columns * 1 stat per column
     assert result_frame.shape == (4, 1)
