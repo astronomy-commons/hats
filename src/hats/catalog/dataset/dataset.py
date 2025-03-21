@@ -70,7 +70,7 @@ class Dataset:
         exclude_columns: list[str] = None,
         include_columns: list[str] = None,
         include_stats: list[str] = None,
-        multiindex=False,
+        multi_index=False,
     ):
         """Read footer statistics in parquet metadata, and report on statistics about
         each pixel partition.
@@ -83,7 +83,7 @@ class Dataset:
                 names provided. Defaults to None, and returns all non-hats columns.
             include_stats (List[str]): if specified, only return the kinds of values from list
                 (min_value, max_value, null_count, row_count). Defaults to None, and returns all values.
-            multiindex (bool): should the returned frame be created with a multi-index, first on
+            multi_index (bool): should the returned frame be created with a multi-index, first on
                 pixel, then on column name? Default is False, and instead indexes on pixel, with
             separate columns per-data-column and stat value combination.
         """
@@ -96,5 +96,5 @@ class Dataset:
             exclude_columns=exclude_columns,
             include_columns=include_columns,
             include_stats=include_stats,
-            multiindex=multiindex,
+            multi_index=multi_index,
         )
