@@ -136,3 +136,22 @@ def test_read_from_dir_branches(
     TableProperties.read_from_dir(small_sky_source_object_index_dir)
     TableProperties.read_from_dir(margin_catalog_path)
     TableProperties.read_from_dir(small_sky_source_dir)
+
+
+def test_extra_dict():
+    extra_properties = {
+        "hats_copyright": "LINCC Frameworks 2024",
+        "hats_estsize": 10000000,
+        "hats_max_rows": 1000000,
+    }
+    table_properties = TableProperties(
+        catalog_name="foo",
+        catalog_type="index",
+        total_rows=15,
+        extra_columns="a , b",
+        indexing_column="a",
+        primary_catalog="bar",
+        **extra_properties,
+    )
+
+    assert table_properties.extra_dict() == extra_properties
