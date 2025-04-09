@@ -189,11 +189,17 @@ class TableProperties(BaseModel):
         TableProperties.model_validate(new_properties)
         return new_properties
 
-    def explicit_dict(self):
+    def explicit_dict(self, by_alias=False, exclude_none=True):
         """Create a dict, based on fields that have been explicitly set, and are not "extra" keys."""
-        explicit = self.model_dump(by_alias=False, exclude_none=True)
+        explicit = self.model_dump(by_alias=by_alias, exclude_none=exclude_none)
         extra_keys = self.__pydantic_extra__.keys()
         return {key: val for key, val in explicit.items() if key not in extra_keys}
+
+    def extra_dict(self, by_alias=False, exclude_none=True):
+        """Create a dict, based on fields that are "extra" keys."""
+        explicit = self.model_dump(by_alias=by_alias, exclude_none=exclude_none)
+        extra_keys = self.__pydantic_extra__.keys()
+        return {key: val for key, val in explicit.items() if key in extra_keys}
 
     def __str__(self):
         """Friendly string representation based on named fields."""
