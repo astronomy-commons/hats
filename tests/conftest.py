@@ -232,6 +232,11 @@ def small_sky_source_dir(test_data_dir) -> str:
 
 
 @pytest.fixture
+def small_sky_collection_dir(test_data_dir) -> str:
+    return test_data_dir / "small_sky_o1_collection"
+
+
+@pytest.fixture
 def small_sky_source_pixels():
     """Source catalog pixels"""
     return [
