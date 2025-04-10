@@ -13,8 +13,8 @@ def compute_spatial_index(ra_values: float | list[float], dec_values: float | li
     """Compute the healpix index field.
 
     Args:
-        ra_values (List[float]): celestial coordinates, right ascension in degrees
-        dec_values (List[float]): celestial coordinates, declination in degrees
+        ra_values (float|list[float]): celestial coordinates, right ascension in degrees
+        dec_values (float|list[float]): celestial coordinates, declination in degrees
     Returns:
         one-dimensional numpy array of int64s with healpix NESTED pixel numbers at order 29
     Raises:
@@ -26,9 +26,7 @@ def compute_spatial_index(ra_values: float | list[float], dec_values: float | li
         if len(ra_values) != len(dec_values):
             raise ValueError("ra and dec arrays should have the same length")
 
-    mapped_pixels = hp.radec2pix(SPATIAL_INDEX_ORDER, ra_values, dec_values)
-
-    return mapped_pixels
+    return hp.radec2pix(SPATIAL_INDEX_ORDER, ra_values, dec_values)
 
 
 def spatial_index_to_healpix(ids: list[int], target_order: int = SPATIAL_INDEX_ORDER) -> np.ndarray:
