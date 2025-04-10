@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pandas as pd
 
 import hats.pixel_math.healpix_shim as hp
 
@@ -8,7 +9,7 @@ SPATIAL_INDEX_COLUMN = "_healpix_29"
 SPATIAL_INDEX_ORDER = 29
 
 
-def compute_spatial_index(ra_values: list[float], dec_values: list[float]) -> np.ndarray:
+def compute_spatial_index(ra_values: float | list[float], dec_values: float | list[float]) -> np.ndarray:
     """Compute the healpix index field.
 
     Args:
@@ -19,8 +20,11 @@ def compute_spatial_index(ra_values: list[float], dec_values: list[float]) -> np
     Raises:
         ValueError: if the length of the input lists don't match.
     """
-    if len(ra_values) != len(dec_values):
-        raise ValueError("ra and dec arrays should have the same length")
+    if pd.api.types.is_list_like(ra_values) or pd.api.types.is_list_like(dec_values):
+        if not (pd.api.types.is_list_like(ra_values) and pd.api.types.is_list_like(dec_values)):
+            raise ValueError("ra and dec cannot be mix of array and scalar")
+        if len(ra_values) != len(dec_values):
+            raise ValueError("ra and dec arrays should have the same length")
 
     mapped_pixels = hp.radec2pix(SPATIAL_INDEX_ORDER, ra_values, dec_values)
 
