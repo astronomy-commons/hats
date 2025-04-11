@@ -13,22 +13,36 @@ from hats.pixel_math.spatial_index import (
 )
 
 
-def test_single():
+def test_single_array():
     """Single point. Adheres to specification."""
     result = compute_spatial_index([5], [5])
-    expected = hp.radec2pix(
-        SPATIAL_INDEX_ORDER,
-        [5],
-        [5],
-    )
+    expected = hp.radec2pix(SPATIAL_INDEX_ORDER, [5], [5])
 
+    npt.assert_array_equal(result, expected)
+
+
+def test_single_scalar():
+    """Single point. Adheres to specification."""
+    result = compute_spatial_index(5, 5)
+    assert result == 1370628467894962607
+
+    expected = hp.radec2pix(SPATIAL_INDEX_ORDER, [5], [5])
     npt.assert_array_equal(result, expected)
 
 
 def test_jagged_list():
     """Arrays of mismatched lengths."""
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="should have the same length"):
         compute_spatial_index([5, 1, 5], [5])
+
+
+def test_mixed_list():
+    """Mix of array and scalar values."""
+    with pytest.raises(ValueError, match="mix of array and scalar"):
+        compute_spatial_index([5, 1, 5], 5)
+
+    with pytest.raises(ValueError, match="mix of array and scalar"):
+        compute_spatial_index(5, [5, 1, 5])
 
 
 def test_short_list():
@@ -36,11 +50,7 @@ def test_short_list():
     ra = [5, 1, 5]
     dec = [5, 1, 5]
     result = compute_spatial_index(ra, dec)
-    expected = hp.radec2pix(
-        SPATIAL_INDEX_ORDER,
-        ra,
-        dec,
-    )
+    expected = hp.radec2pix(SPATIAL_INDEX_ORDER, ra, dec)
     npt.assert_array_equal(result, expected)
 
 
@@ -49,11 +59,7 @@ def test_list():
     ra = [5, 5, 5, 1, 5, 5, 5, 1, 5]
     dec = [5, 5, 5, 1, 5, 5, 5, 1, 5]
     result = compute_spatial_index(ra, dec)
-    expected = hp.radec2pix(
-        SPATIAL_INDEX_ORDER,
-        ra,
-        dec,
-    )
+    expected = hp.radec2pix(SPATIAL_INDEX_ORDER, ra, dec)
     npt.assert_array_equal(result, expected)
 
 
