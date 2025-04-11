@@ -7,11 +7,9 @@ import pytest
 
 from hats.catalog.association_catalog.partition_join_info import PartitionJoinInfo
 from hats.catalog.dataset.table_properties import TableProperties
-from hats.inspection.almanac import Almanac
 from hats.pixel_math import HealpixPixel
 
 DATA_DIR_NAME = "data"
-ALMANAC_DIR_NAME = "almanac"
 SMALL_SKY_DIR_NAME = "small_sky"
 SMALL_SKY_NPIX_ALT_SUFFIX_NAME = "small_sky_npix_alt_suffix"
 SMALL_SKY_NPIX_AS_DIR_NAME = "small_sky_npix_as_dir"
@@ -27,11 +25,6 @@ TEST_DIR = os.path.dirname(__file__)
 @pytest.fixture
 def test_data_dir():
     return Path(TEST_DIR) / DATA_DIR_NAME
-
-
-@pytest.fixture
-def almanac_dir(test_data_dir):
-    return test_data_dir / ALMANAC_DIR_NAME
 
 
 @pytest.fixture
@@ -272,12 +265,3 @@ def association_catalog_join_pixels() -> pd.DataFrame:
             PartitionJoinInfo.JOIN_PIXEL_COLUMN_NAME: [44, 45, 46, 47],
         }
     )
-
-
-@pytest.fixture
-def default_almanac(almanac_dir, test_data_dir):
-    """Set up default environment variables and fetch default almanac data."""
-    os.environ["HATS_ALMANAC_DIR"] = str(almanac_dir)
-    os.environ["HATS_DEFAULT_DIR"] = str(test_data_dir)
-
-    return Almanac()
