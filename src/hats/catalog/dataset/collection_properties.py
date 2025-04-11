@@ -1,0 +1,129 @@
+import re
+from pathlib import Path
+from typing import Iterable, Optional
+
+from jproperties import Properties
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_validator
+from typing_extensions import Self
+from upath import UPath
+
+from hats.io import file_io
+
+# All additional properties in the HATS recommendation.
+EXTRA_ALLOWED_FIELDS = [
+    "addendum_did",
+    "bib_reference",
+    "bib_reference_url",
+    "creator_did",
+    "data_ucd",
+    "hats_builder",
+    "hats_coordinate_epoch",
+    "hats_copyright",
+    "hats_creation_date",
+    "hats_creator",
+    "hats_estsize",
+    "hats_progenitor_url",
+    "hats_release_date",
+    "hats_service_url",
+    "hats_status",
+    "hats_version",
+    "moc_sky_fraction",
+    "obs_ack",
+    "obs_copyright",
+    "obs_copyright_url",
+    "obs_description",
+    "obs_regime",
+    "obs_title",
+    "prov_progenitor",
+    "publisher_id",
+    "t_max",
+    "t_min",
+]
+
+
+class CollectionProperties(BaseModel):
+    """Container class for catalog metadata"""
+
+    name: str = Field(alias="obs_collection")
+
+    hats_primary_table_url: Optional[str] = Field(default=None, alias="hats_primary_table_url")
+    """Reference to object catalog. Relevant for nested, margin, association, and index."""
+
+    all_margins: Optional[list[str]] = Field(default=None)
+    default_margin: Optional[str] = Field(default=None)
+
+    all_indexes: Optional[list[str]] = Field(default=None)
+    default_index: Optional[str] = Field(default=None)
+
+    ## Allow any extra keyword args to be stored on the properties object.
+    model_config = ConfigDict(extra="allow", populate_by_name=True, use_enum_values=True)
+
+    @field_validator("all_margins", "all_indexes", mode="before")
+    @classmethod
+    def space_delimited_list(cls, str_value: str) -> list[str]:
+        """Convert a space-delimited list string into a python list of strings."""
+        if isinstance(str_value, str):
+            # Split on a few kinds of delimiters (just to be safe), and remove duplicates
+            return list(filter(None, re.split(";| |,|\n", str_value)))
+        ## Convert empty strings and empty lists to None
+        return str_value if str_value else None
+
+    @field_validator("all_indexes", mode="after")
+    @classmethod
+    def index_tuples(cls, all_indexes: list[str]) -> list[str]:
+        """Convert a space-delimited list string into a python list of strings."""
+        if len(all_indexes) % 2 != 0:
+            raise ValueError("Collection all_indexes map should contain pairs of field and index name")
+        return all_indexes
+
+    @field_serializer("all_margins", "all_indexes")
+    def serialize_as_space_delimited_list(self, str_list: Iterable[str]) -> str:
+        """Convert a python list of strings into a space-delimited string."""
+        if str_list is None or len(str_list) == 0:
+            return None
+        return " ".join(str_list)
+
+    @model_validator(mode="after")
+    def check_allowed_and_required(self) -> Self:
+        """Check that type-specific fields are appropriate, and required fields are set."""
+        # Check against all known properties - catches typos.
+        non_allowed = set(self.__pydantic_extra__.keys()) - set(EXTRA_ALLOWED_FIELDS)
+        if len(non_allowed) > 0:
+            raise ValueError(f"Unexpected extra property: {non_allowed}")
+        return self
+
+    def explicit_dict(self):
+        """Create a dict, based on fields that have been explicitly set, and are not "extra" keys."""
+        explicit = self.model_dump(by_alias=False, exclude_none=True)
+        extra_keys = self.__pydantic_extra__.keys()
+        return {key: val for key, val in explicit.items() if key not in extra_keys}
+
+    def __str__(self):
+        """Friendly string representation based on named fields."""
+        parameters = self.explicit_dict()
+        formatted_string = ""
+        for name, value in parameters.items():
+            formatted_string += f"  {name} {value}\n"
+        return formatted_string
+
+    @classmethod
+    def read_from_dir(cls, catalog_dir: str | Path | UPath) -> Self:
+        """Read field values from a java-style properties file."""
+        file_path = file_io.get_upath(catalog_dir) / "collection.properties"
+        if not file_io.does_file_or_directory_exist(file_path):
+            raise FileNotFoundError(f"No properties file found where expected: {str(file_path)}")
+        p = Properties()
+        with file_path.open("rb") as f:
+            p.load(f, "utf-8")
+        return cls(**p.properties)
+
+    def to_properties_file(self, catalog_dir: str | Path | UPath) -> Self:
+        """Write fields to a java-style properties file."""
+        # pylint: disable=protected-access
+        parameters = self.model_dump(by_alias=True, exclude_none=True)
+        properties = Properties()
+        properties.properties = parameters
+        properties._key_order = parameters.keys()
+        file_path = file_io.get_upath(catalog_dir) / "collection.properties"
+        with file_path.open("wb") as _file:
+            properties.store(_file, encoding="utf-8", initial_comments="HATS Collection", timestamp=False)
