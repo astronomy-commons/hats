@@ -1,4 +1,5 @@
 import re
+from functools import reduce
 from pathlib import Path
 from typing import Iterable, Optional
 
@@ -52,35 +53,53 @@ class CollectionProperties(BaseModel):
     all_margins: Optional[list[str]] = Field(default=None)
     default_margin: Optional[str] = Field(default=None)
 
-    all_indexes: Optional[list[str]] = Field(default=None)
+    all_indexes: Optional[dict[str, str]] = Field(default=None)
     default_index: Optional[str] = Field(default=None)
 
     ## Allow any extra keyword args to be stored on the properties object.
     model_config = ConfigDict(extra="allow", populate_by_name=True, use_enum_values=True)
 
-    @field_validator("all_margins", "all_indexes", mode="before")
+    @field_validator("all_margins", mode="before")
     @classmethod
     def space_delimited_list(cls, str_value: str) -> list[str]:
         """Convert a space-delimited list string into a python list of strings."""
-        if isinstance(str_value, str):
-            # Split on a few kinds of delimiters (just to be safe), and remove duplicates
-            return list(filter(None, re.split(";| |,|\n", str_value)))
-        ## Convert empty strings and empty lists to None
-        return str_value if str_value else None
+        if not str_value or not isinstance(str_value, str):
+            ## Convert empty strings and empty lists to None
+            return None
+        # Split on a few kinds of delimiters (just to be safe), and remove duplicates
+        return list(filter(None, re.split(";| |,|\n", str_value)))
 
-    @field_validator("all_indexes", mode="after")
+    @field_validator("all_indexes", mode="before")
     @classmethod
-    def index_tuples(cls, all_indexes: list[str]) -> list[str]:
+    def index_tuples(cls, str_value: str) -> dict[str, str]:
         """Convert a space-delimited list string into a python list of strings."""
-        if len(all_indexes) % 2 != 0:
+        if not str_value or not isinstance(str_value, str):
+            return None
+        # Split on a few kinds of delimiters (just to be safe), and remove duplicates
+        str_values = list(filter(None, re.split(";| |,|\n", str_value)))
+        ## Convert empty strings and empty lists to None
+        if len(str_values) % 2 != 0:
             raise ValueError("Collection all_indexes map should contain pairs of field and index name")
-        return all_indexes
+        all_index_dict = {}
+        for index_start in range(0, len(str_values), 2):
+            key = str_values[index_start]
+            value = str_values[index_start + 1]
+            all_index_dict[key] = value
+        return all_index_dict
 
-    @field_serializer("all_margins", "all_indexes")
-    def serialize_as_space_delimited_list(self, str_list: Iterable[str]) -> str:
+    @field_serializer("all_margins")
+    def serialize_list_as_space_delimited_list(self, str_list: Iterable[str]) -> str:
         """Convert a python list of strings into a space-delimited string."""
         if str_list is None or len(str_list) == 0:
-            return None
+            return ""
+        return " ".join(str_list)
+
+    @field_serializer("all_indexes")
+    def serialize_dict_as_space_delimited_list(self, str_dict: dict[str, str]) -> str:
+        """Convert a python list of strings into a space-delimited string."""
+        if str_dict is None or len(str_dict) == 0:
+            return ""
+        str_list = list(reduce(lambda x, y: x + y, str_dict.items()))
         return " ".join(str_list)
 
     @model_validator(mode="after")
