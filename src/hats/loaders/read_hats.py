@@ -11,6 +11,8 @@ from upath import UPath
 import hats.pixel_math.healpix_shim as hp
 from hats.catalog import AssociationCatalog, Catalog, CatalogType, Dataset, MapCatalog, MarginCatalog
 from hats.catalog.association_catalog.partition_join_info import PartitionJoinInfo
+from hats.catalog.catalog_collection import CatalogCollection
+from hats.catalog.dataset.collection_properties import CollectionProperties
 from hats.catalog.dataset.table_properties import TableProperties
 from hats.catalog.index.index_catalog import IndexCatalog
 from hats.catalog.partition_info import PartitionInfo
@@ -27,7 +29,7 @@ DATASET_TYPE_TO_CLASS = {
 }
 
 
-def read_hats(catalog_path: str | Path | UPath) -> Dataset:
+def read_hats(catalog_path: str | Path | UPath) -> CatalogCollection | Dataset:
     """Reads a HATS Catalog from a HATS directory
 
     Args:
@@ -43,6 +45,22 @@ def read_hats(catalog_path: str | Path | UPath) -> Dataset:
             catalog = hats.read_hats(UPath(..., anon=True))
     """
     catalog_path = file_io.get_upath(catalog_path)
+    main_catalog, margin_catalog, index_catalog = None, None, None
+    try:
+        collection_properties = CollectionProperties.read_from_dir(catalog_path)
+        if collection_properties.hats_primary_table_url:
+            main_catalog = _load_catalog(catalog_path / collection_properties.hats_primary_table_url)
+        if collection_properties.default_margin:
+            margin_catalog = _load_catalog(catalog_path / collection_properties.default_margin)
+        if collection_properties.default_index:
+            index_catalog_path = collection_properties.all_indexes[collection_properties.default_index]
+            index_catalog = _load_catalog(catalog_path / index_catalog_path)
+        return CatalogCollection(collection_properties, main_catalog, margin_catalog, index_catalog)
+    except FileNotFoundError:
+        return _load_catalog(catalog_path)
+
+
+def _load_catalog(catalog_path: str | Path | UPath) -> Dataset:
     try:
         properties = TableProperties.read_from_dir(catalog_path)
         dataset_type = properties.catalog_type

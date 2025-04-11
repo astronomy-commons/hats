@@ -1,5 +1,35 @@
+from hats.catalog import Catalog, MarginCatalog
+from hats.catalog.catalog_collection import CatalogCollection
+from hats.catalog.index.index_catalog import IndexCatalog
 from hats.io.file_io import get_upath_for_protocol
 from hats.loaders import read_hats
+
+
+def test_read_hats_collection(
+    small_sky_collection_dir, small_sky_order1_dir, margin_catalog_path, small_sky_order1_id_index_dir
+):
+    collection = read_hats(small_sky_collection_dir)
+    assert isinstance(collection, CatalogCollection)
+
+    assert isinstance(collection.main_catalog, Catalog)
+    main_catalog = read_hats(small_sky_order1_dir)
+    assert collection.main_catalog.catalog_name == main_catalog.catalog_name
+    assert collection.main_catalog.catalog_info == main_catalog.catalog_info
+    assert collection.get_healpix_pixels() == main_catalog.get_healpix_pixels()
+    assert collection.main_catalog.schema == main_catalog.schema
+
+    assert isinstance(collection.margin_catalog, MarginCatalog)
+    margin_catalog = read_hats(margin_catalog_path)
+    assert collection.margin_catalog.catalog_name == margin_catalog.catalog_name
+    assert collection.margin_catalog.catalog_info == margin_catalog.catalog_info
+    assert collection.margin_catalog.get_healpix_pixels() == margin_catalog.get_healpix_pixels()
+    assert collection.margin_catalog.schema == margin_catalog.schema
+
+    assert isinstance(collection.index_catalog, IndexCatalog)
+    index_catalog = read_hats(small_sky_order1_id_index_dir)
+    assert collection.default_index_catalog_dir == index_catalog.catalog_name
+    assert collection.index_catalog.catalog_info == index_catalog.catalog_info
+    assert collection.index_catalog.schema == index_catalog.schema
 
 
 def test_read_hats_branches(
