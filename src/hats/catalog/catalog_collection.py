@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from hats.catalog import Catalog, MarginCatalog
 from hats.catalog.dataset.collection_properties import CollectionProperties
-from hats.catalog.healpix_dataset.healpix_dataset import HealpixDataset
 from hats.catalog.index.index_catalog import IndexCatalog
 from hats.pixel_math import HealpixPixel
 
@@ -28,7 +27,7 @@ class CatalogCollection:
     def __init__(
         self,
         collection_properties: CollectionProperties,
-        main_catalog: HealpixDataset | None = None,
+        main_catalog: Catalog | None = None,
         margin_catalog: MarginCatalog | None = None,
         index_catalog: IndexCatalog | None = None,
     ):

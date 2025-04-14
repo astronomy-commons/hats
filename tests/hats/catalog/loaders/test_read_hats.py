@@ -1,3 +1,5 @@
+import pytest
+
 from hats.catalog import Catalog, MarginCatalog
 from hats.catalog.catalog_collection import CatalogCollection
 from hats.catalog.index.index_catalog import IndexCatalog
@@ -30,6 +32,11 @@ def test_read_hats_collection(
     assert collection.default_index_catalog_dir == index_catalog.catalog_name
     assert collection.index_catalog.catalog_info == index_catalog.catalog_info
     assert collection.index_catalog.schema == index_catalog.schema
+
+
+def test_read_hats_collection_info_only(collection_path):
+    with pytest.raises(FileNotFoundError, match="collection"):
+        read_hats(collection_path)
 
 
 def test_read_hats_branches(

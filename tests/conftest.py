@@ -198,6 +198,11 @@ def catalog_path(test_data_dir) -> str:
 
 
 @pytest.fixture
+def collection_path(test_data_dir) -> str:
+    return test_data_dir / "info_only" / "collection"
+
+
+@pytest.fixture
 def margin_catalog_pixels() -> list[HealpixPixel]:
     return [
         HealpixPixel(0, 4),
