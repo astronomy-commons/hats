@@ -34,21 +34,26 @@ class CatalogCollection:
         self.collection_properties = collection_properties
 
         if main_catalog and not isinstance(main_catalog, Catalog):
-            raise ValueError("Main catalog is not of type `Catalog`")
+            raise ValueError(f"HATS at {main_catalog.catalog_path} is not of type `Catalog`")
         self.main_catalog = main_catalog
 
         if margin_catalog and not isinstance(margin_catalog, MarginCatalog):
-            raise ValueError("Main catalog is not of type `MarginCatalog`")
+            raise ValueError(f"HATS at {margin_catalog.catalog_path} is not of type `MarginCatalog`")
         self.margin_catalog = margin_catalog
 
         if index_catalog and not isinstance(index_catalog, IndexCatalog):
-            raise ValueError("Index catalog is not of type `IndexCatalog`")
+            raise ValueError(f"HATS at {index_catalog.catalog_path} is not of type `IndexCatalog`")
         self.index_catalog = index_catalog
 
     @property
     def main_catalog_dir(self) -> str:
         """Path to the main catalog directory"""
-        return self.collection_properties.main_catalog_dir
+        return self.collection_properties.hats_primary_table_url
+
+    @property
+    def margin_catalog_dir(self) -> str:
+        """Path to the margin catalog directory"""
+        return self.collection_properties.default_margin
 
     @property
     def default_index_field(self) -> str:
@@ -58,7 +63,7 @@ class CatalogCollection:
     @property
     def default_index_catalog_dir(self) -> str:
         """Path to the default index catalog directory"""
-        return self.collection_properties.all_indexes[self.default_index_field]
+        return self.collection_properties.default_index_dir
 
     def get_healpix_pixels(self) -> list[HealpixPixel] | None:
         """The list of HEALPix pixels of the main catalog"""

@@ -111,6 +111,14 @@ class CollectionProperties(BaseModel):
             raise ValueError(f"Unexpected extra property: {non_allowed}")
         return self
 
+    @model_validator(mode="after")
+    def check_default_index_exists(self) -> Self:
+        """Check that the default index is in the list of all indexes."""
+        if self.default_index is not None and self.all_indexes is not None:
+            if self.default_index not in self.all_indexes:
+                raise ValueError(f"Collection default_index {self.default_index} not found in all_indexes")
+        return self
+
     def explicit_dict(self):
         """Create a dict, based on fields that have been explicitly set, and are not "extra" keys."""
         explicit = self.model_dump(by_alias=False, exclude_none=True)
@@ -146,3 +154,8 @@ class CollectionProperties(BaseModel):
         file_path = file_io.get_upath(catalog_dir) / "collection.properties"
         with file_path.open("wb") as _file:
             properties.store(_file, encoding="utf-8", initial_comments="HATS Collection", timestamp=False)
+
+    @property
+    def default_index_dir(self) -> str:
+        """Path to the default index catalog directory"""
+        return self.all_indexes[self.default_index]

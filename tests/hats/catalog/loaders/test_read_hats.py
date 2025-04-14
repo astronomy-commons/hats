@@ -1,7 +1,10 @@
+import shutil
+
 import pytest
 
 from hats.catalog import Catalog, MarginCatalog
 from hats.catalog.catalog_collection import CatalogCollection
+from hats.catalog.dataset.collection_properties import CollectionProperties
 from hats.catalog.index.index_catalog import IndexCatalog
 from hats.io.file_io import get_upath_for_protocol
 from hats.loaders import read_hats
@@ -15,27 +18,51 @@ def test_read_hats_collection(
 
     assert isinstance(collection.main_catalog, Catalog)
     main_catalog = read_hats(small_sky_order1_dir)
-    assert collection.main_catalog.catalog_name == main_catalog.catalog_name
+    assert collection.main_catalog_dir == main_catalog.catalog_name
     assert collection.main_catalog.catalog_info == main_catalog.catalog_info
     assert collection.get_healpix_pixels() == main_catalog.get_healpix_pixels()
     assert collection.main_catalog.schema == main_catalog.schema
 
     assert isinstance(collection.margin_catalog, MarginCatalog)
     margin_catalog = read_hats(margin_catalog_path)
-    assert collection.margin_catalog.catalog_name == margin_catalog.catalog_name
+    assert collection.margin_catalog_dir == margin_catalog.catalog_name
     assert collection.margin_catalog.catalog_info == margin_catalog.catalog_info
     assert collection.margin_catalog.get_healpix_pixels() == margin_catalog.get_healpix_pixels()
     assert collection.margin_catalog.schema == margin_catalog.schema
 
     assert isinstance(collection.index_catalog, IndexCatalog)
     index_catalog = read_hats(small_sky_order1_id_index_dir)
+    assert collection.default_index_field == "id"
     assert collection.default_index_catalog_dir == index_catalog.catalog_name
     assert collection.index_catalog.catalog_info == index_catalog.catalog_info
     assert collection.index_catalog.schema == index_catalog.schema
 
 
+@pytest.mark.parametrize("incorrect_catalog", ["main_catalog", "margin_catalog", "index_catalog"])
+def test_read_hats_collection_catalogs_not_of_correct_type(
+    small_sky_collection_dir, incorrect_catalog, tmp_path
+):
+    """Test that the catalogs need to be of the correct type"""
+    collection_base_dir = tmp_path / "collection"
+    shutil.copytree(small_sky_collection_dir, collection_base_dir)
+    assert collection_base_dir.exists()
+
+    # Modify the collection properties to invalidate a single catalog
+    collection_properties = CollectionProperties.read_from_dir(collection_base_dir)
+    if incorrect_catalog == "main_catalog":
+        collection_properties.hats_primary_table_url = "small_sky_order1_margin"
+    elif incorrect_catalog == "margin_catalog":
+        collection_properties.default_margin = "small_sky_order1_id_index"
+    else:
+        collection_properties.all_indexes["id"] = "small_sky_order1_margin"
+    collection_properties.to_properties_file(collection_base_dir)
+
+    with pytest.raises(FileNotFoundError):
+        read_hats(collection_base_dir)
+
+
 def test_read_hats_collection_info_only(collection_path):
-    with pytest.raises(FileNotFoundError, match="collection"):
+    with pytest.raises(FileNotFoundError):
         read_hats(collection_path)
 
 

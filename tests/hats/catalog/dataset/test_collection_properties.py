@@ -127,3 +127,11 @@ def test_read_collection_from_file_round_trip(small_sky_collection_dir, tmp_path
         **round_trip_properties.model_dump(by_alias=False, exclude_none=True)
     )
     assert table_properties == kwarg_properties
+
+
+def test_read_collection_default_index_not_found(small_sky_collection_dir, tmp_path):
+    table_properties = CollectionProperties.read_from_dir(small_sky_collection_dir)
+    table_properties.default_index = "obj_name"
+    table_properties.to_properties_file(tmp_path)
+    with pytest.raises(ValueError, match="obj_name not found in all_indexes"):
+        CollectionProperties.read_from_dir(tmp_path)
