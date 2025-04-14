@@ -47,7 +47,7 @@ class CollectionProperties(BaseModel):
 
     name: str = Field(alias="obs_collection")
 
-    hats_primary_table_url: Optional[str] = Field(default=None, alias="hats_primary_table_url")
+    hats_primary_table_url: str = Field(..., alias="hats_primary_table_url")
     """Reference to object catalog. Relevant for nested, margin, association, and index."""
 
     all_margins: Optional[list[str]] = Field(default=None)

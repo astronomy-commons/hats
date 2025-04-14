@@ -29,7 +29,7 @@ DATASET_TYPE_TO_CLASS = {
 }
 
 
-def read_hats(catalog_path: str | Path | UPath) -> CatalogCollection | Dataset:
+def read_hats(path: str | Path | UPath) -> CatalogCollection | Dataset:
     """Reads a HATS Catalog from a HATS directory
 
     Args:
@@ -44,31 +44,32 @@ def read_hats(catalog_path: str | Path | UPath) -> CatalogCollection | Dataset:
             from upath import UPath
             catalog = hats.read_hats(UPath(..., anon=True))
     """
-    catalog_path = file_io.get_upath(catalog_path)
+    path = file_io.get_upath(path)
     try:
-        collection_properties = CollectionProperties.read_from_dir(catalog_path)
+        collection_properties = CollectionProperties.read_from_dir(path)
     except FileNotFoundError:
-        return _load_catalog(catalog_path)
-    return _load_collection(catalog_path, collection_properties)
+        return _load_catalog(path)
+    return _load_collection(path, collection_properties)
 
 
 def _load_collection(
-    catalog_path: str | Path | UPath, collection_properties: CollectionProperties
+    collection_path: UPath, collection_properties: CollectionProperties
 ) -> CatalogCollection:
     main_catalog, margin_catalog, index_catalog = None, None, None
     try:
-        if collection_properties.hats_primary_table_url:
-            main_catalog = _load_catalog(catalog_path / collection_properties.hats_primary_table_url)
+        main_catalog = _load_catalog(collection_path / collection_properties.hats_primary_table_url)
         if collection_properties.default_margin:
-            margin_catalog = _load_catalog(catalog_path / collection_properties.default_margin)
+            margin_catalog = _load_catalog(collection_path / collection_properties.default_margin)
         if collection_properties.default_index:
-            index_catalog = _load_catalog(catalog_path / collection_properties.default_index_dir)
-        return CatalogCollection(collection_properties, main_catalog, margin_catalog, index_catalog)
+            index_catalog = _load_catalog(collection_path / collection_properties.default_index_dir)
+        return CatalogCollection(
+            collection_path, collection_properties, main_catalog, margin_catalog, index_catalog
+        )
     except Exception as exception:  # pylint: disable=broad-except
-        raise FileNotFoundError(f"Failed to read collection at location {catalog_path}") from exception
+        raise FileNotFoundError(f"Failed to read collection at location {collection_path}") from exception
 
 
-def _load_catalog(catalog_path: str | Path | UPath) -> Dataset:
+def _load_catalog(catalog_path: UPath) -> Dataset:
     try:
         properties = TableProperties.read_from_dir(catalog_path)
         dataset_type = properties.catalog_type
