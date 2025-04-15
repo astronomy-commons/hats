@@ -12,17 +12,17 @@ class CatalogCollection:
 
     Catalogs of this type are described by a `collection.properties` file which specifies
     the underlying main catalog, margin catalog and index catalog paths. These catalogs are
-    stored at the root of the collection, one in its separate directory:
+    stored at the root of the collection, each in its separate directory::
 
-    catalog_collection/
-    ├── main_catalog/
-    ├── margin_catalog/
-    ├── index_catalog/
-    ├── collection.properties
+        catalog_collection/
+        ├── main_catalog/
+        ├── margin_catalog/
+        ├── index_catalog/
+        ├── collection.properties
 
     Margin and index catalogs are optional but there could also be multiple of them. The
-    catalogs loaded by default are also specified in the `collection.properties` file in
-    the `default_margin` and `default_index` keywords.
+    catalogs loaded by default are specified in the `collection.properties` file in the
+    `default_margin` and `default_index` keywords.
     """
 
     def __init__(
