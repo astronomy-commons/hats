@@ -55,16 +55,9 @@ def read_hats(path: str | Path | UPath) -> CatalogCollection | Dataset:
 def _load_collection(
     collection_path: UPath, collection_properties: CollectionProperties
 ) -> CatalogCollection:
-    main_catalog, margin_catalog, index_catalog = None, None, None
     try:
         main_catalog = _load_catalog(collection_path / collection_properties.hats_primary_table_url)
-        if collection_properties.default_margin:
-            margin_catalog = _load_catalog(collection_path / collection_properties.default_margin)
-        if collection_properties.default_index:
-            index_catalog = _load_catalog(collection_path / collection_properties.default_index_dir)
-        return CatalogCollection(
-            collection_path, collection_properties, main_catalog, margin_catalog, index_catalog
-        )
+        return CatalogCollection(collection_path, collection_properties, main_catalog)
     except Exception as exception:  # pylint: disable=broad-except
         raise FileNotFoundError(f"Failed to read collection at location {collection_path}") from exception
 

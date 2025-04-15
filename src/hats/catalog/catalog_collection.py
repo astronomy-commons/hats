@@ -2,9 +2,8 @@ from __future__ import annotations
 
 from upath import UPath
 
-from hats.catalog import Catalog, MarginCatalog
+from hats.catalog import Catalog
 from hats.catalog.dataset.collection_properties import CollectionProperties
-from hats.catalog.index.index_catalog import IndexCatalog
 from hats.pixel_math import HealpixPixel
 
 
@@ -31,8 +30,6 @@ class CatalogCollection:
         collection_path: UPath,
         collection_properties: CollectionProperties,
         main_catalog: Catalog,
-        margin_catalog: MarginCatalog | None = None,
-        index_catalog: IndexCatalog | None = None,
     ):
         self.collection_path = collection_path
         self.collection_properties = collection_properties
@@ -41,23 +38,25 @@ class CatalogCollection:
             raise TypeError(f"HATS at {main_catalog.catalog_path} is not of type `Catalog`")
         self.main_catalog = main_catalog
 
-        if margin_catalog and not isinstance(margin_catalog, MarginCatalog):
-            raise TypeError(f"HATS at {margin_catalog.catalog_path} is not of type `MarginCatalog`")
-        self.margin_catalog = margin_catalog
-
-        if index_catalog and not isinstance(index_catalog, IndexCatalog):
-            raise TypeError(f"HATS at {index_catalog.catalog_path} is not of type `IndexCatalog`")
-        self.index_catalog = index_catalog
-
     @property
-    def main_catalog_dir(self) -> str:
+    def main_catalog_dir(self) -> UPath:
         """Path to the main catalog directory"""
         return self.collection_path / self.collection_properties.hats_primary_table_url
 
     @property
-    def margin_catalog_dir(self) -> str:
-        """Path to the margin catalog directory"""
+    def all_margins(self) -> str:
+        """The list of margin catalog names in the collection"""
+        return self.collection_properties.all_margins
+
+    @property
+    def default_margin_catalog_dir(self) -> UPath:
+        """Path to the default margin catalog directory"""
         return self.collection_path / self.collection_properties.default_margin
+
+    @property
+    def all_indexes(self) -> str:
+        """The mapping of indexes in the collection"""
+        return self.collection_properties.all_indexes
 
     @property
     def default_index_field(self) -> str:
@@ -65,9 +64,10 @@ class CatalogCollection:
         return self.collection_properties.default_index
 
     @property
-    def default_index_catalog_dir(self) -> str:
+    def default_index_catalog_dir(self) -> UPath:
         """Path to the default index catalog directory"""
-        return self.collection_path / self.collection_properties.default_index_dir
+        default_index_dir = self.all_indexes[self.default_index_field]
+        return self.collection_path / default_index_dir
 
     def get_healpix_pixels(self) -> list[HealpixPixel]:
         """The list of HEALPix pixels of the main catalog"""

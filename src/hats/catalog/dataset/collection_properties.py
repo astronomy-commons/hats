@@ -154,8 +154,3 @@ class CollectionProperties(BaseModel):
         file_path = file_io.get_upath(catalog_dir) / "collection.properties"
         with file_path.open("wb") as _file:
             properties.store(_file, encoding="utf-8", initial_comments="HATS Collection", timestamp=False)
-
-    @property
-    def default_index_dir(self) -> str:
-        """Path to the default index catalog directory"""
-        return self.all_indexes[self.default_index]
