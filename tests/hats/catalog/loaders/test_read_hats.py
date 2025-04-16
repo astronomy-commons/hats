@@ -21,7 +21,7 @@ def test_read_hats_collection(small_sky_collection_dir, small_sky_order1_catalog
     assert collection.get_healpix_pixels() == small_sky_order1_catalog.get_healpix_pixels()
 
 
-def test_read_hats_collection_main_catalog_is_invalid(small_sky_collection_dir, tmp_path):
+def test_read_hats_collection_main_catalog_invalid(small_sky_collection_dir, tmp_path):
     """Test that the main catalog is of the correct `Catalog` type"""
     collection_base_dir = tmp_path / "collection"
     shutil.copytree(small_sky_collection_dir, collection_base_dir)
@@ -33,13 +33,51 @@ def test_read_hats_collection_main_catalog_is_invalid(small_sky_collection_dir, 
         read_hats(collection_base_dir)
 
 
-def test_read_hats_get_index_for_field(small_sky_collection_dir):
-    collection = read_hats(small_sky_collection_dir)
-    assert isinstance(collection, CatalogCollection)
-    index_dir = small_sky_collection_dir / "small_sky_order1_id_index"
-    assert collection.get_index_dir_for_field("id") == index_dir
+def test_read_hats_default_margin_not_specified(small_sky_collection_dir, tmp_path):
+    collection_base_dir = tmp_path / "collection"
+    shutil.copytree(small_sky_collection_dir, collection_base_dir)
+    assert collection_base_dir.exists()
+    collection_properties = CollectionProperties.read_from_dir(collection_base_dir)
+    collection_properties.default_margin = None
+    collection_properties.to_properties_file(collection_base_dir)
+    collection = read_hats(collection_base_dir)
+    assert collection.default_margin_catalog_dir is None
+
+
+def test_read_hats_default_index_not_specified(small_sky_collection_dir, tmp_path):
+    collection_base_dir = tmp_path / "collection"
+    shutil.copytree(small_sky_collection_dir, collection_base_dir)
+    assert collection_base_dir.exists()
+    collection_properties = CollectionProperties.read_from_dir(collection_base_dir)
+    collection_properties.default_index = None
+    collection_properties.to_properties_file(collection_base_dir)
+    collection = read_hats(collection_base_dir)
+    assert collection.default_index_catalog_dir is None
+
+
+def test_read_hats_index_dir_for_field(small_sky_collection_dir, tmp_path):
+    collection_base_dir = tmp_path / "collection"
+    shutil.copytree(small_sky_collection_dir, collection_base_dir)
+    assert collection_base_dir.exists()
+
+    collection = read_hats(collection_base_dir)
+
+    # If no field specified, the default index dir is returned
+    assert collection.default_index_field == "id"
+    assert collection.get_index_dir_for_field() == collection.get_index_dir_for_field("id")
+
+    # There are indexes but none match the field name
     with pytest.raises(ValueError, match="not specified"):
         collection.get_index_dir_for_field("name")
+
+    # There are no indexes available
+    collection_properties = CollectionProperties.read_from_dir(collection_base_dir)
+    collection_properties.all_indexes = None
+    collection_properties.default_index = None
+    collection_properties.to_properties_file(collection_base_dir)
+    collection = read_hats(collection_base_dir)
+    with pytest.raises(ValueError, match="not specified"):
+        collection.get_index_dir_for_field("id")
 
 
 def test_read_hats_collection_info_only(collection_path):

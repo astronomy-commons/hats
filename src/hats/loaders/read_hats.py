@@ -29,7 +29,7 @@ DATASET_TYPE_TO_CLASS = {
 }
 
 
-def read_hats(path: str | Path | UPath) -> CatalogCollection | Dataset:
+def read_hats(catalog_path: str | Path | UPath) -> CatalogCollection | Dataset:
     """Reads a HATS Catalog from a HATS directory
 
     Args:
@@ -44,7 +44,7 @@ def read_hats(path: str | Path | UPath) -> CatalogCollection | Dataset:
             from upath import UPath
             catalog = hats.read_hats(UPath(..., anon=True))
     """
-    path = file_io.get_upath(path)
+    path = file_io.get_upath(catalog_path)
     try:
         collection_properties = CollectionProperties.read_from_dir(path)
         return _load_collection(path, collection_properties)

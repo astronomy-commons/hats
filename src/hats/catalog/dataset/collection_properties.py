@@ -112,11 +112,23 @@ class CollectionProperties(BaseModel):
         return self
 
     @model_validator(mode="after")
+    def check_default_margin_exists(self) -> Self:
+        """Check that the default margin is in the list of all margins."""
+        if self.default_margin is not None:
+            if self.all_margins is None:
+                raise ValueError("all_margins needs to be set if default_margin is set")
+            if self.default_margin not in self.all_margins:
+                raise ValueError(f"default_margin `{self.default_margin}` not found in all_margins")
+        return self
+
+    @model_validator(mode="after")
     def check_default_index_exists(self) -> Self:
         """Check that the default index is in the list of all indexes."""
-        if self.default_index is not None and self.all_indexes is not None:
+        if self.default_index is not None:
+            if self.all_indexes is None:
+                raise ValueError("all_indexes needs to be set if default_index is set")
             if self.default_index not in self.all_indexes:
-                raise ValueError(f"Collection default_index {self.default_index} not found in all_indexes")
+                raise ValueError(f"default_index `{self.default_index}` not found in all_indexes")
         return self
 
     def explicit_dict(self):
