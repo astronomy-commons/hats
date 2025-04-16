@@ -44,7 +44,7 @@ class CatalogCollection:
         return self.collection_path / self.collection_properties.hats_primary_table_url
 
     @property
-    def all_margins(self) -> str:
+    def all_margins(self) -> list[str]:
         """The list of margin catalog names in the collection"""
         return self.collection_properties.all_margins
 
@@ -54,7 +54,7 @@ class CatalogCollection:
         return self.collection_path / self.collection_properties.default_margin
 
     @property
-    def all_indexes(self) -> str:
+    def all_indexes(self) -> dict[str, str]:
         """The mapping of indexes in the collection"""
         return self.collection_properties.all_indexes
 
@@ -68,6 +68,13 @@ class CatalogCollection:
         """Path to the default index catalog directory"""
         default_index_dir = self.all_indexes[self.default_index_field]
         return self.collection_path / default_index_dir
+
+    def get_index_dir_for_field(self, field_name: str) -> UPath:
+        """Path to the field's index catalog directory"""
+        if field_name not in self.all_indexes:
+            raise ValueError(f"Index for field {field_name} is not specified")
+        index_dir = self.all_indexes[field_name]
+        return self.collection_path / index_dir
 
     def get_healpix_pixels(self) -> list[HealpixPixel]:
         """The list of HEALPix pixels of the main catalog"""

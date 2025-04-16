@@ -33,6 +33,15 @@ def test_read_hats_collection_main_catalog_is_invalid(small_sky_collection_dir, 
         read_hats(collection_base_dir)
 
 
+def test_read_hats_get_index_for_field(small_sky_collection_dir):
+    collection = read_hats(small_sky_collection_dir)
+    assert isinstance(collection, CatalogCollection)
+    index_dir = small_sky_collection_dir / "small_sky_order1_id_index"
+    assert collection.get_index_dir_for_field("id") == index_dir
+    with pytest.raises(ValueError, match="not specified"):
+        collection.get_index_dir_for_field("name")
+
+
 def test_read_hats_collection_info_only(collection_path):
     with pytest.raises(FileNotFoundError):
         read_hats(collection_path)
