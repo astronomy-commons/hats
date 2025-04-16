@@ -15,17 +15,17 @@ from mocpy.moc.plot import fill
 from mocpy.moc.plot.culling_backfacing_cells import from_moc
 from mocpy.moc.plot.utils import build_plotting_moc
 
+import hats.pixel_math.healpix_shim as hp
 from hats import read_hats
 from hats.inspection import plot_density, plot_pixels
 from hats.inspection.visualize_catalog import (
     compute_healpix_vertices,
     cull_from_pixel_map,
     cull_to_fov,
+    get_fov_moc_from_wcs,
     plot_healpix_map,
     plot_moc,
-    get_fov_moc_from_wcs,
 )
-import hats.pixel_math.healpix_shim as hp
 
 # pylint: disable=no-member
 
