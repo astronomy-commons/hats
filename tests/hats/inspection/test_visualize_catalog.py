@@ -262,7 +262,7 @@ def test_fov_moc():
         projection=DEFAULT_PROJECTION,
     ).w
     fov_moc = get_fov_moc_from_wcs(wcs)
-    fov_hp_order = hp.avgsize2order((fov[0] / 4).value * 3600)
+    fov_hp_order = hp.avgsize2order((fov[0]).value * 3600)
     assert fov_moc.max_order >= fov_hp_order
     ras_in = np.linspace(center.ra - (fov[0] / 2), center.ra + (fov[0] / 2))
     decs_in = np.linspace(center.dec - (fov[1] / 2), center.dec + (fov[1] / 2))
@@ -285,7 +285,7 @@ def test_fov_moc_small():
         projection=DEFAULT_PROJECTION,
     ).w
     fov_moc = get_fov_moc_from_wcs(wcs)
-    fov_hp_order = hp.avgsize2order((fov[0] / 4).value)
+    fov_hp_order = hp.avgsize2order((fov[0]).value)
     assert fov_moc.max_order >= fov_hp_order
     ras_in = np.linspace(center.ra - (fov[0] / 2), center.ra + (fov[0] / 2))
     decs_in = np.linspace(center.dec - (fov[1] / 2), center.dec + (fov[1] / 2))
