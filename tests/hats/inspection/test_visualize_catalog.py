@@ -23,7 +23,9 @@ from hats.inspection.visualize_catalog import (
     cull_to_fov,
     plot_healpix_map,
     plot_moc,
+    get_fov_moc_from_wcs,
 )
+import hats.pixel_math.healpix_shim as hp
 
 # pylint: disable=no-member
 
@@ -245,6 +247,52 @@ def test_cull_from_pixel_map():
         np.testing.assert_array_equal(pixels, mocpy_culled[str(iter_ord)])
         map_indices = pixels >> (2 * (iter_ord - order))
         np.testing.assert_array_equal(m, pix_map[map_indices])
+
+
+def test_fov_moc():
+    fig = plt.figure(figsize=(10, 5))
+    fov = (20 * u.deg, 10 * u.deg)
+    center = SkyCoord(10, 10, unit="deg", frame="icrs")
+    wcs = WCS(
+        fig,
+        fov=fov,
+        center=center,
+        coordsys=DEFAULT_COORDSYS,
+        rotation=DEFAULT_ROTATION,
+        projection=DEFAULT_PROJECTION,
+    ).w
+    fov_moc = get_fov_moc_from_wcs(wcs)
+    fov_hp_order = hp.avgsize2order((fov[0] / 4).value * 3600)
+    assert fov_moc.max_order >= fov_hp_order
+    ras_in = np.linspace(center.ra - (fov[0] / 2), center.ra + (fov[0] / 2))
+    decs_in = np.linspace(center.dec - (fov[1] / 2), center.dec + (fov[1] / 2))
+    assert np.all(fov_moc.contains_lonlat(ras_in, decs_in))
+    ras_out = np.linspace(-180 * u.deg, center.ra - 3 * (fov[0]))
+    decs_out = np.linspace(-90 * u.deg, center.dec - 3 * (fov[1]))
+    assert not np.any(fov_moc.contains_lonlat(ras_out, decs_out))
+
+
+def test_fov_moc_small():
+    fig = plt.figure(figsize=(10, 5))
+    fov = (20 * u.arcsec, 10 * u.arcsec)
+    center = SkyCoord(10, 10, unit="deg", frame="icrs")
+    wcs = WCS(
+        fig,
+        fov=fov,
+        center=center,
+        coordsys=DEFAULT_COORDSYS,
+        rotation=DEFAULT_ROTATION,
+        projection=DEFAULT_PROJECTION,
+    ).w
+    fov_moc = get_fov_moc_from_wcs(wcs)
+    fov_hp_order = hp.avgsize2order((fov[0] / 4).value)
+    assert fov_moc.max_order >= fov_hp_order
+    ras_in = np.linspace(center.ra - (fov[0] / 2), center.ra + (fov[0] / 2))
+    decs_in = np.linspace(center.dec - (fov[1] / 2), center.dec + (fov[1] / 2))
+    assert np.all(fov_moc.contains_lonlat(ras_in, decs_in))
+    ras_out = np.linspace(-180 * u.deg, center.ra - 3 * (fov[0]))
+    decs_out = np.linspace(-90 * u.deg, center.dec - 3 * (fov[1]))
+    assert not np.any(fov_moc.contains_lonlat(ras_out, decs_out))
 
 
 def test_cull_to_fov():
