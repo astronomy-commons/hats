@@ -47,9 +47,9 @@ def read_hats(path: str | Path | UPath) -> CatalogCollection | Dataset:
     path = file_io.get_upath(path)
     try:
         collection_properties = CollectionProperties.read_from_dir(path)
+        return _load_collection(path, collection_properties)
     except FileNotFoundError:
         return _load_catalog(path)
-    return _load_collection(path, collection_properties)
 
 
 def _load_collection(

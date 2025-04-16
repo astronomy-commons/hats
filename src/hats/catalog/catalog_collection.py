@@ -21,7 +21,7 @@ class CatalogCollection:
         ├── collection.properties
 
     Margin and index catalogs are optional but there could also be multiple of them. The
-    catalogs loaded by default are specified in the `collection.properties` file in the
+    catalogs used by default are specified in the `collection.properties` file in the
     `default_margin` and `default_index` keywords.
     """
 
