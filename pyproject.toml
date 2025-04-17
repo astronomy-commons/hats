@@ -22,7 +22,7 @@ dependencies = [
     "astropy",
     "fsspec>=2023.10.0", # Used for abstract filesystems
     "jproperties",
-    "matplotlib>=3.3,<3.9",
+    "matplotlib>=3.3",
     "mocpy>=0.17.1",
     "numba>=0.58",
     "numpy<3", 

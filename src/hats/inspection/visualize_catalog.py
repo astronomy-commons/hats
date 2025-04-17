@@ -246,8 +246,16 @@ def get_fov_moc_from_wcs(wcs: WCS) -> MOC | None:
     if np.isnan(ra_deg).any() or np.isnan(dec_deg).any():
         return None
 
-    # Create a rough MOC (depth=3 is sufficient) from the viewport
-    moc_viewport = MOC.from_polygon_skycoord(viewport, max_depth=3)
+    max_distance = np.max([np.ptp(ra_deg), np.ptp(dec_deg)])
+
+    # max_depth for moc calculated from (very) approximate max distance between points in the viewport
+    # distance divided by 4 to make sure moc pixel size < viewport size
+    # min max depth of 3 to match original mocpy method
+    max_depth = hp.avgsize2order((max_distance / 4) * 60)
+
+    max_depth = np.max([max_depth, 3])
+
+    moc_viewport = MOC.from_polygon_skycoord(viewport, max_depth=max_depth)
     return moc_viewport
 
 
