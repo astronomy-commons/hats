@@ -47,7 +47,7 @@ class CollectionProperties(BaseModel):
 
     name: str = Field(alias="obs_collection")
 
-    hats_primary_table_url: Optional[str] = Field(default=None, alias="hats_primary_table_url")
+    hats_primary_table_url: str = Field(..., alias="hats_primary_table_url")
     """Reference to object catalog. Relevant for nested, margin, association, and index."""
 
     all_margins: Optional[list[str]] = Field(default=None)
@@ -109,6 +109,26 @@ class CollectionProperties(BaseModel):
         non_allowed = set(self.__pydantic_extra__.keys()) - set(EXTRA_ALLOWED_FIELDS)
         if len(non_allowed) > 0:
             raise ValueError(f"Unexpected extra property: {non_allowed}")
+        return self
+
+    @model_validator(mode="after")
+    def check_default_margin_exists(self) -> Self:
+        """Check that the default margin is in the list of all margins."""
+        if self.default_margin is not None:
+            if self.all_margins is None:
+                raise ValueError("all_margins needs to be set if default_margin is set")
+            if self.default_margin not in self.all_margins:
+                raise ValueError(f"default_margin `{self.default_margin}` not found in all_margins")
+        return self
+
+    @model_validator(mode="after")
+    def check_default_index_exists(self) -> Self:
+        """Check that the default index is in the list of all indexes."""
+        if self.default_index is not None:
+            if self.all_indexes is None:
+                raise ValueError("all_indexes needs to be set if default_index is set")
+            if self.default_index not in self.all_indexes:
+                raise ValueError(f"default_index `{self.default_index}` not found in all_indexes")
         return self
 
     def explicit_dict(self):

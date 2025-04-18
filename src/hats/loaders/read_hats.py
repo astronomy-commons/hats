@@ -11,6 +11,8 @@ from upath import UPath
 import hats.pixel_math.healpix_shim as hp
 from hats.catalog import AssociationCatalog, Catalog, CatalogType, Dataset, MapCatalog, MarginCatalog
 from hats.catalog.association_catalog.partition_join_info import PartitionJoinInfo
+from hats.catalog.catalog_collection import CatalogCollection
+from hats.catalog.dataset.collection_properties import CollectionProperties
 from hats.catalog.dataset.table_properties import TableProperties
 from hats.catalog.index.index_catalog import IndexCatalog
 from hats.catalog.partition_info import PartitionInfo
@@ -27,7 +29,7 @@ DATASET_TYPE_TO_CLASS = {
 }
 
 
-def read_hats(catalog_path: str | Path | UPath) -> Dataset:
+def read_hats(catalog_path: str | Path | UPath) -> CatalogCollection | Dataset:
     """Reads a HATS Catalog from a HATS directory
 
     Args:
@@ -42,7 +44,25 @@ def read_hats(catalog_path: str | Path | UPath) -> Dataset:
             from upath import UPath
             catalog = hats.read_hats(UPath(..., anon=True))
     """
-    catalog_path = file_io.get_upath(catalog_path)
+    path = file_io.get_upath(catalog_path)
+    try:
+        collection_properties = CollectionProperties.read_from_dir(path)
+        return _load_collection(path, collection_properties)
+    except FileNotFoundError:
+        return _load_catalog(path)
+
+
+def _load_collection(
+    collection_path: UPath, collection_properties: CollectionProperties
+) -> CatalogCollection:
+    try:
+        main_catalog = _load_catalog(collection_path / collection_properties.hats_primary_table_url)
+        return CatalogCollection(collection_path, collection_properties, main_catalog)
+    except Exception as exception:  # pylint: disable=broad-except
+        raise FileNotFoundError(f"Failed to read collection at location {collection_path}") from exception
+
+
+def _load_catalog(catalog_path: UPath) -> Dataset:
     try:
         properties = TableProperties.read_from_dir(catalog_path)
         dataset_type = properties.catalog_type

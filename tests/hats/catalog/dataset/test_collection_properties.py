@@ -127,3 +127,39 @@ def test_read_collection_from_file_round_trip(small_sky_collection_dir, tmp_path
         **round_trip_properties.model_dump(by_alias=False, exclude_none=True)
     )
     assert table_properties == kwarg_properties
+
+
+def test_read_collection_default_margin_not_found(small_sky_collection_dir, tmp_path):
+    table_properties = CollectionProperties.read_from_dir(small_sky_collection_dir)
+    assert table_properties.all_margins == ["small_sky_order1_margin"]
+    table_properties.default_margin = "small_sky_order1_margin_1deg"
+    table_properties.to_properties_file(tmp_path)
+    with pytest.raises(ValueError, match="not found in all_margins"):
+        CollectionProperties.read_from_dir(tmp_path)
+
+
+def test_read_collection_all_margins_not_specified(small_sky_collection_dir, tmp_path):
+    table_properties = CollectionProperties.read_from_dir(small_sky_collection_dir)
+    assert table_properties.default_margin == "small_sky_order1_margin"
+    table_properties.all_margins = []
+    table_properties.to_properties_file(tmp_path)
+    with pytest.raises(ValueError, match="all_margins needs to be set"):
+        CollectionProperties.read_from_dir(tmp_path)
+
+
+def test_read_collection_default_index_not_found(small_sky_collection_dir, tmp_path):
+    table_properties = CollectionProperties.read_from_dir(small_sky_collection_dir)
+    assert table_properties.all_indexes == {"id": "small_sky_order1_id_index"}
+    table_properties.default_index = "obj_name"
+    table_properties.to_properties_file(tmp_path)
+    with pytest.raises(ValueError, match="not found in all_indexes"):
+        CollectionProperties.read_from_dir(tmp_path)
+
+
+def test_read_collection_all_indexes_not_specified(small_sky_collection_dir, tmp_path):
+    table_properties = CollectionProperties.read_from_dir(small_sky_collection_dir)
+    assert table_properties.default_index == "id"
+    table_properties.all_indexes = []
+    table_properties.to_properties_file(tmp_path)
+    with pytest.raises(ValueError, match="all_indexes needs to be set"):
+        CollectionProperties.read_from_dir(tmp_path)
