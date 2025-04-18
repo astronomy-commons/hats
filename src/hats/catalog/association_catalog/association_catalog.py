@@ -28,8 +28,11 @@ class AssociationCatalog(HealpixDataset):
         catalog_path=None,
         moc: MOC | None = None,
         schema: pa.Schema | None = None,
+        original_schema: pa.Schema | None = None,
     ) -> None:
-        super().__init__(catalog_info, pixels, catalog_path, moc=moc, schema=schema)
+        super().__init__(
+            catalog_info, pixels, catalog_path, moc=moc, schema=schema, original_schema=original_schema
+        )
         self.join_info = self._get_partition_join_info_from_pixels(join_pixels)
 
     def get_join_pixels(self) -> pd.DataFrame:
