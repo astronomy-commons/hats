@@ -221,6 +221,7 @@ def test_cone_filter(small_sky_order1_catalog):
         max_depth=small_sky_order1_catalog.get_max_coverage_order(),
     )
     assert filtered_catalog.moc == cone_moc.intersection(small_sky_order1_catalog.moc)
+    assert filtered_catalog.original_schema is not None
 
 
 def test_cone_filter_big(small_sky_order1_catalog):
@@ -274,6 +275,7 @@ def test_polygonal_filter(small_sky_order1_catalog):
         max_depth=small_sky_order1_catalog.get_max_coverage_order(),
     )
     assert filtered_catalog.moc == polygon_moc.intersection(small_sky_order1_catalog.moc)
+    assert filtered_catalog.original_schema is not None
 
 
 def test_polygonal_filter_invalid_coordinate_shape(small_sky_order1_catalog):

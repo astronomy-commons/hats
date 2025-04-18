@@ -22,6 +22,7 @@ class Dataset:
         catalog_info: TableProperties,
         catalog_path: str | Path | UPath | None = None,
         schema: pa.Schema | None = None,
+        original_schema: pa.Schema | None = None,
     ) -> None:
         """Initializes a Dataset
 
@@ -38,6 +39,7 @@ class Dataset:
         self.on_disk = catalog_path is not None
         self.catalog_base_dir = file_io.get_upath(self.catalog_path)
         self.schema = schema
+        self.original_schema = original_schema
 
     def aggregate_column_statistics(
         self,

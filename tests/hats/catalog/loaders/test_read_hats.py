@@ -2,6 +2,7 @@ import shutil
 
 import pytest
 
+import hats
 from hats.catalog.catalog_collection import CatalogCollection
 from hats.catalog.dataset.collection_properties import CollectionProperties
 from hats.io.file_io import get_upath_for_protocol
@@ -123,3 +124,8 @@ def test_read_hats_nonstandard_npix_suffix(
 ):
     read_hats(small_sky_npix_alt_suffix_dir)
     read_hats(small_sky_npix_as_dir_dir)
+
+
+def test_read_hats_original_schema(small_sky_order1_dir):
+    cat = hats.read_hats(small_sky_order1_dir)
+    assert cat.schema == cat.original_schema

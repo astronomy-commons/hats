@@ -48,6 +48,7 @@ class HealpixDataset(Dataset):
         catalog_path: str | Path | UPath | None = None,
         moc: MOC | None = None,
         schema: pa.Schema | None = None,
+        original_schema: pa.Schema | None = None,
     ) -> None:
         """Initializes a Catalog
 
@@ -60,7 +61,9 @@ class HealpixDataset(Dataset):
             moc (mocpy.MOC): MOC object representing the coverage of the catalog
             schema (pa.Schema): The pyarrow schema for the catalog
         """
-        super().__init__(catalog_info, catalog_path=catalog_path, schema=schema)
+        super().__init__(
+            catalog_info, catalog_path=catalog_path, schema=schema, original_schema=original_schema
+        )
         self.partition_info = self._get_partition_info_from_pixels(pixels)
         self.pixel_tree = self._get_pixel_tree_from_pixels(pixels)
         self.moc = moc
@@ -208,6 +211,7 @@ class HealpixDataset(Dataset):
             catalog_path=self.catalog_path,
             moc=filtered_moc,
             schema=self.schema,
+            original_schema=self.original_schema,
         )
 
     def align(

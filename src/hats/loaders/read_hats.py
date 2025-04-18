@@ -70,10 +70,12 @@ def _load_catalog(catalog_path: UPath) -> Dataset:
             raise NotImplementedError(f"Cannot load catalog of type {dataset_type}")
 
         loader = DATASET_TYPE_TO_CLASS[dataset_type]
+        schema = _read_schema_from_metadata(catalog_path)
         kwargs = {
             "catalog_path": catalog_path,
             "catalog_info": properties,
-            "schema": _read_schema_from_metadata(catalog_path),
+            "schema": schema,
+            "original_schema": schema,
         }
         if _is_healpix_dataset(dataset_type):
             kwargs["pixels"] = PartitionInfo.read_from_dir(catalog_path)
