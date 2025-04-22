@@ -65,7 +65,10 @@ write_to = "src/hats/_version.py"
 timeout = 5
 testpaths = [
     "tests",
+    "src",
+    "docs",
 ]
+addopts = "--doctest-modules --doctest-glob=*.rst"
 
 [tool.coverage.run]
 omit=["src/hats/_version.py"]
