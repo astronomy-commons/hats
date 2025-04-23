@@ -32,7 +32,7 @@ class PixelTree:
             order (int): HEALPix order of the pixel numbers in the intervals
         """
         self.tree_order = order
-        self.tree = tree
+        self.tree = tree.astype(np.int64)
 
         if not np.all((self.tree.T[0, 1:] - self.tree.T[1, :-1]) >= 0):
             raise ValueError("Invalid Catalog: Tree contains overlapping pixels")
@@ -113,7 +113,7 @@ class PixelTree:
             return PixelTree(np.empty((0, 2), dtype=np.int64), 0)
 
         pixel_tuples = [get_healpix_tuple(p) for p in healpix_pixels]
-        pixel_array = np.array(pixel_tuples).T
+        pixel_array = np.array(pixel_tuples, dtype=np.int64).T
         orders = pixel_array[0]
         pixels = pixel_array[1]
         max_order = np.max(orders) if tree_order is None else tree_order

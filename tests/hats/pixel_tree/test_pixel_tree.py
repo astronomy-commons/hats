@@ -5,6 +5,20 @@ from hats.pixel_math.healpix_pixel import get_higher_order_pixels
 from hats.pixel_tree.pixel_tree import PixelTree
 
 
+def test_pixel_tree_from_healpix():
+    tree = PixelTree.from_healpix([(0, 0)])
+    assert tree.contains((0, 0))
+    assert len(tree.to_depth29_ranges()) == 1
+    assert tree.tree.dtype == np.int64
+
+
+def test_pixel_tree_wrong_input_type():
+    tree = PixelTree(np.array([[0, 1]], dtype=np.int32), order=0)
+    assert tree.contains((0, 0))
+    assert len(tree.to_depth29_ranges()) == 1
+    assert tree.tree.dtype == np.int64
+
+
 def test_pixel_tree_length():
     lengths = [1, 3, 6]
     orders = [1, 2, 7]
