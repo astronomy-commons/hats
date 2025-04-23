@@ -110,11 +110,15 @@ class HealpixDataset(Dataset):
             raise ValueError("The number of rows is undetermined because the catalog was modified.")
         return self.catalog_info.total_rows
 
-    def get_max_coverage_order(self) -> int:
+    def get_max_coverage_order(self, default_order: int = 3) -> int:
         """Gets the maximum HEALPix order for which the coverage of the catalog is known from the pixel
-        tree and moc if it exists"""
+        tree and moc if it exists
+
+        Args:
+            default_order (int): The order to return if the dataset has no pixels.
+        """
         if len(self.pixel_tree) == 0:
-            raise ValueError("Cannot get max_order of empty catalog")
+            return default_order
         max_order = (
             max(self.moc.max_order, self.pixel_tree.get_max_depth())
             if self.moc is not None
