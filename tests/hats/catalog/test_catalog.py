@@ -195,8 +195,8 @@ def test_max_coverage_order(small_sky_order1_catalog):
 
 def test_max_coverage_order_empty_catalog(catalog_info):
     empty_catalog = HealpixDataset(catalog_info, PixelTree.from_healpix([]))
-    with pytest.raises(ValueError, match="empty catalog"):
-        empty_catalog.get_max_coverage_order()
+    assert empty_catalog.get_max_coverage_order() == 3
+    assert empty_catalog.get_max_coverage_order(default_order=0) == 0
 
 
 def test_cone_filter(small_sky_order1_catalog):
