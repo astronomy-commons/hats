@@ -110,7 +110,7 @@ class HealpixDataset(Dataset):
             raise ValueError("The number of rows is undetermined because the catalog was modified.")
         return self.catalog_info.total_rows
 
-    def get_max_coverage_order(self, default_order=3) -> int:
+    def get_max_coverage_order(self, default_order: int = 3) -> int:
         """Gets the maximum HEALPix order for which the coverage of the catalog is known from the pixel
         tree and moc if it exists
 
