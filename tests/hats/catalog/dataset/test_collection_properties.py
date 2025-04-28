@@ -163,3 +163,36 @@ def test_read_collection_all_indexes_not_specified(small_sky_collection_dir, tmp
     table_properties.to_properties_file(tmp_path)
     with pytest.raises(ValueError, match="all_indexes needs to be set"):
         CollectionProperties.read_from_dir(tmp_path)
+
+
+def test_collection_parsing(small_sky_collection_dir):
+    ## Confirm we can pass in already dict- or list-like objects, and get the expected values.
+    properties_from_file = CollectionProperties.read_from_dir(small_sky_collection_dir)
+
+    expected_properties = CollectionProperties(
+        name="small_sky_01",
+        hats_primary_table_url="small_sky_order1",
+        all_margins=["small_sky_order1_margin"],
+        default_margin="small_sky_order1_margin",
+        all_indexes={"id": "small_sky_order1_id_index"},
+        default_index="id",
+        obs_regime="Optical",
+    )
+
+    assert properties_from_file == expected_properties
+
+    simple_properties = CollectionProperties(
+        name="small_sky_01",
+        hats_primary_table_url="small_sky_order1",
+    )
+
+    simple_properties_with_none = CollectionProperties(
+        name="small_sky_01",
+        hats_primary_table_url="small_sky_order1",
+        all_margins=None,
+        default_margin=None,
+        all_indexes=None,
+        default_index=None,
+    )
+
+    assert simple_properties == simple_properties_with_none
