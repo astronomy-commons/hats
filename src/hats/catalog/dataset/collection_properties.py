@@ -3,6 +3,7 @@ from functools import reduce
 from pathlib import Path
 from typing import Iterable, Optional
 
+import pandas as pd
 from jproperties import Properties
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_validator
 from typing_extensions import Self
@@ -63,6 +64,10 @@ class CollectionProperties(BaseModel):
     @classmethod
     def space_delimited_list(cls, str_value: str) -> list[str]:
         """Convert a space-delimited list string into a python list of strings."""
+        if str_value is None:
+            return None
+        if pd.api.types.is_list_like(str_value):
+            return list(str_value)
         if not str_value or not isinstance(str_value, str):
             ## Convert empty strings and empty lists to None
             return None
@@ -73,6 +78,10 @@ class CollectionProperties(BaseModel):
     @classmethod
     def index_tuples(cls, str_value: str) -> dict[str, str]:
         """Convert a space-delimited list string into a python list of strings."""
+        if str_value is None:
+            return None
+        if pd.api.types.is_dict_like(str_value):
+            return dict(str_value)
         if not str_value or not isinstance(str_value, str):
             return None
         # Split on a few kinds of delimiters (just to be safe), and remove duplicates
