@@ -26,7 +26,7 @@ dependencies = [
     "mocpy>=0.17.1",
     "numba>=0.58",
     "numpy<3", 
-    "pandas",
+    "pandas>2.0",
     "pyarrow>=14.0.1",
     "pydantic",
     "scipy",
