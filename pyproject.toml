@@ -28,7 +28,7 @@ dependencies = [
     "numpy<3", 
     "pandas>2.0",
     "pyarrow>=14.0.1",
-    "pydantic<2.0",
+    "pydantic>2.0",
     "scipy",
     "typing-extensions>=4.3.0",
     "universal-pathlib>=0.2",
