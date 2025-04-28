@@ -31,7 +31,7 @@ dependencies = [
     "pydantic",
     "scipy",
     "typing-extensions>=4.3.0",
-    "universal-pathlib",
+    "universal-pathlib>=0.2",
 ]
 
 [project.urls]
