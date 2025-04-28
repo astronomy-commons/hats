@@ -18,7 +18,7 @@ classifiers = [
 dynamic = ["version"]
 requires-python = ">=3.10"
 dependencies = [
-    "aiohttp", # http filesystem support
+    "aiohttp>3.0", # http filesystem support
     "astropy",
     "fsspec>=2023.10.0", # Used for abstract filesystems
     "jproperties",
