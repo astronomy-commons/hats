@@ -4,9 +4,9 @@ import tempfile
 from collections.abc import Generator
 from pathlib import Path
 
+import nested_pandas as npd
 import numpy as np
 import pandas as pd
-import nested_pandas as npd
 import pyarrow.dataset as pds
 import pyarrow.parquet as pq
 import upath.implementations.http
