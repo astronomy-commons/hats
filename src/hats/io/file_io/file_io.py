@@ -297,7 +297,7 @@ def read_parquet_file_to_pandas(file_pointer: str | Path | UPath, **kwargs) -> n
     file_pointer = get_upath(file_pointer)
     # If we are trying to read a directory over http, we need to send the explicit list of files instead.
     # We don't want to get the list unnecessarily because it can be expensive.
-    if isinstance(file_pointer, upath.implementations.http.HTTPPath) and len(file_pointer.suffixes) == 0:
+    if isinstance(file_pointer, upath.implementations.http.HTTPPath) and file_pointer.is_dir():
         file_pointers = [f for f in file_pointer.iterdir() if f.is_file()]
         return npd.read_parquet(
             file_pointers,
