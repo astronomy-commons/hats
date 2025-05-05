@@ -62,6 +62,10 @@ autoapi_add_toc_tree_entry = False
 autoapi_member_order = "bysource"
 
 html_theme = "sphinx_book_theme"
+html_theme_options = {
+    "repository_url": "https://github.com/astronomy-commons/hats",
+    "use_repository_button": True,
+}
 
 html_static_path = ["_static"]
 html_css_files = ["custom.css"]
