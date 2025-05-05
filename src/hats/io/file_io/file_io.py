@@ -4,6 +4,7 @@ import tempfile
 from collections.abc import Generator
 from pathlib import Path
 
+import nested_pandas as npd
 import numpy as np
 import pandas as pd
 import pyarrow.dataset as pds
@@ -283,7 +284,7 @@ def unnest_headers_for_pandas(storage_options: dict | None) -> dict | None:
     return storage_options
 
 
-def read_parquet_file_to_pandas(file_pointer: str | Path | UPath, **kwargs) -> pd.DataFrame:
+def read_parquet_file_to_pandas(file_pointer: str | Path | UPath, **kwargs) -> npd.NestedFrame:
     """Reads parquet file(s) to a pandas DataFrame
 
     Args:
@@ -296,17 +297,15 @@ def read_parquet_file_to_pandas(file_pointer: str | Path | UPath, **kwargs) -> p
     file_pointer = get_upath(file_pointer)
     # If we are trying to read a directory over http, we need to send the explicit list of files instead.
     # We don't want to get the list unnecessarily because it can be expensive.
-    if isinstance(file_pointer, upath.implementations.http.HTTPPath) and len(file_pointer.suffixes) == 0:
+    if isinstance(file_pointer, upath.implementations.http.HTTPPath) and file_pointer.is_dir():
         file_pointers = [f for f in file_pointer.iterdir() if f.is_file()]
-        storage_options = unnest_headers_for_pandas(file_pointer.storage_options)
-        return pd.read_parquet(
+        return npd.read_parquet(
             file_pointers,
-            storage_options=storage_options,
             filesystem=file_pointer.fs,
             partitioning=None,  # Avoid the ArrowTypeError described in #367
             **kwargs,
         )
-    return pd.read_parquet(
+    return npd.read_parquet(
         file_pointer.path,
         filesystem=file_pointer.fs,
         partitioning=None,  # Avoid the ArrowTypeError described in #367

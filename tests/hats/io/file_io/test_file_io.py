@@ -113,6 +113,7 @@ def test_write_df_to_csv(tmp_path):
 
 def test_read_parquet_data(tmp_path):
     random_df = pd.DataFrame(np.random.randint(0, 100, size=(100, 4)), columns=list("ABCD"))
+    random_df = random_df.convert_dtypes(dtype_backend="pyarrow")
     test_file_path = tmp_path / "test.parquet"
     random_df.to_parquet(test_file_path)
     dataframe = read_parquet_file_to_pandas(test_file_path)
