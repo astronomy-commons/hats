@@ -18,21 +18,21 @@ classifiers = [
 dynamic = ["version"]
 requires-python = ">=3.10"
 dependencies = [
-    "aiohttp", # http filesystem support
-    "astropy",
+    "aiohttp>=3.8.0", # http filesystem support
+    "astropy>=5.0",
     "fsspec>=2023.10.0", # Used for abstract filesystems
-    "jproperties",
-    "matplotlib>=3.3",
+    "jproperties>=2.0.0",
+    "matplotlib>=3.5",
     "mocpy>=0.17.1",
-    "numba>=0.58",
-    "numpy<3", 
-    "pandas",
     "nested-pandas>=0.3.8,<0.5.0",
+    "numba>=0.58",
+    "numpy>=1.22,<3", 
+    "pandas>=2.0",
     "pyarrow>=14.0.1",
-    "pydantic",
-    "scipy",
+    "pydantic>=2.0",
+    "scipy>=1.7.2",
     "typing-extensions>=4.3.0",
-    "universal-pathlib",
+    "universal-pathlib>=0.2.2",
 ]
 
 [project.urls]
@@ -76,54 +76,7 @@ omit=["src/hats/_version.py"]
 
 [tool.black]
 line-length = 110
-target-version = ["py38"]
-
+target-version = ["py310"]
 [tool.isort]
 profile = "black"
 line_length = 110
-
-[tool.ruff]
-line-length = 110
-target-version = "py310"
-
-[tool.ruff.lint]
-select = [
-    # pycodestyle
-    "E",
-    "W",
-    # Pyflakes
-    "F",
-    # pep8-naming
-    "N",
-    # pyupgrade
-    "UP",
-    # flake8-bugbear
-    "B",
-    # flake8-simplify
-    "SIM",
-    # isort
-    "I",
-    # docstrings
-    "D101",
-    "D102",
-    "D103",
-    "D106",
-    "D206",
-    "D207",
-    "D208",
-    "D300",
-    "D417",
-    "D419",
-    # Numpy v2.0 compatibility
-    "NPY201",
-]
-
-ignore = [
-    "UP006", # Allow non standard library generics in type hints
-    "UP007", # Allow Union in type hints
-    "SIM114", # Allow if with same arms
-    "B028", # Allow default warning level
-    "SIM117", # Allow nested with
-    "UP015", # Allow redundant open parameters
-    "UP028", # Allow yield in for loop
-]
