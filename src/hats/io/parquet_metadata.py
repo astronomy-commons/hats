@@ -41,8 +41,8 @@ def write_parquet_metadata(
             defaults to `catalog_path` if unspecified
         create_thumbnail (bool): if True, create a data thumbnail parquet file for
             the dataset. Defaults to True.
-        thumbnail_threshold (int): the number of points per partition specified when
-            importing the catalog. Defaults to 1_000_000.
+        thumbnail_threshold (int): maximum number of rows in the data thumbnail,
+            which is otherwise one row/partition. Defaults to 1_000_000.
 
     Returns:
         sum of the number of rows in the dataset.
