@@ -10,6 +10,7 @@ from pyarrow.parquet import ParquetFile
 from hats.io import file_io, paths
 from hats.io.parquet_metadata import aggregate_column_statistics, per_pixel_statistics, write_parquet_metadata
 from hats.pixel_math.healpix_pixel import HealpixPixel
+from hats.pixel_math.spatial_index import SPATIAL_INDEX_COLUMN
 
 
 def test_write_parquet_metadata(tmp_path, small_sky_dir, small_sky_schema, check_parquet_schema):
@@ -77,7 +78,7 @@ def test_write_parquet_metadata_order1(
     assert len(data_thumbnail) == 4
     assert thumbnail.metadata.num_row_groups == 1
     assert data_thumbnail.schema.equals(small_sky_schema)
-    assert data_thumbnail.equals(data_thumbnail.sort_by("_healpix_29"))
+    assert data_thumbnail.equals(data_thumbnail.sort_by(SPATIAL_INDEX_COLUMN))
 
 
 def test_write_parquet_metadata_sorted(
@@ -115,7 +116,7 @@ def test_write_parquet_metadata_sorted(
     assert len(data_thumbnail) == 2
     assert thumbnail.metadata.num_row_groups == 1
     assert data_thumbnail.schema.equals(small_sky_schema)
-    assert data_thumbnail.equals(data_thumbnail.sort_by("_healpix_29"))
+    assert data_thumbnail.equals(data_thumbnail.sort_by(SPATIAL_INDEX_COLUMN))
 
 
 def test_write_index_parquet_metadata(tmp_path, check_parquet_schema):
