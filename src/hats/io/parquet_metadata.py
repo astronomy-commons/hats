@@ -15,6 +15,7 @@ from hats.io import file_io, paths
 from hats.io.file_io.file_pointer import get_upath
 from hats.pixel_math.healpix_pixel import HealpixPixel
 from hats.pixel_math.healpix_pixel_function import get_pixel_argsort
+from hats.pixel_math.spatial_index import SPATIAL_INDEX_COLUMN
 
 
 def write_parquet_metadata(
@@ -102,7 +103,9 @@ def write_parquet_metadata(
     ## Write out the thumbnail file
     if create_thumbnail:
         data_thumbnail_pointer = paths.get_data_thumbnail_pointer(catalog_path)
-        data_thumbnail = pa.Table.from_batches(first_rows)
+        data_thumbnail = pa.Table.from_batches(first_rows, dataset.schema)
+        if SPATIAL_INDEX_COLUMN in data_thumbnail.column_names:
+            data_thumbnail = data_thumbnail.sort_by(SPATIAL_INDEX_COLUMN)
         with data_thumbnail_pointer.open("wb") as f_out:
             pq.write_table(data_thumbnail, f_out)
 

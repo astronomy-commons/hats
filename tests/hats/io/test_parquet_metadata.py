@@ -5,6 +5,7 @@ import shutil
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
+from pyarrow.parquet import ParquetFile
 
 from hats.io import file_io, paths
 from hats.io.parquet_metadata import aggregate_column_statistics, per_pixel_statistics, write_parquet_metadata
@@ -37,12 +38,6 @@ def test_write_parquet_metadata(tmp_path, small_sky_dir, small_sky_schema, check
         small_sky_schema,
         0,
     )
-    ## the data thumbnail was generated and it has 1 row
-    data_thumbnail_path = catalog_base_dir / "dataset" / "data_thumbnail.parquet"
-    assert data_thumbnail_path.exists()
-    data_thumbnail = pq.read_table(data_thumbnail_path)
-    assert data_thumbnail.schema.equals(small_sky_schema)
-    assert len(data_thumbnail) == 1
 
 
 def test_write_parquet_metadata_order1(
@@ -98,6 +93,15 @@ def test_write_parquet_metadata_sorted(
         small_sky_schema,
         0,
     )
+    ## the data thumbnail has 1 row group, with a total of 4 rows
+    data_thumbnail_path = temp_path / "dataset" / "data_thumbnail.parquet"
+    assert data_thumbnail_path.exists()
+    thumbnail = ParquetFile(data_thumbnail_path)
+    data_thumbnail = thumbnail.read()
+    assert len(data_thumbnail) == 4
+    assert thumbnail.metadata.num_row_groups == 1
+    assert data_thumbnail.schema.equals(small_sky_schema)
+    assert data_thumbnail.equals(data_thumbnail.sort_by("_healpix_29"))
 
 
 def test_write_index_parquet_metadata(tmp_path, check_parquet_schema):
