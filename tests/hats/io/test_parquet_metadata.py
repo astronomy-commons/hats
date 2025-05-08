@@ -92,8 +92,8 @@ def test_write_parquet_metadata_sorted(
         temp_path,
     )
     ## Sneak in a test for the data thumbnail generation, specifying a
-    ## pixel threshold that is smaller than the number of partitions
-    total_rows = write_parquet_metadata(temp_path, pixel_threshold=2)
+    ## thumbnail threshold that is smaller than the number of partitions
+    total_rows = write_parquet_metadata(temp_path, thumbnail_threshold=2)
     assert total_rows == 131
     ## 4 row groups for 4 partitioned parquet files
     check_parquet_schema(

@@ -25,7 +25,7 @@ def write_parquet_metadata(
     order_by_healpix=True,
     output_path: str | Path | UPath | None = None,
     create_thumbnail: bool = True,
-    pixel_threshold: int = 1_000_000,
+    thumbnail_threshold: int = 1_000_000,
 ):
     """Generate parquet metadata, using the already-partitioned parquet files
     for this catalog.
@@ -41,7 +41,7 @@ def write_parquet_metadata(
             defaults to `catalog_path` if unspecified
         create_thumbnail (bool): if True, create a data thumbnail parquet file for
             the dataset. Defaults to True.
-        pixel_threshold (int): the number of points per partition specified when
+        thumbnail_threshold (int): the number of points per partition specified when
             importing the catalog. Defaults to 1_000_000.
 
     Returns:
@@ -70,10 +70,11 @@ def write_parquet_metadata(
     first_rows = []
     pq_file_list = set()
     if create_thumbnail:
-        # The pixel threshold is the maximum number of Parquet rows per pixel,
-        # used to prevent memory issues. It doesn't make sense for the thumbnail
-        # to have more rows than this. If it does, randomly sample those available.
-        row_limit = min(len(dataset.files), pixel_threshold)
+        # The thumbnail_threshold threshold is the maximum number of Parquet rows
+        # per pixel, used to prevent memory issues. It doesn't make sense for the
+        # thumbnail to have more rows than this. If it does, randomly sample those
+        # available.
+        row_limit = min(len(dataset.files), thumbnail_threshold)
         # Create set for O(1) lookups in the loop that follows
         pq_file_list = set(random.sample(dataset.files, row_limit))
 
