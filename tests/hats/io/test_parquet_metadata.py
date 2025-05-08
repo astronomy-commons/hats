@@ -37,6 +37,12 @@ def test_write_parquet_metadata(tmp_path, small_sky_dir, small_sky_schema, check
         small_sky_schema,
         0,
     )
+    ## the data thumbnail was generated and it has 1 row
+    data_thumbnail_path = catalog_base_dir / "dataset" / "data_thumbnail.parquet"
+    assert data_thumbnail_path.exists()
+    data_thumbnail = pq.read_table(data_thumbnail_path)
+    assert data_thumbnail.schema.equals(small_sky_schema)
+    assert len(data_thumbnail) == 1
 
 
 def test_write_parquet_metadata_order1(
@@ -49,8 +55,7 @@ def test_write_parquet_metadata_order1(
         small_sky_order1_dir,
         temp_path,
     )
-
-    total_rows = write_parquet_metadata(temp_path)
+    total_rows = write_parquet_metadata(temp_path, create_thumbnail=False)
     assert total_rows == 131
     ## 4 row groups for 4 partitioned parquet files
     check_parquet_schema(
@@ -64,6 +69,8 @@ def test_write_parquet_metadata_order1(
         small_sky_schema,
         0,
     )
+    ## the data thumbnail was not generated
+    assert not (temp_path / "dataset" / "data_thumbnail.parquet").exists()
 
 
 def test_write_parquet_metadata_sorted(

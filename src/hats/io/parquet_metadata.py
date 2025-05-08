@@ -6,7 +6,9 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pyarrow as pa
 import pyarrow.dataset as pds
+import pyarrow.parquet as pq
 from upath import UPath
 
 from hats.io import file_io, paths
@@ -19,6 +21,7 @@ def write_parquet_metadata(
     catalog_path: str | Path | UPath,
     order_by_healpix=True,
     output_path: str | Path | UPath | None = None,
+    create_thumbnail: bool = True,
 ):
     """Generate parquet metadata, using the already-partitioned parquet files
     for this catalog.
@@ -32,6 +35,8 @@ def write_parquet_metadata(
             breadth-first healpix pixel (e.g. secondary indexes)
         output_path (str): base path for writing out metadata files
             defaults to `catalog_path` if unspecified
+        create_thumbnail (bool): if True, create a data thumbnail parquet file for
+            the dataset. Defaults to True.
 
     Returns:
         sum of the number of rows in the dataset.
@@ -40,6 +45,7 @@ def write_parquet_metadata(
         "intermediate",
         "_common_metadata",
         "_metadata",
+        "data_thumbnail",
     ]
 
     catalog_path = get_upath(catalog_path)
@@ -53,10 +59,13 @@ def write_parquet_metadata(
     # Collect the healpix pixels so we can sort before writing.
     healpix_pixels = []
     total_rows = 0
+    # Collect the first rows for the data thumbnail
+    first_rows = []
 
     for single_file in dataset.files:
         relative_path = single_file[len(dataset_path) + 1 :]
-        single_metadata = file_io.read_parquet_metadata(dataset_subdir / relative_path)
+        file = pq.ParquetFile(dataset_subdir / relative_path)
+        single_metadata = file.metadata
 
         # Users must set the file path of each chunk before combining the metadata.
         single_metadata.set_file_path(relative_path)
@@ -67,6 +76,9 @@ def write_parquet_metadata(
             healpix_pixels.append(healpix_pixel)
         metadata_collector.append(single_metadata)
         total_rows += single_metadata.num_rows
+
+        if create_thumbnail:
+            first_rows.append(next(file.iter_batches(batch_size=1)))
 
     ## Write out the two metadata files
     if output_path is None:
@@ -86,6 +98,14 @@ def write_parquet_metadata(
         write_statistics=True,
     )
     file_io.write_parquet_metadata(dataset.schema, common_metadata_file_pointer)
+
+    ## Write out the thumbnail file
+    if create_thumbnail:
+        data_thumbnail_pointer = paths.get_data_thumbnail_pointer(catalog_path)
+        data_thumbnail = pa.Table.from_batches(first_rows)
+        with data_thumbnail_pointer.open("wb") as f_out:
+            pq.write_table(data_thumbnail, f_out)
+
     return total_rows
 
 
