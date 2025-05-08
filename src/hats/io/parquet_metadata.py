@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import random
 from pathlib import Path
 
 import numpy as np
@@ -18,11 +19,13 @@ from hats.pixel_math.healpix_pixel_function import get_pixel_argsort
 from hats.pixel_math.spatial_index import SPATIAL_INDEX_COLUMN
 
 
+# pylint: disable=too-many-locals
 def write_parquet_metadata(
     catalog_path: str | Path | UPath,
     order_by_healpix=True,
     output_path: str | Path | UPath | None = None,
     create_thumbnail: bool = True,
+    pixel_threshold: int = 1_000_000,
 ):
     """Generate parquet metadata, using the already-partitioned parquet files
     for this catalog.
@@ -38,6 +41,8 @@ def write_parquet_metadata(
             defaults to `catalog_path` if unspecified
         create_thumbnail (bool): if True, create a data thumbnail parquet file for
             the dataset. Defaults to True.
+        pixel_threshold (int): the number of points per partition specified when
+            importing the catalog. Defaults to 1_000_000.
 
     Returns:
         sum of the number of rows in the dataset.
@@ -63,6 +68,13 @@ def write_parquet_metadata(
     # Collect the first rows for the data thumbnail
     first_rows = []
 
+    # The pixel threshold is the maximum number of Parquet rows per pixel,
+    # used to prevent memory issues. It doesn't make sense for the thumbnail
+    # to have more rows than this. If it does, randomly sample those available.
+    row_limit = min(len(dataset.files), pixel_threshold)
+    # Create set for O(1) lookups in the loop that follows
+    pq_file_list = set(random.sample(dataset.files, row_limit))
+
     for single_file in dataset.files:
         relative_path = single_file[len(dataset_path) + 1 :]
         file = pq.ParquetFile(dataset_subdir / relative_path)
@@ -78,7 +90,7 @@ def write_parquet_metadata(
         metadata_collector.append(single_metadata)
         total_rows += single_metadata.num_rows
 
-        if create_thumbnail:
+        if create_thumbnail and single_file in pq_file_list:
             first_rows.append(next(file.iter_batches(batch_size=1)))
 
     ## Write out the two metadata files

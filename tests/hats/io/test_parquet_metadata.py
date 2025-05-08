@@ -19,7 +19,9 @@ def test_write_parquet_metadata(tmp_path, small_sky_dir, small_sky_schema, check
         small_sky_dir,
         catalog_base_dir,
     )
-    total_rows = write_parquet_metadata(catalog_base_dir)
+
+    ## Sneak in a test where we do not generate the thumbnail
+    total_rows = write_parquet_metadata(catalog_base_dir, create_thumbnail=False)
     assert total_rows == 131
     check_parquet_schema(catalog_base_dir / "dataset" / "_metadata", small_sky_schema)
     ## _common_metadata has 0 row groups
@@ -28,6 +30,8 @@ def test_write_parquet_metadata(tmp_path, small_sky_dir, small_sky_schema, check
         small_sky_schema,
         0,
     )
+    assert not (catalog_base_dir / "dataset" / "data_thumbnail.parquet").exists()
+
     ## Re-write - should still have the same properties.
     total_rows = write_parquet_metadata(catalog_base_dir)
     assert total_rows == 131
@@ -50,35 +54,6 @@ def test_write_parquet_metadata_order1(
         small_sky_order1_dir,
         temp_path,
     )
-    total_rows = write_parquet_metadata(temp_path, create_thumbnail=False)
-    assert total_rows == 131
-    ## 4 row groups for 4 partitioned parquet files
-    check_parquet_schema(
-        temp_path / "dataset" / "_metadata",
-        small_sky_schema,
-        4,
-    )
-    ## _common_metadata has 0 row groups
-    check_parquet_schema(
-        temp_path / "dataset" / "_common_metadata",
-        small_sky_schema,
-        0,
-    )
-    ## the data thumbnail was not generated
-    assert not (temp_path / "dataset" / "data_thumbnail.parquet").exists()
-
-
-def test_write_parquet_metadata_sorted(
-    tmp_path, small_sky_order1_dir, small_sky_schema, check_parquet_schema
-):
-    """Copy existing catalog and create new metadata files for it,
-    using a catalog with multiple files."""
-    temp_path = tmp_path / "catalog"
-    shutil.copytree(
-        small_sky_order1_dir,
-        temp_path,
-    )
-
     total_rows = write_parquet_metadata(temp_path)
     assert total_rows == 131
     ## 4 row groups for 4 partitioned parquet files
@@ -93,12 +68,51 @@ def test_write_parquet_metadata_sorted(
         small_sky_schema,
         0,
     )
-    ## the data thumbnail has 1 row group, with a total of 4 rows
+    ## the data thumbnail has 1 row group and a total of 4 rows
+    ## corresponding to the number of partitions
     data_thumbnail_path = temp_path / "dataset" / "data_thumbnail.parquet"
     assert data_thumbnail_path.exists()
     thumbnail = ParquetFile(data_thumbnail_path)
     data_thumbnail = thumbnail.read()
     assert len(data_thumbnail) == 4
+    assert thumbnail.metadata.num_row_groups == 1
+    assert data_thumbnail.schema.equals(small_sky_schema)
+    assert data_thumbnail.equals(data_thumbnail.sort_by("_healpix_29"))
+
+
+def test_write_parquet_metadata_sorted(
+    tmp_path, small_sky_order1_dir, small_sky_schema, check_parquet_schema
+):
+    """Copy existing catalog and create new metadata files for it,
+    using a catalog with multiple files."""
+    temp_path = tmp_path / "catalog"
+    shutil.copytree(
+        small_sky_order1_dir,
+        temp_path,
+    )
+    ## Sneak in a test for the data thumbnail generation, specifying a
+    ## pixel threshold that is smaller than the number of partitions
+    total_rows = write_parquet_metadata(temp_path, pixel_threshold=2)
+    assert total_rows == 131
+    ## 4 row groups for 4 partitioned parquet files
+    check_parquet_schema(
+        temp_path / "dataset" / "_metadata",
+        small_sky_schema,
+        4,
+    )
+    ## _common_metadata has 0 row groups
+    check_parquet_schema(
+        temp_path / "dataset" / "_common_metadata",
+        small_sky_schema,
+        0,
+    )
+    ## the data thumbnail has 1 row group and a total of 2 rows
+    ## because that is what the pixel threshold specified
+    data_thumbnail_path = temp_path / "dataset" / "data_thumbnail.parquet"
+    assert data_thumbnail_path.exists()
+    thumbnail = ParquetFile(data_thumbnail_path)
+    data_thumbnail = thumbnail.read()
+    assert len(data_thumbnail) == 2
     assert thumbnail.metadata.num_row_groups == 1
     assert data_thumbnail.schema.equals(small_sky_schema)
     assert data_thumbnail.equals(data_thumbnail.sort_by("_healpix_29"))
