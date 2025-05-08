@@ -65,15 +65,17 @@ def write_parquet_metadata(
     # Collect the healpix pixels so we can sort before writing.
     healpix_pixels = []
     total_rows = 0
+
     # Collect the first rows for the data thumbnail
     first_rows = []
-
-    # The pixel threshold is the maximum number of Parquet rows per pixel,
-    # used to prevent memory issues. It doesn't make sense for the thumbnail
-    # to have more rows than this. If it does, randomly sample those available.
-    row_limit = min(len(dataset.files), pixel_threshold)
-    # Create set for O(1) lookups in the loop that follows
-    pq_file_list = set(random.sample(dataset.files, row_limit))
+    pq_file_list = set()
+    if create_thumbnail:
+        # The pixel threshold is the maximum number of Parquet rows per pixel,
+        # used to prevent memory issues. It doesn't make sense for the thumbnail
+        # to have more rows than this. If it does, randomly sample those available.
+        row_limit = min(len(dataset.files), pixel_threshold)
+        # Create set for O(1) lookups in the loop that follows
+        pq_file_list = set(random.sample(dataset.files, row_limit))
 
     for single_file in dataset.files:
         relative_path = single_file[len(dataset_path) + 1 :]
@@ -85,8 +87,8 @@ def write_parquet_metadata(
 
         if order_by_healpix:
             healpix_pixel = paths.get_healpix_from_path(relative_path)
-
             healpix_pixels.append(healpix_pixel)
+
         metadata_collector.append(single_metadata)
         total_rows += single_metadata.num_rows
 
