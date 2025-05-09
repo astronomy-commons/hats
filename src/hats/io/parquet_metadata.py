@@ -24,7 +24,7 @@ def write_parquet_metadata(
     catalog_path: str | Path | UPath,
     order_by_healpix=True,
     output_path: str | Path | UPath | None = None,
-    create_thumbnail: bool = True,
+    create_thumbnail: bool = False,
     thumbnail_threshold: int = 1_000_000,
 ):
     """Generate parquet metadata, using the already-partitioned parquet files

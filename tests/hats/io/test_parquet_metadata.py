@@ -21,8 +21,7 @@ def test_write_parquet_metadata(tmp_path, small_sky_dir, small_sky_schema, check
         catalog_base_dir,
     )
 
-    ## Sneak in a test where we do not generate the thumbnail
-    total_rows = write_parquet_metadata(catalog_base_dir, create_thumbnail=False)
+    total_rows = write_parquet_metadata(catalog_base_dir)
     assert total_rows == 131
     check_parquet_schema(catalog_base_dir / "dataset" / "_metadata", small_sky_schema)
     ## _common_metadata has 0 row groups
@@ -55,7 +54,7 @@ def test_write_parquet_metadata_order1(
         small_sky_order1_dir,
         temp_path,
     )
-    total_rows = write_parquet_metadata(temp_path)
+    total_rows = write_parquet_metadata(temp_path, create_thumbnail=True)
     assert total_rows == 131
     ## 4 row groups for 4 partitioned parquet files
     check_parquet_schema(
@@ -93,7 +92,7 @@ def test_write_parquet_metadata_sorted(
     )
     ## Sneak in a test for the data thumbnail generation, specifying a
     ## thumbnail threshold that is smaller than the number of partitions
-    total_rows = write_parquet_metadata(temp_path, thumbnail_threshold=2)
+    total_rows = write_parquet_metadata(temp_path, create_thumbnail=True, thumbnail_threshold=2)
     assert total_rows == 131
     ## 4 row groups for 4 partitioned parquet files
     check_parquet_schema(
