@@ -34,6 +34,7 @@ PARTITION_INFO_FILENAME = "partition_info.csv"
 PARTITION_JOIN_INFO_FILENAME = "partition_join_info.csv"
 PARQUET_METADATA_FILENAME = "_metadata"
 PARQUET_COMMON_METADATA_FILENAME = "_common_metadata"
+DATA_THUMBNAIL_FILENAME = "data_thumbnail.parquet"
 POINT_MAP_FILENAME = "point_map.fits"
 
 
@@ -198,6 +199,17 @@ def get_parquet_metadata_pointer(catalog_base_dir: str | Path | UPath) -> UPath:
         File Pointer to the catalog's `_metadata` file
     """
     return get_upath(catalog_base_dir) / DATASET_DIR / PARQUET_METADATA_FILENAME
+
+
+def get_data_thumbnail_pointer(catalog_base_dir: str | Path | UPath) -> UPath:
+    """Get file pointer to `data_thumbnail` parquet file
+
+    Args:
+        catalog_base_dir: pointer to base catalog directory
+    Returns:
+        File Pointer to the catalog's `data_thumbnail` file
+    """
+    return get_upath(catalog_base_dir) / DATASET_DIR / DATA_THUMBNAIL_FILENAME
 
 
 def get_point_map_file_pointer(catalog_base_dir: str | Path | UPath) -> UPath:

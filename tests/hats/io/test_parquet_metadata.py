@@ -5,10 +5,12 @@ import shutil
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
+from pyarrow.parquet import ParquetFile
 
 from hats.io import file_io, paths
 from hats.io.parquet_metadata import aggregate_column_statistics, per_pixel_statistics, write_parquet_metadata
 from hats.pixel_math.healpix_pixel import HealpixPixel
+from hats.pixel_math.spatial_index import SPATIAL_INDEX_COLUMN
 
 
 def test_write_parquet_metadata(tmp_path, small_sky_dir, small_sky_schema, check_parquet_schema):
@@ -18,7 +20,9 @@ def test_write_parquet_metadata(tmp_path, small_sky_dir, small_sky_schema, check
         small_sky_dir,
         catalog_base_dir,
     )
-    total_rows = write_parquet_metadata(catalog_base_dir)
+
+    ## Sneak in a test where we do not generate the thumbnail
+    total_rows = write_parquet_metadata(catalog_base_dir, create_thumbnail=False)
     assert total_rows == 131
     check_parquet_schema(catalog_base_dir / "dataset" / "_metadata", small_sky_schema)
     ## _common_metadata has 0 row groups
@@ -27,6 +31,8 @@ def test_write_parquet_metadata(tmp_path, small_sky_dir, small_sky_schema, check
         small_sky_schema,
         0,
     )
+    assert not (catalog_base_dir / "dataset" / "data_thumbnail.parquet").exists()
+
     ## Re-write - should still have the same properties.
     total_rows = write_parquet_metadata(catalog_base_dir)
     assert total_rows == 131
@@ -49,7 +55,6 @@ def test_write_parquet_metadata_order1(
         small_sky_order1_dir,
         temp_path,
     )
-
     total_rows = write_parquet_metadata(temp_path)
     assert total_rows == 131
     ## 4 row groups for 4 partitioned parquet files
@@ -64,6 +69,16 @@ def test_write_parquet_metadata_order1(
         small_sky_schema,
         0,
     )
+    ## the data thumbnail has 1 row group and a total of 4 rows
+    ## corresponding to the number of partitions
+    data_thumbnail_path = temp_path / "dataset" / "data_thumbnail.parquet"
+    assert data_thumbnail_path.exists()
+    thumbnail = ParquetFile(data_thumbnail_path)
+    data_thumbnail = thumbnail.read()
+    assert len(data_thumbnail) == 4
+    assert thumbnail.metadata.num_row_groups == 1
+    assert data_thumbnail.schema.equals(small_sky_schema)
+    assert data_thumbnail.equals(data_thumbnail.sort_by(SPATIAL_INDEX_COLUMN))
 
 
 def test_write_parquet_metadata_sorted(
@@ -76,8 +91,9 @@ def test_write_parquet_metadata_sorted(
         small_sky_order1_dir,
         temp_path,
     )
-
-    total_rows = write_parquet_metadata(temp_path)
+    ## Sneak in a test for the data thumbnail generation, specifying a
+    ## thumbnail threshold that is smaller than the number of partitions
+    total_rows = write_parquet_metadata(temp_path, thumbnail_threshold=2)
     assert total_rows == 131
     ## 4 row groups for 4 partitioned parquet files
     check_parquet_schema(
@@ -91,6 +107,16 @@ def test_write_parquet_metadata_sorted(
         small_sky_schema,
         0,
     )
+    ## the data thumbnail has 1 row group and a total of 2 rows
+    ## because that is what the pixel threshold specified
+    data_thumbnail_path = temp_path / "dataset" / "data_thumbnail.parquet"
+    assert data_thumbnail_path.exists()
+    thumbnail = ParquetFile(data_thumbnail_path)
+    data_thumbnail = thumbnail.read()
+    assert len(data_thumbnail) == 2
+    assert thumbnail.metadata.num_row_groups == 1
+    assert data_thumbnail.schema.equals(small_sky_schema)
+    assert data_thumbnail.equals(data_thumbnail.sort_by(SPATIAL_INDEX_COLUMN))
 
 
 def test_write_index_parquet_metadata(tmp_path, check_parquet_schema):
