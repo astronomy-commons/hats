@@ -162,6 +162,19 @@ def read_parquet_metadata(file_pointer: str | Path | UPath, **kwargs) -> pq.File
     return parquet_file
 
 
+def read_parquet_file(file_pointer: str | Path | UPath, **kwargs) -> pq.ParquetFile:
+    """Read single parquet file.
+
+    Args:
+        file_pointer: location of parquet file
+        **kwargs: additional arguments to be passed to pyarrow.parquet.ParquetFile
+    """
+    file_pointer = get_upath(file_pointer)
+    if file_pointer is None or not file_pointer.exists():
+        raise FileNotFoundError("Parquet file does not exist")
+    return pq.ParquetFile(file_pointer.path, filesystem=file_pointer.fs, **kwargs)
+
+
 def read_parquet_dataset(source: str | Path | UPath, **kwargs) -> tuple[UPath, Dataset]:
     """Read parquet dataset from directory pointer or list of files.
 
