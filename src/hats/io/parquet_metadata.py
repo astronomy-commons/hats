@@ -24,7 +24,7 @@ def write_parquet_metadata(
     catalog_path: str | Path | UPath,
     order_by_healpix=True,
     output_path: str | Path | UPath | None = None,
-    create_thumbnail: bool = True,
+    create_thumbnail: bool = False,
     thumbnail_threshold: int = 1_000_000,
 ):
     """Generate parquet metadata, using the already-partitioned parquet files
@@ -80,7 +80,7 @@ def write_parquet_metadata(
 
     for single_file in dataset.files:
         relative_path = single_file[len(dataset_path) + 1 :]
-        file = pq.ParquetFile(dataset_subdir / relative_path)
+        file = file_io.read_parquet_file(dataset_subdir / relative_path)
         single_metadata = file.metadata
 
         # Users must set the file path of each chunk before combining the metadata.

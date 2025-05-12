@@ -6,6 +6,7 @@ from .file_io import (
     make_directory,
     read_fits_image,
     read_parquet_dataset,
+    read_parquet_file,
     read_parquet_file_to_pandas,
     read_parquet_metadata,
     remove_directory,
