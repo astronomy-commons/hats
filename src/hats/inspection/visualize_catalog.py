@@ -83,7 +83,7 @@ def plot_density(catalog: Catalog, *, plot_title: str | None = None, order=None,
     col = ax.collections[0]
     plt.colorbar(
         col,
-        label=f"count / {unit} sq",
+        label=f"count / {unit}",
     )
     return fig, ax
 
