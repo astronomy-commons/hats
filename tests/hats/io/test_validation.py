@@ -26,6 +26,7 @@ def test_is_valid_catalog(tmp_path, small_sky_catalog):
 
     # A partition_info file alone is also not enough
     os.remove(tmp_path / "properties")
+    os.remove(tmp_path / "hats.properties")
     assert not is_valid_catalog(tmp_path)
 
     # The catalog_info file needs to be in the correct format
