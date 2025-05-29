@@ -36,6 +36,7 @@ PARQUET_METADATA_FILENAME = "_metadata"
 PARQUET_COMMON_METADATA_FILENAME = "_common_metadata"
 DATA_THUMBNAIL_FILENAME = "data_thumbnail.parquet"
 POINT_MAP_FILENAME = "point_map.fits"
+SKYMAP_FILENAME = "skymap.fits"
 
 
 def pixel_directory(
@@ -221,6 +222,20 @@ def get_point_map_file_pointer(catalog_base_dir: str | Path | UPath) -> UPath:
         File Pointer to the catalog's `point_map.fits` FITS image file.
     """
     return get_upath(catalog_base_dir) / POINT_MAP_FILENAME
+
+
+def get_skymap_file_pointer(catalog_base_dir: str | Path | UPath, order: int | None = None) -> UPath:
+    """Get file pointer to `skymap.fits` or `skymap.K.fits` FITS image file.
+
+    Args:
+        catalog_base_dir: pointer to base catalog directory
+        order: healpix order of the desired down-sampled skymap
+    Returns:
+        File Pointer to the FITS image file.
+    """
+    if order is not None and order >= 0:
+        return get_upath(catalog_base_dir) / f"skymap.{order}.fits"
+    return get_upath(catalog_base_dir) / SKYMAP_FILENAME
 
 
 def get_partition_join_info_pointer(catalog_base_dir: str | Path | UPath) -> UPath:
