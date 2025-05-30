@@ -6,6 +6,7 @@ from .paths import (
     get_parquet_metadata_pointer,
     get_partition_info_pointer,
     get_point_map_file_pointer,
+    get_skymap_file_pointer,
     pixel_catalog_file,
     pixel_directory,
 )
