@@ -164,9 +164,12 @@ class TableProperties(BaseModel):
     @classmethod
     def read_from_dir(cls, catalog_dir: str | Path | UPath) -> Self:
         """Read field values from a java-style properties file."""
-        file_path = file_io.get_upath(catalog_dir) / "properties"
+        catalog_path = file_io.get_upath(catalog_dir)
+        file_path = catalog_path / "hats.properties"
         if not file_io.does_file_or_directory_exist(file_path):
-            raise FileNotFoundError(f"No properties file found where expected: {str(file_path)}")
+            file_path = catalog_path / "properties"
+            if not file_io.does_file_or_directory_exist(file_path):
+                raise FileNotFoundError(f"No properties file found where expected: {str(file_path)}")
         p = Properties()
         with file_path.open("rb") as f:
             p.load(f, "utf-8")
@@ -179,6 +182,11 @@ class TableProperties(BaseModel):
         properties = Properties()
         properties.properties = parameters
         properties._key_order = parameters.keys()
-        file_path = file_io.get_upath(catalog_dir) / "properties"
+
+        catalog_path = file_io.get_upath(catalog_dir)
+        file_path = catalog_path / "hats.properties"
+        with file_path.open("wb") as _file:
+            properties.store(_file, encoding="utf-8", initial_comments="HATS catalog", timestamp=False)
+        file_path = catalog_path / "properties"
         with file_path.open("wb") as _file:
             properties.store(_file, encoding="utf-8", initial_comments="HATS catalog", timestamp=False)
