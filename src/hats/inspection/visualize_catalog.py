@@ -97,7 +97,7 @@ def plot_pixels(catalog: HealpixDataset, plot_title: str | None = None, **kwargs
         kwargs: Additional args to pass to `plot_healpix_map`
     """
     pixels = catalog.get_healpix_pixels()
-    default_title = f"Catalog pixel density map - {catalog.catalog_name}"
+    default_title = f"Catalog pixel map - {catalog.catalog_name}"
     return plot_pixel_list(
         pixels=pixels,
         plot_title=default_title if plot_title is None else plot_title,
