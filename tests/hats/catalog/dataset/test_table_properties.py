@@ -59,6 +59,41 @@ def test_properties_parsing():
     assert table_properties_using_list == table_properties
 
 
+def test_properties_int_list_parsing():
+    results = TableProperties.space_delimited_int_list("0 2 5")
+    assert results == [0, 2, 5]
+
+    results = TableProperties.space_delimited_int_list("0 5 2 5")
+    assert results == [0, 2, 5]
+
+    results = TableProperties.space_delimited_int_list([0, 2, 5])
+    assert results == [0, 2, 5]
+
+    results = TableProperties.space_delimited_int_list([0, 5, 2, 5])
+    assert results == [0, 2, 5]
+
+    results = TableProperties.space_delimited_int_list(" 2 ")
+    assert results == [2]
+
+    results = TableProperties.space_delimited_int_list(2)
+    assert results == [2]
+
+    results = TableProperties.space_delimited_int_list("      ")
+    assert results is None
+
+    results = TableProperties.space_delimited_int_list("")
+    assert results is None
+
+    results = TableProperties.space_delimited_int_list(None)
+    assert results is None
+
+    with pytest.raises(ValueError, match="invalid literal"):
+        TableProperties.space_delimited_int_list("one two five")
+
+    with pytest.raises(ValueError, match="Unsupported type"):
+        TableProperties.space_delimited_int_list(["0 2 5"])
+
+
 def test_properties_allowed_required():
     # Missing required field indexing_column
     with pytest.raises(ValueError, match="indexing_column"):

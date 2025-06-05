@@ -25,6 +25,7 @@ def test_write_skymap_roundtrip(tmp_path):
 def test_write_sampled_skymaps_roundtrip(tmp_path, orders):
     """Test the reading/writing of a catalog point map"""
     dense = np.arange(0, 3072)
+    assert sum(dense) == 4_717_056
 
     write_skymap(dense, tmp_path, orders)
     skymap_path = tmp_path / "skymap.fits"
@@ -38,6 +39,10 @@ def test_write_sampled_skymaps_roundtrip(tmp_path, orders):
             assert skymap_atorder_path.exists()
             read_histogram = read_fits_image(skymap_atorder_path)
             assert hp.npix2order(len(read_histogram)) == order
+            # Check that the contents have same overall count, and we're summing quadratically.
+            assert sum(read_histogram) == 4_717_056
+            pixel_size = 4 ** (4 - order)
+            assert read_histogram[-1] == sum(dense[-1 * pixel_size :])
         else:
             assert not skymap_atorder_path.exists()
 

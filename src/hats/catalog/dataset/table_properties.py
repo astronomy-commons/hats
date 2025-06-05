@@ -100,15 +100,34 @@ class TableProperties(BaseModel):
 
     @field_validator("skymap_alt_orders", mode="before")
     @classmethod
-    def space_delimited_int_list(cls, str_value: str) -> list[int]:
-        """Convert a space-delimited list string into a python list of strings."""
+    def space_delimited_int_list(cls, str_value: str | list[int]) -> list[int]:
+        """Convert a space-delimited list string into a python list of integers.
+
+        Args:
+            str_value(str | list[int]): string representation of a list of integers, delimited by
+                space, comma, or semi-colon, or a list of integers.
+
+        Returns:
+            sorted list of unique integers, if all inputs are integers, None if the input is empty
+        Raises:
+            ValueError: if any non-digit characters are encountered, or
+        """
+        if not str_value:
+            return None
+        if isinstance(str_value, int):
+            return [str_value]
         if isinstance(str_value, str):
-            # Split on a few kinds of delimiters (just to be safe), and remove duplicates
-            ints = [int(token) for token in re.split(";| |,|\n", str_value) if token.isdigit()]
-            ints.sort()
-            return ints
-        ## Convert empty strings and empty lists to None
-        return str_value if str_value else None
+            # Split on a few kinds of delimiters (just to be safe)
+            int_list = [int(token) for token in list(filter(None, re.split(";| |,|\n", str_value)))]
+        elif isinstance(str_value, list) and all(isinstance(elem, int) for elem in str_value):
+            int_list = str_value
+        else:
+            raise ValueError(f"Unsupported type of skymap_alt_orders {type(str_value)}")
+        if len(int_list) == 0:
+            return None
+        int_list = list(set(int_list))
+        int_list.sort()
+        return int_list
 
     @field_serializer("default_columns", "extra_columns", "skymap_alt_orders")
     def serialize_as_space_delimited_list(self, str_list: Iterable) -> str:
