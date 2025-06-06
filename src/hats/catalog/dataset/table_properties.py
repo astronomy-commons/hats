@@ -10,24 +10,6 @@ from upath import UPath
 from hats.catalog.catalog_type import CatalogType
 from hats.io import file_io
 
-## catalog_name, catalog_type, and total_rows are allowed for ALL types
-CATALOG_TYPE_ALLOWED_FIELDS = {
-    CatalogType.OBJECT: ["ra_column", "dec_column", "default_columns"],
-    CatalogType.SOURCE: ["primary_catalog", "ra_column", "dec_column", "default_columns"],
-    CatalogType.ASSOCIATION: [
-        "primary_catalog",
-        "primary_column",
-        "primary_column_association",
-        "join_catalog",
-        "join_column",
-        "join_column_association",
-        "contains_leaf_files",
-    ],
-    CatalogType.INDEX: ["primary_catalog", "indexing_column", "extra_columns"],
-    CatalogType.MARGIN: ["primary_catalog", "margin_threshold", "ra_column", "dec_column", "default_columns"],
-    CatalogType.MAP: ["default_columns"],
-}
-
 ## catalog_name, catalog_type, and total_rows are required for ALL types
 CATALOG_TYPE_REQUIRED_FIELDS = {
     CatalogType.OBJECT: ["ra_column", "dec_column"],
@@ -43,42 +25,6 @@ CATALOG_TYPE_REQUIRED_FIELDS = {
     CatalogType.MARGIN: ["primary_catalog", "margin_threshold"],
     CatalogType.MAP: [],
 }
-
-# All additional properties in the HATS recommendation.
-EXTRA_ALLOWED_FIELDS = [
-    "addendum_did",
-    "bib_reference",
-    "bib_reference_url",
-    "creator_did",
-    "data_ucd",
-    "hats_builder",
-    "hats_cols_sort",
-    "hats_cols_survey_id",
-    "hats_coordinate_epoch",
-    "hats_copyright",
-    "hats_creation_date",
-    "hats_creator",
-    "hats_estsize",
-    "hats_frame",
-    "hats_max_rows",
-    "hats_order",
-    "hats_progenitor_url",
-    "hats_release_date",
-    "hats_service_url",
-    "hats_status",
-    "hats_version",
-    "moc_sky_fraction",
-    "obs_ack",
-    "obs_copyright",
-    "obs_copyright_url",
-    "obs_description",
-    "obs_regime",
-    "obs_title",
-    "prov_progenitor",
-    "publisher_id",
-    "t_max",
-    "t_min",
-]
 
 
 class TableProperties(BaseModel):
@@ -123,9 +69,6 @@ class TableProperties(BaseModel):
     extra_columns: Optional[list[str]] = Field(default=None, alias="hats_index_extra_column")
     """Any additional payload columns included in index."""
 
-    ## Allow any extra keyword args to be stored on the properties object.
-    model_config = ConfigDict(extra="allow", populate_by_name=True, use_enum_values=True)
-
     npix_suffix: str = Field(default=".parquet", alias="hats_npix_suffix")
     """Suffix of the Npix partitions.
     In the standard HATS directory structure, this is '.parquet' because there is a single file
@@ -135,6 +78,15 @@ class TableProperties(BaseModel):
     and also those in which the Npix partitions are actually directories containing 1+ files
     underneath (and then `npix_suffix` = '/').
     """
+
+    skymap_order: Optional[int] = Field(default=None, alias="hats_skymap_order")
+    """Nested Order of the healpix skymap stored in the default skymap.fits."""
+
+    skymap_alt_orders: Optional[list[int]] = Field(default=None, alias="hats_skymap_alt_orders")
+    """Nested Order (K) of the healpix skymaps stored in altnernative skymap.K.fits."""
+
+    ## Allow any extra keyword args to be stored on the properties object.
+    model_config = ConfigDict(extra="allow", populate_by_name=True, use_enum_values=True)
 
     @field_validator("default_columns", "extra_columns", mode="before")
     @classmethod
@@ -146,27 +98,50 @@ class TableProperties(BaseModel):
         ## Convert empty strings and empty lists to None
         return str_value if str_value else None
 
-    @field_serializer("default_columns", "extra_columns")
-    def serialize_as_space_delimited_list(self, str_list: Iterable[str]) -> str:
+    @field_validator("skymap_alt_orders", mode="before")
+    @classmethod
+    def space_delimited_int_list(cls, str_value: str | list[int]) -> list[int]:
+        """Convert a space-delimited list string into a python list of integers.
+
+        Args:
+            str_value(str | list[int]): string representation of a list of integers, delimited by
+                space, comma, or semi-colon, or a list of integers.
+
+        Returns:
+            sorted list of unique integers, if all inputs are integers, None if the input is empty
+        Raises:
+            ValueError: if any non-digit characters are encountered, or
+        """
+        if not str_value:
+            return None
+        if isinstance(str_value, int):
+            return [str_value]
+        if isinstance(str_value, str):
+            # Split on a few kinds of delimiters (just to be safe)
+            int_list = [int(token) for token in list(filter(None, re.split(";| |,|\n", str_value)))]
+        elif isinstance(str_value, list) and all(isinstance(elem, int) for elem in str_value):
+            int_list = str_value
+        else:
+            raise ValueError(f"Unsupported type of skymap_alt_orders {type(str_value)}")
+        if len(int_list) == 0:
+            return None
+        int_list = list(set(int_list))
+        int_list.sort()
+        return int_list
+
+    @field_serializer("default_columns", "extra_columns", "skymap_alt_orders")
+    def serialize_as_space_delimited_list(self, str_list: Iterable) -> str:
         """Convert a python list of strings into a space-delimited string."""
         if str_list is None or len(str_list) == 0:
             return None
-        return " ".join(str_list)
+        return " ".join([str(element) for element in str_list])
 
     @model_validator(mode="after")
-    def check_allowed_and_required(self) -> Self:
+    def check_required(self) -> Self:
         """Check that type-specific fields are appropriate, and required fields are set."""
         explicit_keys = set(
             self.model_dump(by_alias=False, exclude_none=True).keys() - self.__pydantic_extra__.keys()
         )
-
-        allowed_keys = set(
-            CATALOG_TYPE_ALLOWED_FIELDS[self.catalog_type]
-            + ["catalog_name", "catalog_type", "total_rows", "npix_suffix"]
-        )
-        non_allowed = explicit_keys - allowed_keys
-        if len(non_allowed) > 0:
-            raise ValueError(f"Unexpected property for table type {self.catalog_type}: {non_allowed}")
 
         required_keys = set(
             CATALOG_TYPE_REQUIRED_FIELDS[self.catalog_type] + ["catalog_name", "catalog_type", "total_rows"]
@@ -177,10 +152,6 @@ class TableProperties(BaseModel):
                 f"Missing required property for table type {self.catalog_type}: {missing_required}"
             )
 
-        # Check against all known properties - catches typos.
-        non_allowed = set(self.__pydantic_extra__.keys()) - set(EXTRA_ALLOWED_FIELDS)
-        if len(non_allowed) > 0:
-            raise ValueError(f"Unexpected extra property: {non_allowed}")
         return self
 
     def copy_and_update(self, **kwargs):

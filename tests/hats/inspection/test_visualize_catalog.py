@@ -898,7 +898,7 @@ def test_catalog_plot_density(small_sky_source_dir):
 
 def test_catalog_plot_density_errors(small_sky_source_dir):
     small_sky_source_catalog = read_hats(small_sky_source_dir)
-    with pytest.raises(ValueError, match="plotting order"):
+    with pytest.raises(ValueError, match="order should be less"):
         plot_density(small_sky_source_catalog, order=13)
 
     with pytest.raises(ValueError, match="not convertible"):
