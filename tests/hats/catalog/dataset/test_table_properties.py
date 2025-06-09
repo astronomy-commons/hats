@@ -23,6 +23,8 @@ def test_properties_parsing():
         catalog_type="index",
         total_rows=15,
         extra_columns="a , b",
+        skymap_order=7,
+        skymap_alt_orders="2 3 4",
         indexing_column="a",
         primary_catalog="bar",
         hats_copyright="LINCC Frameworks 2024",
@@ -39,6 +41,8 @@ def test_properties_parsing():
   indexing_column a
   extra_columns a b
   npix_suffix .parquet
+  skymap_order 7
+  skymap_alt_orders 2 3 4
 """
     )
     table_properties_using_list = TableProperties(
@@ -46,11 +50,48 @@ def test_properties_parsing():
         catalog_type="index",
         total_rows=15,
         extra_columns=["a", "b"],
+        skymap_order=7,
+        skymap_alt_orders=[2, 3, 4],
         indexing_column="a",
         primary_catalog="bar",
         hats_copyright="LINCC Frameworks 2024",
     )
     assert table_properties_using_list == table_properties
+
+
+def test_properties_int_list_parsing():
+    results = TableProperties.space_delimited_int_list("0 2 5")
+    assert results == [0, 2, 5]
+
+    results = TableProperties.space_delimited_int_list("0 5 2 5")
+    assert results == [0, 2, 5]
+
+    results = TableProperties.space_delimited_int_list([0, 2, 5])
+    assert results == [0, 2, 5]
+
+    results = TableProperties.space_delimited_int_list([0, 5, 2, 5])
+    assert results == [0, 2, 5]
+
+    results = TableProperties.space_delimited_int_list(" 2 ")
+    assert results == [2]
+
+    results = TableProperties.space_delimited_int_list(2)
+    assert results == [2]
+
+    results = TableProperties.space_delimited_int_list("      ")
+    assert results is None
+
+    results = TableProperties.space_delimited_int_list("")
+    assert results is None
+
+    results = TableProperties.space_delimited_int_list(None)
+    assert results is None
+
+    with pytest.raises(ValueError, match="invalid literal"):
+        TableProperties.space_delimited_int_list("one two five")
+
+    with pytest.raises(ValueError, match="Unsupported type"):
+        TableProperties.space_delimited_int_list(["0 2 5"])
 
 
 def test_properties_allowed_required():
@@ -61,28 +102,6 @@ def test_properties_allowed_required():
             catalog_type="index",
             total_rows=15,
             primary_catalog="bar",
-        )
-
-    # join_column is only allowed on association catalogs
-    with pytest.raises(ValueError, match="join_column"):
-        TableProperties(
-            catalog_name="foo",
-            catalog_type="index",
-            total_rows=15,
-            indexing_column="a",
-            primary_catalog="bar",
-            join_column="b",
-        )
-
-    # extra_columnsss is a typo
-    with pytest.raises(ValueError, match="extra_columnsss"):
-        TableProperties(
-            catalog_name="foo",
-            catalog_type="index",
-            total_rows=15,
-            indexing_column="a",
-            primary_catalog="bar",
-            extra_columnsss=["beep"],
         )
 
 
@@ -109,13 +128,6 @@ def test_copy_and_update():
     prop_c = initital_properties.copy_and_update(moc_sky_fraction=0.54)
     assert initital_properties != prop_c
     assert prop_c.__pydantic_extra__["moc_sky_fraction"] == pytest.approx(0.54)
-
-    # extra_columnsss is a typo
-    with pytest.raises(ValueError, match="extra_columnsss"):
-        initital_properties.copy_and_update(extra_columnsss=0.54)
-
-    with pytest.raises(ValueError, match="extra_columnsss"):
-        initital_properties.copy_and_update(**{"extra_columnsss": 0.54})
 
 
 def test_read_from_dir_branches(

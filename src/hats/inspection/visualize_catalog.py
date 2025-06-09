@@ -27,7 +27,7 @@ from mocpy.moc.plot.culling_backfacing_cells import backface_culling
 from mocpy.moc.plot.utils import _set_wcs
 
 import hats.pixel_math.healpix_shim as hp
-from hats.io import file_io, paths
+from hats.io import skymap
 from hats.pixel_math import HealpixPixel
 from hats.pixel_tree.moc_filter import perform_filter_by_moc
 from hats.pixel_tree.pixel_tree import PixelTree
@@ -37,21 +37,9 @@ if TYPE_CHECKING:
     from hats.catalog.healpix_dataset.healpix_dataset import HealpixDataset
 
 
-def _read_point_map(catalog_base_dir):
-    """Read the object spatial distribution information from a healpix FITS file.
-
-    Args:
-        catalog_base_dir: path to a catalog
-    Returns:
-        one-dimensional numpy array of long integers where the value at each index
-        corresponds to the number of objects found at the healpix pixel.
-    """
-    map_file_pointer = paths.get_point_map_file_pointer(catalog_base_dir)
-    return file_io.read_fits_image(map_file_pointer)
-
-
 def plot_density(catalog: Catalog, *, plot_title: str | None = None, order=None, unit=None, **kwargs):
     """Create a visual map of the density of input points of a catalog on-disk.
+
     Args:
         catalog (`hats.catalog.Catalog`) Catalog to display
         plot_title (str): Optional title for the plot
@@ -60,16 +48,9 @@ def plot_density(catalog: Catalog, *, plot_title: str | None = None, order=None,
     """
     if catalog is None or not catalog.on_disk:
         raise ValueError("on disk catalog required for point-wise visualization")
-    point_map = _read_point_map(catalog.catalog_base_dir)
-    map_order = hp.npix2order(len(point_map))
+    point_map = skymap.read_skymap(catalog, order)
+    order = hp.npix2order(len(point_map))
 
-    if order is not None:
-        if order > map_order:
-            raise ValueError(f"plotting order should be less than stored density map order ({map_order})")
-        ## Create larger pixel sums from the constituent pixels.
-        point_map = point_map.reshape(hp.order2npix(order), -1).sum(axis=1)
-    else:
-        order = map_order
     if unit is None:
         unit = u.deg * u.deg
 
