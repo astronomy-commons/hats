@@ -928,7 +928,7 @@ def test_catalog_plot(small_sky_order1_catalog):
         np.testing.assert_array_equal(path.vertices, verts)
         np.testing.assert_array_equal(path.codes, codes)
     np.testing.assert_array_equal(col.get_array(), np.array([p.order for p in pixels]))
-    assert ax.get_title() == f"Catalog pixel density map - {small_sky_order1_catalog.catalog_name}"
+    assert ax.get_title() == f"Catalog pixel map - {small_sky_order1_catalog.catalog_name}"
 
 
 def test_catalog_plot_no_color_by_order(small_sky_order1_catalog):
@@ -955,7 +955,7 @@ def test_catalog_plot_no_color_by_order(small_sky_order1_catalog):
     assert col.get_array() is None
     np.testing.assert_array_equal(col.get_facecolor()[0], colors.to_rgba(fc))
     np.testing.assert_array_equal(col.get_edgecolor()[0], colors.to_rgba(ec))
-    assert ax.get_title() == f"Catalog pixel density map - {small_sky_order1_catalog.catalog_name}"
+    assert ax.get_title() == f"Catalog pixel map - {small_sky_order1_catalog.catalog_name}"
 
 
 def test_plot_moc(small_sky_order1_catalog):
