@@ -1,9 +1,0 @@
-catalog_name: small_sky
-catalog_type: object
-catalog_path: $HATS_DEFAULT_DIR/small_sky
-catalog_info:
-  catalog_name: small_sky
-  catalog_type: object
-  ra_column: ra
-  dec_column: dec
-  total_rows: 131
