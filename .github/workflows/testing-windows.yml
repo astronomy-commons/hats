@@ -30,4 +30,4 @@ jobs:
         pip install -e .[dev]
     - name: Run unit tests with pytest
       run: |
-        python -m pytest tests
+        python -m pytest --timeout=10 tests
