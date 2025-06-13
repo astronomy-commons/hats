@@ -880,18 +880,18 @@ def test_plot_existing_wrong_axes():
     np.testing.assert_array_equal(col.get_array(), pix_map)
 
 
-def test_catalog_plot_density(small_sky_source_dir):
+def test_catalog_plot_density(small_sky_dir):
     """Test plotting pixel-density for on-disk catalog.
     Confirm plotting at lower order doesn't have a warning, and creates fewer plot paths."""
-    small_sky_source_catalog = read_hats(small_sky_source_dir)
+    small_sky_source_catalog = read_hats(small_sky_dir)
     with pytest.warns(match="smaller"):
         _, ax = plot_density(small_sky_source_catalog)
     order10_paths = ax.collections[0].get_paths()
-    assert "Angular density of catalog small_sky_source" == ax.get_title()
+    assert "Angular density of catalog small_sky" == ax.get_title()
 
     _, ax = plot_density(small_sky_source_catalog, order=3)
     order3_paths = ax.collections[-1].get_paths()
-    assert "Angular density of catalog small_sky_source" == ax.get_title()
+    assert "Angular density of catalog small_sky" == ax.get_title()
 
     assert len(order3_paths) < len(order10_paths)
 

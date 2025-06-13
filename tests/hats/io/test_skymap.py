@@ -55,10 +55,10 @@ def test_write_sampled_skymaps_error(tmp_path):
         write_skymap(dense, tmp_path, 13)
 
 
-def test_read_alt_skymap(small_sky_source_skymap_dir, mocker):
+def test_read_alt_skymap(small_sky_source_dir, mocker):
     """Test that we're reading the file we expect to read, and get the
     appropriate length for the returned skymap histogram."""
-    catalog = read_hats(small_sky_source_skymap_dir)
+    catalog = read_hats(small_sky_source_dir)
 
     mock_method = "hats.io.file_io.read_fits_image"
     # Setting the side effect allows us to run the mocked function's code
@@ -70,7 +70,7 @@ def test_read_alt_skymap(small_sky_source_skymap_dir, mocker):
 
     mocked_read_fits_call.assert_called_once()
     path_arg = mocked_read_fits_call.call_args.args[0]
-    assert str(small_sky_source_skymap_dir / "skymap.fits") == str(path_arg)
+    assert str(small_sky_source_dir / "skymap.fits") == str(path_arg)
 
     mocked_read_fits_call.reset_mock()
 
@@ -80,7 +80,7 @@ def test_read_alt_skymap(small_sky_source_skymap_dir, mocker):
 
     mocked_read_fits_call.assert_called_once()
     path_arg = mocked_read_fits_call.call_args.args[0]
-    assert str(small_sky_source_skymap_dir / "skymap.4.fits") == str(path_arg)
+    assert str(small_sky_source_dir / "skymap.4.fits") == str(path_arg)
 
     mocked_read_fits_call.reset_mock()
 
@@ -90,7 +90,7 @@ def test_read_alt_skymap(small_sky_source_skymap_dir, mocker):
 
     mocked_read_fits_call.assert_called_once()
     path_arg = mocked_read_fits_call.call_args.args[0]
-    assert str(small_sky_source_skymap_dir / "skymap.4.fits") == str(path_arg)
+    assert str(small_sky_source_dir / "skymap.4.fits") == str(path_arg)
 
     mocked_read_fits_call.reset_mock()
 
@@ -100,15 +100,15 @@ def test_read_alt_skymap(small_sky_source_skymap_dir, mocker):
 
     mocked_read_fits_call.assert_called_once()
     path_arg = mocked_read_fits_call.call_args.args[0]
-    assert str(small_sky_source_skymap_dir / "skymap.fits") == str(path_arg)
+    assert str(small_sky_source_dir / "skymap.fits") == str(path_arg)
 
     mocked_read_fits_call.reset_mock()
 
 
-def test_read_noalt_skymap(small_sky_source_skymap_dir, mocker):
+def test_read_noalt_skymap(small_sky_source_dir, mocker):
     """Test that we're reading the file we expect to read, and get the
     appropriate length for the returned skymap histogram."""
-    catalog = read_hats(small_sky_source_skymap_dir)
+    catalog = read_hats(small_sky_source_dir)
     ## Alternate sky map orders are only used when present in the properties file.
     catalog.catalog_info.skymap_alt_orders = None
 
@@ -122,7 +122,7 @@ def test_read_noalt_skymap(small_sky_source_skymap_dir, mocker):
 
     mocked_read_fits_call.assert_called_once()
     path_arg = mocked_read_fits_call.call_args.args[0]
-    assert str(small_sky_source_skymap_dir / "skymap.fits") == str(path_arg)
+    assert str(small_sky_source_dir / "skymap.fits") == str(path_arg)
 
     mocked_read_fits_call.reset_mock()
 
@@ -132,7 +132,7 @@ def test_read_noalt_skymap(small_sky_source_skymap_dir, mocker):
 
     mocked_read_fits_call.assert_called_once()
     path_arg = mocked_read_fits_call.call_args.args[0]
-    assert str(small_sky_source_skymap_dir / "skymap.fits") == str(path_arg)
+    assert str(small_sky_source_dir / "skymap.fits") == str(path_arg)
 
     mocked_read_fits_call.reset_mock()
 

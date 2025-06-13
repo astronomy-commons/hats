@@ -34,7 +34,7 @@ def test_read_from_file(margin_catalog_path, margin_catalog_pixels, margin_catal
     assert info.catalog_type == CatalogType.MARGIN
     assert info.ra_column == "ra"
     assert info.dec_column == "dec"
-    assert info.primary_catalog == "small_sky_order1"
+    assert info.primary_catalog == "small_sky_o1_collection/small_sky_order1"
     assert info.margin_threshold == 7200
 
     assert isinstance(catalog.schema, pa.Schema)

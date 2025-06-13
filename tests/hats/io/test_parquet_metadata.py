@@ -30,7 +30,7 @@ def test_write_parquet_metadata(tmp_path, small_sky_dir, small_sky_schema, check
         small_sky_schema,
         0,
     )
-    assert not (catalog_base_dir / "dataset" / "data_thumbnail.parquet").exists()
+    assert (catalog_base_dir / "dataset" / "data_thumbnail.parquet").exists()
 
     ## Re-write - should still have the same properties.
     total_rows = write_parquet_metadata(catalog_base_dir)
@@ -153,7 +153,7 @@ def test_aggregate_column_statistics(small_sky_order1_dir):
     assert len(result_frame) == 5
 
     result_frame = aggregate_column_statistics(partition_info_file, exclude_hats_columns=False)
-    assert len(result_frame) == 9
+    assert len(result_frame) == 6
 
     result_frame = aggregate_column_statistics(partition_info_file, include_columns=["ra", "dec"])
     assert len(result_frame) == 2
@@ -267,8 +267,8 @@ def test_per_pixel_statistics(small_sky_order1_dir):
     assert result_frame.shape == (4, 20)
 
     result_frame = per_pixel_statistics(partition_info_file, exclude_hats_columns=False)
-    # 36 = 9 columns * 4 stats per-column
-    assert result_frame.shape == (4, 36)
+    # 36 = 6 columns * 4 stats per-column
+    assert result_frame.shape == (4, 24)
 
     result_frame = per_pixel_statistics(partition_info_file, include_columns=["ra", "dec"])
     # 8 = 2 columns * 4 stats per-column
@@ -286,8 +286,8 @@ def test_per_pixel_statistics_multi_index(small_sky_order1_dir):
     assert result_frame.shape == (20, 4)
 
     result_frame = per_pixel_statistics(partition_info_file, exclude_hats_columns=False, multi_index=True)
-    # 36 = 9 columns * 4 stats per-column
-    assert result_frame.shape == (36, 4)
+    # 24 = 6 columns * 4 stats per-column
+    assert result_frame.shape == (24, 4)
 
 
 def test_per_pixel_statistics_include_stats(small_sky_order1_dir):

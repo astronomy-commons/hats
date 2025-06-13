@@ -1,4 +1,0 @@
-catalog_name: bad_link
-catalog_type: source
-catalog_path: $HATS_DEFAULT_DIR/catalog
-primary: /does/not/exist

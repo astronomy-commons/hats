@@ -6,19 +6,22 @@ from hats.io.file_io.file_io import load_text_file
 
 
 def test_read_collection_from_file(small_sky_collection_dir):
-    properties_from_file = CollectionProperties.read_from_dir(small_sky_collection_dir)
-
-    expected_properties = CollectionProperties(
-        name="small_sky_01",
-        hats_primary_table_url="small_sky_order1",
-        all_margins="small_sky_order1_margin",
-        default_margin="small_sky_order1_margin",
-        all_indexes="id small_sky_order1_id_index",
-        default_index="id",
-        obs_regime="Optical",
+    properties_from_file = CollectionProperties.read_from_dir(small_sky_collection_dir).model_dump(
+        by_alias=False, exclude_none=True
     )
 
-    assert properties_from_file == expected_properties
+    expected_attributes = {
+        "name": "small_sky_o1_collection",
+        "hats_primary_table_url": "small_sky_order1",
+        "all_margins": "small_sky_order1_margin",
+        "default_margin": "small_sky_order1_margin",
+        "all_indexes": "id small_sky_order1_id_index",
+        "default_index": "id",
+        "obs_regime": "Optical",
+    }
+
+    for key, val in expected_attributes.items():
+        assert properties_from_file[key] == val
 
 
 def test_collection_properties_string():
@@ -165,21 +168,52 @@ def test_read_collection_all_indexes_not_specified(small_sky_collection_dir, tmp
         CollectionProperties.read_from_dir(tmp_path)
 
 
-def test_collection_parsing(small_sky_collection_dir):
+def test_collection_parsing():
     ## Confirm we can pass in already dict- or list-like objects, and get the expected values.
-    properties_from_file = CollectionProperties.read_from_dir(small_sky_collection_dir)
-
-    expected_properties = CollectionProperties(
-        name="small_sky_01",
-        hats_primary_table_url="small_sky_order1",
-        all_margins=["small_sky_order1_margin"],
-        default_margin="small_sky_order1_margin",
-        all_indexes={"id": "small_sky_order1_id_index"},
-        default_index="id",
-        obs_regime="Optical",
+    ## Space-only delimited
+    results = CollectionProperties.space_delimited_list(
+        "small_sky_order1_margin small_sky_order1_50arcs_margin"
     )
+    assert results == ["small_sky_order1_margin", "small_sky_order1_50arcs_margin"]
 
-    assert properties_from_file == expected_properties
+    ## Comma-delimited
+    results = CollectionProperties.space_delimited_list(
+        "small_sky_order1_margin, small_sky_order1_50arcs_margin"
+    )
+    assert results == ["small_sky_order1_margin", "small_sky_order1_50arcs_margin"]
+
+    ## Already a list of strings
+    results = CollectionProperties.space_delimited_list(
+        ["small_sky_order1_margin", "small_sky_order1_50arcs_margin"]
+    )
+    assert results == ["small_sky_order1_margin", "small_sky_order1_50arcs_margin"]
+
+    ## None or empty
+    results = CollectionProperties.space_delimited_list(None)
+    assert results is None
+
+    results = CollectionProperties.space_delimited_list("")
+    assert results is None
+
+    results = CollectionProperties.index_tuples("id small_sky_order1_id_index")
+    assert results == {"id": "small_sky_order1_id_index"}
+
+    ## Comma-delimited
+    results = CollectionProperties.index_tuples("id small_sky_order1_id_index, ra small_sky_ra_index")
+    assert results == {"id": "small_sky_order1_id_index", "ra": "small_sky_ra_index"}
+
+    ## Already a dict of strings
+    results = CollectionProperties.index_tuples(
+        {"id": "small_sky_order1_id_index", "ra": "small_sky_ra_index"}
+    )
+    assert results == {"id": "small_sky_order1_id_index", "ra": "small_sky_ra_index"}
+
+    ## None or empty
+    results = CollectionProperties.index_tuples(None)
+    assert results is None
+
+    results = CollectionProperties.index_tuples("")
+    assert results is None
 
     simple_properties = CollectionProperties(
         name="small_sky_01",
