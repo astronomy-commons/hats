@@ -45,46 +45,39 @@ def read_hats(catalog_path: str | Path | UPath) -> CatalogCollection | Dataset:
             catalog = hats.read_hats(UPath(..., anon=True))
     """
     path = file_io.get_upath(catalog_path)
-    try:
-        collection_properties = CollectionProperties.read_from_dir(path)
-        return _load_collection(path, collection_properties)
-    except FileNotFoundError:
+    if (path / "hats.properties").exists() or (path / "properties").exists():
         return _load_catalog(path)
+    if (path / "collection.properties").exists():
+        return _load_collection(path)
+    raise FileNotFoundError(f"Failed to read HATS at location {catalog_path}")
 
 
-def _load_collection(
-    collection_path: UPath, collection_properties: CollectionProperties
-) -> CatalogCollection:
-    try:
-        main_catalog = _load_catalog(collection_path / collection_properties.hats_primary_table_url)
-        return CatalogCollection(collection_path, collection_properties, main_catalog)
-    except Exception as exception:  # pylint: disable=broad-except
-        raise FileNotFoundError(f"Failed to read collection at location {collection_path}") from exception
+def _load_collection(collection_path: UPath) -> CatalogCollection:
+    collection_properties = CollectionProperties.read_from_dir(collection_path)
+    main_catalog = _load_catalog(collection_path / collection_properties.hats_primary_table_url)
+    return CatalogCollection(collection_path, collection_properties, main_catalog)
 
 
 def _load_catalog(catalog_path: UPath) -> Dataset:
-    try:
-        properties = TableProperties.read_from_dir(catalog_path)
-        dataset_type = properties.catalog_type
-        if dataset_type not in DATASET_TYPE_TO_CLASS:
-            raise NotImplementedError(f"Cannot load catalog of type {dataset_type}")
+    properties = TableProperties.read_from_dir(catalog_path)
+    dataset_type = properties.catalog_type
+    if dataset_type not in DATASET_TYPE_TO_CLASS:
+        raise NotImplementedError(f"Cannot load catalog of type {dataset_type}")
 
-        loader = DATASET_TYPE_TO_CLASS[dataset_type]
-        schema = _read_schema_from_metadata(catalog_path)
-        kwargs = {
-            "catalog_path": catalog_path,
-            "catalog_info": properties,
-            "schema": schema,
-            "original_schema": schema,
-        }
-        if _is_healpix_dataset(dataset_type):
-            kwargs["pixels"] = PartitionInfo.read_from_dir(catalog_path)
-            kwargs["moc"] = _read_moc_from_point_map(catalog_path)
-        if dataset_type == CatalogType.ASSOCIATION:
-            kwargs["join_pixels"] = PartitionJoinInfo.read_from_dir(catalog_path)
-        return loader(**kwargs)
-    except Exception as exception:  # pylint: disable=broad-except
-        raise FileNotFoundError(f"Failed to read HATS at location {catalog_path}") from exception
+    loader = DATASET_TYPE_TO_CLASS[dataset_type]
+    schema = _read_schema_from_metadata(catalog_path)
+    kwargs = {
+        "catalog_path": catalog_path,
+        "catalog_info": properties,
+        "schema": schema,
+        "original_schema": schema,
+    }
+    if _is_healpix_dataset(dataset_type):
+        kwargs["pixels"] = PartitionInfo.read_from_dir(catalog_path)
+        kwargs["moc"] = _read_moc_from_point_map(catalog_path)
+    if dataset_type == CatalogType.ASSOCIATION:
+        kwargs["join_pixels"] = PartitionJoinInfo.read_from_dir(catalog_path)
+    return loader(**kwargs)
 
 
 def _is_healpix_dataset(dataset_type):

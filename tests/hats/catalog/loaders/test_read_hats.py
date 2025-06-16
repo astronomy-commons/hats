@@ -30,7 +30,7 @@ def test_read_hats_collection_main_catalog_invalid(small_sky_collection_dir, tmp
     collection_properties = CollectionProperties.read_from_dir(collection_base_dir)
     collection_properties.hats_primary_table_url = "small_sky_order1_margin"
     collection_properties.to_properties_file(collection_base_dir)
-    with pytest.raises(FileNotFoundError):
+    with pytest.raises(TypeError):
         read_hats(collection_base_dir)
 
 
