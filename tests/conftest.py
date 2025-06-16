@@ -13,8 +13,6 @@ DATA_DIR_NAME = "data"
 SMALL_SKY_DIR_NAME = "small_sky"
 SMALL_SKY_NPIX_ALT_SUFFIX_NAME = "small_sky_npix_alt_suffix"
 SMALL_SKY_NPIX_AS_DIR_NAME = "small_sky_npix_as_dir"
-SMALL_SKY_ORDER1_DIR_NAME = "small_sky_order1"
-SMALL_SKY_ORDER1_INDEX_DIR_NAME = "small_sky_order1_id_index"
 SMALL_SKY_SOURCE_OBJECT_INDEX_DIR_NAME = "small_sky_source_object_index"
 SMALL_SKY_NESTED_DIR_NAME = "small_sky_nested"
 
@@ -45,12 +43,12 @@ def small_sky_npix_as_dir_dir(test_data_dir):
 
 @pytest.fixture
 def small_sky_order1_dir(test_data_dir):
-    return test_data_dir / SMALL_SKY_ORDER1_DIR_NAME
+    return test_data_dir / "small_sky_o1_collection" / "small_sky_order1"
 
 
 @pytest.fixture
 def small_sky_order1_id_index_dir(test_data_dir):
-    return test_data_dir / SMALL_SKY_ORDER1_INDEX_DIR_NAME
+    return test_data_dir / "small_sky_o1_collection" / "small_sky_order1_id_index"
 
 
 @pytest.fixture
@@ -139,9 +137,6 @@ def small_sky_schema() -> pa.Schema:
             pa.field("dec", pa.float64()),
             pa.field("ra_error", pa.int64()),
             pa.field("dec_error", pa.int64()),
-            pa.field("Norder", pa.uint8()),
-            pa.field("Dir", pa.uint64()),
-            pa.field("Npix", pa.uint64()),
         ]
     )
 
@@ -160,9 +155,6 @@ def small_sky_source_schema() -> pa.Schema:
             pa.field("object_id", pa.int64()),
             pa.field("object_ra", pa.float64()),
             pa.field("object_dec", pa.float64()),
-            pa.field("Norder", pa.uint8()),
-            pa.field("Dir", pa.uint64()),
-            pa.field("Npix", pa.uint64()),
         ]
     )
 
@@ -177,12 +169,6 @@ def margin_catalog_schema() -> pa.Schema:
             pa.field("dec", pa.float64()),
             pa.field("ra_error", pa.int64()),
             pa.field("dec_error", pa.int64()),
-            pa.field("margin_Norder", pa.uint8()),
-            pa.field("margin_Dir", pa.uint64()),
-            pa.field("margin_Npix", pa.uint64()),
-            pa.field("Norder", pa.uint8()),
-            pa.field("Dir", pa.uint64()),
-            pa.field("Npix", pa.uint64()),
         ]
     )
 
@@ -217,7 +203,7 @@ def margin_catalog_pixels() -> list[HealpixPixel]:
 
 @pytest.fixture
 def margin_catalog_path(test_data_dir) -> str:
-    return test_data_dir / "small_sky_order1_margin"
+    return test_data_dir / "small_sky_o1_collection" / "small_sky_order1_margin"
 
 
 @pytest.fixture
@@ -233,11 +219,6 @@ def association_catalog_path(test_data_dir) -> str:
 @pytest.fixture
 def small_sky_source_dir(test_data_dir) -> str:
     return test_data_dir / "small_sky_source"
-
-
-@pytest.fixture
-def small_sky_source_skymap_dir(test_data_dir) -> str:
-    return test_data_dir / "small_sky_source_skymap"
 
 
 @pytest.fixture

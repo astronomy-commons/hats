@@ -105,26 +105,3 @@ def directory_has_contents(pointer: str | Path | UPath) -> bool:
     """
     pointer = get_upath(pointer)
     return len(find_files_matching_path(pointer, "*")) > 0
-
-
-def get_directory_contents(pointer: str | Path | UPath) -> list[UPath]:
-    """Finds all files and directories in the specified directory.
-
-    NB: This is not recursive, and will return only the first level of directory contents.
-
-    Args:
-        pointer: File Pointer in which to find contents
-
-    Returns:
-        New file pointers to files or subdirectories below this directory.
-    """
-    pointer = get_upath(pointer)
-    contents = []
-    for child in pointer.iterdir():
-        contents.append(child)
-
-    if len(contents) == 0:
-        return []
-
-    contents.sort()
-    return contents

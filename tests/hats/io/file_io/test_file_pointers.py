@@ -1,11 +1,8 @@
-from pathlib import Path
-
 from hats.io.file_io import (
     append_paths_to_pointer,
     directory_has_contents,
     does_file_or_directory_exist,
     find_files_matching_path,
-    get_directory_contents,
     is_regular_file,
 )
 
@@ -56,22 +53,3 @@ def test_find_files_matching_path_directory(small_sky_order1_dir):
 def test_directory_has_contents(small_sky_order1_dir, tmp_path):
     assert directory_has_contents(small_sky_order1_dir)
     assert not directory_has_contents(tmp_path)
-
-
-def test_get_directory_contents(small_sky_order1_dir, tmp_path):
-    small_sky_contents = get_directory_contents(small_sky_order1_dir)
-
-    small_sky_paths = [Path(p) for p in small_sky_contents]
-
-    expected = [
-        "dataset",
-        "partition_info.csv",
-        "point_map.fits",
-        "properties",
-    ]
-
-    expected = [small_sky_order1_dir / file_name for file_name in expected]
-
-    assert small_sky_paths == expected
-
-    assert len(get_directory_contents(tmp_path)) == 0

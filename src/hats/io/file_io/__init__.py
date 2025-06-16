@@ -22,7 +22,6 @@ from .file_pointer import (
     directory_has_contents,
     does_file_or_directory_exist,
     find_files_matching_path,
-    get_directory_contents,
     get_upath,
     get_upath_for_protocol,
     is_regular_file,

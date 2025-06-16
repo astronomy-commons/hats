@@ -110,8 +110,7 @@ def test_catalog_statistics(small_sky_order1_dir):
     assert_column_stat_as_floats(result_frame, "dec", min_value=-69.5, max_value=-25.5, row_count=131)
 
     result_frame = cat.aggregate_column_statistics(exclude_hats_columns=False)
-    assert_column_stat_as_floats(result_frame, "Norder", min_value=1, max_value=1, row_count=131)
-    assert len(result_frame) == 9
+    assert len(result_frame) == 6
 
     result_frame = cat.aggregate_column_statistics(include_columns=["ra", "dec"])
     assert len(result_frame) == 2
@@ -126,8 +125,8 @@ def test_catalog_statistics(small_sky_order1_dir):
     assert result_frame.shape == (4, 20)
 
     result_frame = cat.per_pixel_statistics(exclude_hats_columns=False)
-    # 36 = 9 columns * 4 stats per-column
-    assert result_frame.shape == (4, 36)
+    # 24 = 6 columns * 4 stats per-column
+    assert result_frame.shape == (4, 24)
 
     result_frame = cat.per_pixel_statistics(
         include_columns=["ra", "dec"], include_stats=["min_value", "max_value"]
