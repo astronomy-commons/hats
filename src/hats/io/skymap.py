@@ -85,7 +85,7 @@ def write_skymap(histogram: np.ndarray, catalog_dir: str | Path | UPath, orders:
         for order in orders:
             if order > original_order:
                 raise ValueError(
-                    f"sub-sampling skymap order should be less than overal order ({original_order})"
+                    f"sub-sampling skymap order should be less than overall order ({original_order})"
                 )
             sampled_histogram = histogram.reshape(hp.order2npix(order), -1).sum(axis=1)
             map_file_pointer = paths.get_skymap_file_pointer(catalog_dir, order=order)
