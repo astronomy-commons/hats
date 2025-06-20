@@ -11,7 +11,7 @@ from hats.catalog.dataset.table_properties import TableProperties
 from hats.catalog.healpix_dataset.healpix_dataset import HealpixDataset
 from hats.catalog.partition_info import PartitionInfo
 from hats.io import get_common_metadata_pointer, get_parquet_metadata_pointer, get_partition_info_pointer
-from hats.io.file_io import get_upath
+from hats.io.file_io import does_file_or_directory_exist, get_upath
 from hats.io.file_io.file_pointer import is_regular_file
 from hats.io.paths import get_healpix_from_path
 from hats.loaders import read_hats
@@ -114,6 +114,8 @@ def is_valid_catalog(
 
         parquet_path_pixels = []
         for hats_file in dataset.files:
+            if not does_file_or_directory_exist(hats_file):
+                handle_error(f"Pixel partition is missing: {hats_file}")
             healpix_pixel = get_healpix_from_path(hats_file)
             if healpix_pixel == INVALID_PIXEL:
                 handle_error(f"Could not derive partition pixel from parquet path: {hats_file}")
