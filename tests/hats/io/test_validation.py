@@ -161,3 +161,18 @@ def test_valid_catalog_strict_all(
     assert is_valid_catalog(small_sky_dir, **flags)
     assert is_valid_catalog(small_sky_source_object_index_dir, **flags)
     assert is_valid_catalog(margin_catalog_path, **flags)
+
+
+def test_is_valid_catalog_fail_with_missing_partitions(small_sky_source_dir, tmp_path):
+    """Test that if some files are missing an error is raised"""
+    flags = {
+        "strict": True,  # more intensive checks
+        "fail_fast": True,  # check everything, and just return true/false
+        "verbose": False,  # don't bother printing anything.
+    }
+    # copy all partitions but two
+    shutil.copytree(
+        small_sky_source_dir, tmp_path / "copy", ignore=lambda _, f: ["Npix=4.parquet", "Npix=176.parquet"]
+    )
+    with pytest.raises(ValueError, match="partition is missing"):
+        assert is_valid_catalog(tmp_path / "copy", **flags)
