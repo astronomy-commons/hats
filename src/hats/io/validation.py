@@ -114,11 +114,12 @@ def is_valid_catalog(
 
         parquet_path_pixels = []
         for hats_file in dataset.files:
-            if not does_file_or_directory_exist(hats_file):
-                handle_error(f"Pixel partition is missing: {hats_file}")
+            hats_fp = UPath(hats_file, protocol=metadata_file.protocol, **metadata_file.storage_options)
+            if not does_file_or_directory_exist(hats_fp):
+                handle_error(f"Pixel partition is missing: {hats_fp}")
             healpix_pixel = get_healpix_from_path(hats_file)
             if healpix_pixel == INVALID_PIXEL:
-                handle_error(f"Could not derive partition pixel from parquet path: {hats_file}")
+                handle_error(f"Could not derive partition pixel from parquet path: {str(hats_fp)}")
             parquet_path_pixels.append(healpix_pixel)
 
         parquet_path_pixels = sort_pixels(parquet_path_pixels)
