@@ -19,6 +19,7 @@ import hats.pixel_math.healpix_shim as hp
 from hats import read_hats
 from hats.inspection import plot_density, plot_pixels
 from hats.inspection.visualize_catalog import (
+    _merge_too_small_pixels,
     compute_healpix_vertices,
     cull_from_pixel_map,
     cull_to_fov,
@@ -908,7 +909,7 @@ def test_catalog_plot_density_errors(small_sky_source_dir):
         plot_density(None)
 
 
-def test_plot_pixels_empty_region():
+def test_plot_pixels_empty_region_or_no_remaining():
     mock_catalog = MagicMock()
     mock_catalog.catalog_name = "Test Empty Catalog"
     mock_catalog.get_healpix_pixels.return_value = []
@@ -917,6 +918,14 @@ def test_plot_pixels_empty_region():
         match="No pixels to plot for 'Catalog pixel map - Test Empty Catalog'. Cannot generate plot.",
     ):
         plot_pixels(mock_catalog)
+
+    empty_depth_ipix_d = {}
+    mock_wcs = MagicMock()
+    with pytest.raises(
+        ValueError,
+        match="No pixels remain. Cannot merge or plot an empty pixel map.",
+    ):
+        _merge_too_small_pixels(empty_depth_ipix_d, mock_wcs)
 
 
 def test_catalog_plot(small_sky_order1_catalog):
