@@ -79,9 +79,12 @@ def plot_pixels(catalog: HealpixDataset, plot_title: str | None = None, **kwargs
     """
     pixels = catalog.get_healpix_pixels()
     default_title = f"Catalog pixel map - {catalog.catalog_name}"
+    title = default_title if plot_title is None else plot_title
+    if len(pixels) == 0:
+        raise ValueError(f"No pixels to plot for '{title}'. Cannot generate plot.")
     return plot_pixel_list(
         pixels=pixels,
-        plot_title=default_title if plot_title is None else plot_title,
+        plot_title=title,
         **kwargs,
     )
 

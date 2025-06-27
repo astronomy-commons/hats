@@ -908,6 +908,17 @@ def test_catalog_plot_density_errors(small_sky_source_dir):
         plot_density(None)
 
 
+def test_plot_pixels_empty_region():
+    mock_catalog = MagicMock()
+    mock_catalog.catalog_name = "Test Empty Catalog"
+    mock_catalog.get_healpix_pixels.return_value = []
+    with pytest.raises(
+        ValueError,
+        match="No pixels to plot for 'Catalog pixel map - Test Empty Catalog'. Cannot generate plot.",
+    ):
+        plot_pixels(mock_catalog)
+
+
 def test_catalog_plot(small_sky_order1_catalog):
     fig, ax = plot_pixels(small_sky_order1_catalog)
     pixels = sorted(small_sky_order1_catalog.get_healpix_pixels())
