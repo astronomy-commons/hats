@@ -48,3 +48,13 @@ structure:
                |__ Dir=10000/
                    |__ Npix=K.parquet
                    |__ Npix=M.parquet
+
+
+As you can notice, `dataset/` has the following heirarchy:
+1. `Norder=k` directory contains all the tiles of the HEALPix order `k`.
+2. `Dir=m` directory contains all the tiles grouped by their pixel numbers such that `m` is the
+result of integer division by 10,000 of the pixel number. This is to avoid directories becoming 
+too large for some file systems.
+3. `Npix=n` is the ultimate data leaf for a tile with thw HEALPix pixel number `n` at `k`th order. Note:
+instead of being a single parquet file, this can be a directory containing one or more parquet files, 
+representing a single data partition, i.e., they should be read together as one single data unit.
