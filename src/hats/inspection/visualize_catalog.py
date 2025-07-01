@@ -79,9 +79,12 @@ def plot_pixels(catalog: HealpixDataset, plot_title: str | None = None, **kwargs
     """
     pixels = catalog.get_healpix_pixels()
     default_title = f"Catalog pixel map - {catalog.catalog_name}"
+    title = default_title if plot_title is None else plot_title
+    if len(pixels) == 0:
+        raise ValueError(f"No pixels to plot for '{title}'. Cannot generate plot.")
     return plot_pixel_list(
         pixels=pixels,
-        plot_title=default_title if plot_title is None else plot_title,
+        plot_title=title,
         **kwargs,
     )
 
@@ -283,6 +286,8 @@ def cull_to_fov(depth_ipix_d: dict[int, tuple[np.ndarray, np.ndarray]], wcs):
 def _merge_too_small_pixels(depth_ipix_d: dict[int, tuple[np.ndarray, np.ndarray]], wcs):
     """Merges any pixels too small in a map to a lower order, with the map values within a lower order pixel
     being sampled"""
+    if not depth_ipix_d:
+        raise ValueError("No pixels remain. Cannot merge or plot an empty pixel map.")
     # Get the WCS cdelt giving the deg.px^(-1) resolution.
     cdelt = wcs.wcs.cdelt
     # Convert in rad.px^(-1)
