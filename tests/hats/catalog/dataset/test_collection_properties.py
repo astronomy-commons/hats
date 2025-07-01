@@ -99,11 +99,11 @@ def test_write_properties_colon_not_escaped(tmp_path):
 
     file_contents = load_text_file(output_file_path)
 
-    expected_line_unescaped = f"obs_regime={test_timestamp_value}\n"
+    expected_line_unescaped = f"hats_creation_date={test_timestamp_value}\n"
     assert expected_line_unescaped in file_contents
 
     escaped_timestamp_value = test_timestamp_value.replace(":", r"\:")
-    unexpected_line_escaped = f"obs_regime={escaped_timestamp_value}\n"
+    unexpected_line_escaped = f"hats_creation_date={escaped_timestamp_value}\n"
     assert unexpected_line_escaped not in file_contents
 
 
