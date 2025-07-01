@@ -90,7 +90,7 @@ def test_write_properties_colon_not_escaped(tmp_path):
     collection_props = CollectionProperties(
         name="test_collection_with_colon",
         hats_primary_table_url="test_url_with_colon",
-        obs_regime=test_timestamp_value,
+        hats_creation_date=test_timestamp_value,
     )
 
     collection_props.to_properties_file(tmp_path)
