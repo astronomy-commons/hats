@@ -84,6 +84,29 @@ def test_read_collection_list_parse(tmp_path):
     ]
 
 
+def test_write_properties_colon_not_escaped(tmp_path):
+    test_timestamp_value = "2025-06-30T17:10UTC"
+
+    collection_props = CollectionProperties(
+        name="test_collection_with_colon",
+        hats_primary_table_url="test_url_with_colon",
+        hats_creation_date=test_timestamp_value,
+    )
+
+    collection_props.to_properties_file(tmp_path)
+
+    output_file_path = tmp_path / "collection.properties"
+
+    file_contents = load_text_file(output_file_path)
+
+    expected_line_unescaped = f"hats_creation_date={test_timestamp_value}\n"
+    assert expected_line_unescaped in file_contents
+
+    escaped_timestamp_value = test_timestamp_value.replace(":", r"\:")
+    unexpected_line_escaped = f"hats_creation_date={escaped_timestamp_value}\n"
+    assert unexpected_line_escaped not in file_contents
+
+
 def test_read_collection_read_errors(tmp_path):
     test_file_path = tmp_path / "collection.properties"
 
