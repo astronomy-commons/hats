@@ -1,3 +1,5 @@
+from importlib.metadata import version
+
 import pytest
 
 from hats.catalog.dataset.table_properties import TableProperties
@@ -167,3 +169,31 @@ def test_extra_dict():
     )
 
     assert table_properties.extra_dict() == extra_properties
+
+
+def test_provenance_dict(small_sky_dir):
+    properties = TableProperties.new_provenance_dict(small_sky_dir)
+    assert list(properties.keys()) == [
+        "hats_builder",
+        "hats_creation_date",
+        "hats_estsize",
+        "hats_release_date",
+        "hats_version",
+    ]
+    # Most values are dynamic, but these are some safe assumptions.
+    assert properties["hats_builder"] == f"hats v{version('hats')}"
+    assert properties["hats_creation_date"].startswith("20")
+    assert properties["hats_estsize"] >= 0
+    assert properties["hats_release_date"].startswith("20")
+    assert properties["hats_version"].startswith("v")
+
+    # Test that we can override a property and add another.
+    properties = TableProperties.new_provenance_dict(
+        small_sky_dir, builder="lsdb v0.1", hats_estsize=1000, foo="bar"
+    )
+    assert properties["hats_builder"] == f"lsdb v0.1, hats v{version('hats')}"
+    assert properties["hats_creation_date"].startswith("20")
+    assert properties["hats_estsize"] == 1000
+    assert properties["hats_release_date"].startswith("20")
+    assert properties["hats_version"].startswith("v")
+    assert properties["foo"] == "bar"
