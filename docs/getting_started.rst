@@ -5,7 +5,7 @@ Installation
 ------------
 
 The latest release version of HATS is available to install with 
-`pip <https://pypi.org/project/hats/>` or 
+`pip <https://pypi.org/project/hats/>`__ or 
 `conda <https://anaconda.org/conda-forge/hats>`__:
 
 .. code-block:: bash
