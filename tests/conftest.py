@@ -88,6 +88,8 @@ def association_catalog_info_data() -> dict:
         "join_column": "id",
         "join_column_association": "id_small_sky_order1",
         "contains_leaf_files": False,
+        "assn_separation_column": "_dist_arcsec",
+        "assn_max_separation": 35.0,
     }
 
 
