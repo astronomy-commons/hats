@@ -11,6 +11,7 @@ from hats.io import file_io, paths
 from hats.io.parquet_metadata import aggregate_column_statistics, per_pixel_statistics, write_parquet_metadata
 from hats.pixel_math.healpix_pixel import HealpixPixel
 from hats.pixel_math.spatial_index import SPATIAL_INDEX_COLUMN
+from pandas.api.types import is_numeric_dtype
 
 
 def test_write_parquet_metadata(tmp_path, small_sky_dir, small_sky_schema, check_parquet_schema):
@@ -169,8 +170,8 @@ def assert_column_stat_as_floats(
     data_stats = result_frame.loc[column_name]
     assert float(data_stats["min_value"]) >= min_value
     assert float(data_stats["max_value"]) <= max_value
-    assert int(data_stats["null_count"]) == null_count
-    assert int(data_stats["row_count"]) == row_count
+    assert data_stats["null_count"] == null_count
+    assert data_stats["row_count"] == row_count
 
 
 def test_aggregate_column_statistics_with_pixel(small_sky_order1_dir):
@@ -193,6 +194,29 @@ def test_aggregate_column_statistics_with_pixel(small_sky_order1_dir):
     )
     assert len(result_frame) == 5
     assert_column_stat_as_floats(result_frame, "dec", min_value=-60.5, max_value=-25.5, row_count=47)
+
+    result_frame = aggregate_column_statistics(partition_info_file, include_pixels=[HealpixPixel(1, 4)])
+    assert len(result_frame) == 0
+
+
+def test_aggregate_column_statistics_with_rowgroups(small_sky_source_dir):
+    partition_info_file = paths.get_parquet_metadata_pointer(small_sky_source_dir)
+
+    result_frame = aggregate_column_statistics(partition_info_file)
+    assert len(result_frame) == 9
+    assert_column_stat_as_floats(
+        result_frame, "object_dec", min_value=-69.5, max_value=-25.5, row_count=17161
+    )
+
+    result_frame = aggregate_column_statistics(partition_info_file, include_pixels=[HealpixPixel(1, 47)])
+    assert len(result_frame) == 9
+    assert_column_stat_as_floats(result_frame, "object_dec", min_value=-36.5, max_value=-25.5, row_count=2395)
+
+    result_frame = aggregate_column_statistics(
+        partition_info_file, include_pixels=[HealpixPixel(1, 45), HealpixPixel(1, 47)]
+    )
+    assert len(result_frame) == 9
+    assert_column_stat_as_floats(result_frame, "object_dec", min_value=-60.5, max_value=-25.5, row_count=2395)
 
     result_frame = aggregate_column_statistics(partition_info_file, include_pixels=[HealpixPixel(1, 4)])
     assert len(result_frame) == 0
@@ -308,3 +332,97 @@ def test_per_pixel_statistics_include_stats(small_sky_order1_dir):
     )
     # 1 = 1 columns * 1 stat per column
     assert result_frame.shape == (4, 1)
+
+
+def test_per_pixel_statistics_with_nested(small_sky_nested_dir):
+    partition_info_file = paths.get_parquet_metadata_pointer(small_sky_nested_dir)
+
+    ## Will have 13 returned columns (5 object and 8 light curve)
+    ## Since object_dec is copied from object.dec, the min/max are the same,
+    ## but there are MANY more rows of light curve dec values.
+    result_frame = per_pixel_statistics(partition_info_file)
+    assert len(result_frame) == 13
+    assert result_frame["dec: row_count"].sum() == 131
+
+    ## Only peeking at a single pixel, we should see the same dec min/max as
+    ## we see for the flat object table.
+    single_pixel = HealpixPixel(1, 47)
+    result_frame = per_pixel_statistics(partition_info_file, include_pixels=[single_pixel], multi_index=True)
+    assert len(result_frame) == 13
+    assert_column_stat_as_floats(
+        result_frame, (single_pixel, "dec"), min_value=-36.5, max_value=-25.5, row_count=18
+    )
+    assert_column_stat_as_floats(
+        result_frame, (single_pixel, "lc.source_id"), min_value=70008, max_value=87148, row_count=2358
+    )
+    assert_column_stat_as_floats(
+        result_frame, (single_pixel, "lc.mag"), min_value=15, max_value=21, row_count=2358
+    )
+
+
+def test_per_pixel_statistics_with_rowgroups_aggregated(small_sky_source_dir):
+    partition_info_file = paths.get_parquet_metadata_pointer(small_sky_source_dir)
+
+    result_frame = per_pixel_statistics(partition_info_file)
+    ## 14 = number of partitions in this catalog
+    assert len(result_frame) == 14
+    assert result_frame["object_dec: row_count"].sum() == 17161
+
+    single_pixel = HealpixPixel(1, 47)
+    result_frame = per_pixel_statistics(partition_info_file, include_pixels=[single_pixel], multi_index=True)
+    ## 9 = number of columns
+    assert len(result_frame) == 9
+    assert_column_stat_as_floats(
+        result_frame, (single_pixel, "object_dec"), min_value=-36.5, max_value=-25.5, row_count=2395
+    )
+
+
+def test_statistics_numeric_fields(small_sky_source_dir):
+    """Test behavior of the `only_numeric_columns` flag on both statistics-gathering methods."""
+    partition_info_file = paths.get_parquet_metadata_pointer(small_sky_source_dir)
+
+    result_frame = per_pixel_statistics(partition_info_file, only_numeric_columns=True)
+    ## 14 = number of partitions in this catalog
+    assert len(result_frame) == 14
+    assert result_frame["object_dec: row_count"].sum() == 17161
+    for col in result_frame.columns:
+        assert is_numeric_dtype(result_frame[col]), f"Expected {col} to be numeric"
+
+    single_pixel = HealpixPixel(1, 47)
+    result_frame = per_pixel_statistics(
+        partition_info_file, include_pixels=[single_pixel], multi_index=True, only_numeric_columns=True
+    )
+    ## 8 = number of NUMERIC columns (band is a string)
+    assert len(result_frame) == 8
+    for col in result_frame.columns:
+        assert is_numeric_dtype(result_frame[col]), f"Expected {col} to be numeric"
+
+    assert_column_stat_as_floats(
+        result_frame, (single_pixel, "object_dec"), min_value=-36.5, max_value=-25.5, row_count=2395
+    )
+
+    result_frame = aggregate_column_statistics(partition_info_file, only_numeric_columns=True)
+    assert len(result_frame) == 8
+
+    for col in result_frame.columns:
+        assert is_numeric_dtype(result_frame[col]), f"Expected {col} to be numeric"
+
+
+def test_per_pixel_statistics_per_row_group(small_sky_source_dir):
+    partition_info_file = paths.get_parquet_metadata_pointer(small_sky_source_dir)
+
+    result_frame = per_pixel_statistics(partition_info_file, per_row_group=False)
+    ## 24 = number of ROW GROUPS in ALL partitions in this catalog
+    assert len(result_frame) == 14
+    assert result_frame["object_dec: row_count"].sum() == 17161
+
+
+def test_per_pixel_statistics_with_rowgroups_empty_result(small_sky_source_dir):
+    partition_info_file = paths.get_parquet_metadata_pointer(small_sky_source_dir)
+    result_frame = per_pixel_statistics(partition_info_file, include_pixels=[HealpixPixel(1, 4)])
+    assert len(result_frame) == 0
+
+    result_frame = per_pixel_statistics(
+        partition_info_file, include_pixels=[HealpixPixel(1, 4)], multi_index=True
+    )
+    assert len(result_frame) == 0
