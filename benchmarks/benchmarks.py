@@ -10,9 +10,8 @@ import numpy as np
 import hats.pixel_math as hist
 import hats.pixel_math.healpix_shim as hp
 from hats.catalog import Catalog, PartitionInfo, TableProperties
-from hats.catalog.association_catalog.partition_join_info import PartitionJoinInfo
 from hats.pixel_math import HealpixPixel
-from hats.pixel_tree import PixelAlignment, align_trees
+from hats.pixel_tree import align_trees
 from hats.pixel_tree.pixel_tree import PixelTree
 
 
@@ -86,29 +85,14 @@ class MetadataSuite:
         partition_info = PartitionInfo.from_healpix(pixel_list_b)
         partition_info.write_to_file(os.path.join(catalog_path_b, "partition_info.csv"))
 
-        ## Fake an association table between the two
+        ## Fake an association catalog between the two
+        association_catalog_path = os.path.join(root_dir, "association_a_b")
+        os.makedirs(association_catalog_path, exist_ok=True)
         tree_a = PixelTree.from_healpix(pixel_list_a)
         tree_b = PixelTree.from_healpix(pixel_list_b)
         alignment = align_trees(tree_a, tree_b)
-        alignment_df = alignment.pixel_mapping[
-            [
-                PixelAlignment.PRIMARY_ORDER_COLUMN_NAME,
-                PixelAlignment.PRIMARY_PIXEL_COLUMN_NAME,
-                PixelAlignment.JOIN_ORDER_COLUMN_NAME,
-                PixelAlignment.JOIN_PIXEL_COLUMN_NAME,
-            ]
-        ]
-        alignment_df = alignment_df.rename(
-            columns={
-                PixelAlignment.PRIMARY_ORDER_COLUMN_NAME: "Norder",
-                PixelAlignment.PRIMARY_PIXEL_COLUMN_NAME: "Npix",
-            }
-        )
-
-        association_catalog_path = os.path.join(root_dir, "assocation_a_b")
-        os.makedirs(association_catalog_path, exist_ok=True)
-        partition_info = PartitionJoinInfo(alignment_df)
-        partition_info.write_to_csv(association_catalog_path)
+        partition_info = PartitionInfo.from_healpix(alignment.pixel_tree.get_healpix_pixels())
+        partition_info.write_to_file(os.path.join(association_catalog_path, "partition_info.csv"))
 
         return (catalog_path_a, catalog_path_b, association_catalog_path)
 
@@ -118,5 +102,5 @@ class MetadataSuite:
     def time_load_partition_info_order6(self, cache):
         PartitionInfo.read_from_dir(cache[1])
 
-    def time_load_partition_join_info(self, cache):
+    def time_load_partition_info_association(self, cache):
         PartitionInfo.read_from_dir(cache[2])

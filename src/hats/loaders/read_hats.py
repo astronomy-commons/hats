@@ -10,7 +10,6 @@ from upath import UPath
 
 import hats.pixel_math.healpix_shim as hp
 from hats.catalog import AssociationCatalog, Catalog, CatalogType, Dataset, MapCatalog, MarginCatalog
-from hats.catalog.association_catalog.partition_join_info import PartitionJoinInfo
 from hats.catalog.catalog_collection import CatalogCollection
 from hats.catalog.dataset.collection_properties import CollectionProperties
 from hats.catalog.dataset.table_properties import TableProperties
@@ -63,7 +62,6 @@ def _load_catalog(catalog_path: UPath) -> Dataset:
     dataset_type = properties.catalog_type
     if dataset_type not in DATASET_TYPE_TO_CLASS:
         raise NotImplementedError(f"Cannot load catalog of type {dataset_type}")
-
     loader = DATASET_TYPE_TO_CLASS[dataset_type]
     schema = _read_schema_from_metadata(catalog_path)
     kwargs = {
@@ -75,8 +73,6 @@ def _load_catalog(catalog_path: UPath) -> Dataset:
     if _is_healpix_dataset(dataset_type):
         kwargs["pixels"] = PartitionInfo.read_from_dir(catalog_path)
         kwargs["moc"] = _read_moc_from_point_map(catalog_path)
-    if dataset_type == CatalogType.ASSOCIATION:
-        kwargs["join_pixels"] = PartitionJoinInfo.read_from_dir(catalog_path)
     return loader(**kwargs)
 
 
