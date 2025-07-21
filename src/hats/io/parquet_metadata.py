@@ -302,6 +302,7 @@ def aggregate_column_statistics(
     return frame
 
 
+# pylint: disable=too-many-positional-arguments
 def per_pixel_statistics(
     metadata_file: str | Path | UPath,
     exclude_hats_columns: bool = True,
@@ -309,9 +310,9 @@ def per_pixel_statistics(
     include_columns: list[str] = None,
     only_numeric_columns: bool = False,
     include_stats: list[str] = None,
-    multi_index=False,
+    multi_index: bool = False,
     include_pixels: list[HealpixPixel] = None,
-    per_row_group=False,
+    per_row_group: bool = False,
 ):
     """Read footer statistics in parquet metadata, and report on statistics about
     each pixel partition.

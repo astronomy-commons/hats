@@ -5,13 +5,14 @@ import shutil
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
+import pytest
+from pandas.api.types import is_numeric_dtype
 from pyarrow.parquet import ParquetFile
 
 from hats.io import file_io, paths
 from hats.io.parquet_metadata import aggregate_column_statistics, per_pixel_statistics, write_parquet_metadata
 from hats.pixel_math.healpix_pixel import HealpixPixel
 from hats.pixel_math.spatial_index import SPATIAL_INDEX_COLUMN
-from pandas.api.types import is_numeric_dtype
 
 
 def test_write_parquet_metadata(tmp_path, small_sky_dir, small_sky_schema, check_parquet_schema):
@@ -333,6 +334,9 @@ def test_per_pixel_statistics_include_stats(small_sky_order1_dir):
     # 1 = 1 columns * 1 stat per column
     assert result_frame.shape == (4, 1)
 
+    with pytest.raises(ValueError, match="include_stats"):
+        per_pixel_statistics(partition_info_file, include_stats=["bad", "min"])
+
 
 def test_per_pixel_statistics_with_nested(small_sky_nested_dir):
     partition_info_file = paths.get_parquet_metadata_pointer(small_sky_nested_dir)
@@ -411,9 +415,9 @@ def test_statistics_numeric_fields(small_sky_source_dir):
 def test_per_pixel_statistics_per_row_group(small_sky_source_dir):
     partition_info_file = paths.get_parquet_metadata_pointer(small_sky_source_dir)
 
-    result_frame = per_pixel_statistics(partition_info_file, per_row_group=False)
+    result_frame = per_pixel_statistics(partition_info_file, per_row_group=True)
     ## 24 = number of ROW GROUPS in ALL partitions in this catalog
-    assert len(result_frame) == 14
+    assert len(result_frame) == 24
     assert result_frame["object_dec: row_count"].sum() == 17161
 
 
