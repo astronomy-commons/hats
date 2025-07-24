@@ -170,6 +170,7 @@ def _pick_columns(
     exclude_hats_columns: bool = True,
     exclude_columns: list[str] = None,
     include_columns: list[str] = None,
+    only_numeric_columns: bool = False,
 ):
     """Convenience method to find the desired columns and their indexes, given
     some conventional user preferences."""
@@ -181,16 +182,26 @@ def _pick_columns(
         exclude_columns = []
     if exclude_hats_columns:
         exclude_columns.extend(["Norder", "Dir", "Npix", "_healpix_29"])
+    num_columns = first_row_group.num_columns
 
     column_names = [
         first_row_group.column(col).path_in_schema for col in range(0, first_row_group.num_columns)
     ]
+    numeric_columns = [
+        first_row_group.column(col).path_in_schema
+        for col in range(0, num_columns)
+        if first_row_group.column(col).physical_type in ("DOUBLE", "FLOAT", "DECIMAL")
+        or "INT" in first_row_group.column(col).physical_type
+    ]
+
     column_names = [name.removesuffix(".list.element") for name in column_names]
+    numeric_columns = [name.removesuffix(".list.element") for name in numeric_columns]
     good_column_indexes = [
         index
         for index, name in enumerate(column_names)
         if (len(include_columns) == 0 or name in include_columns)
         and not (len(exclude_columns) > 0 and name in exclude_columns)
+        and (not only_numeric_columns or name in numeric_columns)
     ]
     column_names = [column_names[i] for i in good_column_indexes]
 
@@ -202,6 +213,7 @@ def aggregate_column_statistics(
     exclude_hats_columns: bool = True,
     exclude_columns: list[str] = None,
     include_columns: list[str] = None,
+    only_numeric_columns: bool = False,
     include_pixels: list[HealpixPixel] = None,
 ):
     """Read footer statistics in parquet metadata, and report on global min/max values.
@@ -215,6 +227,8 @@ def aggregate_column_statistics(
             names provided. Defaults to None, and returns all non-hats columns.
         include_pixels (list[HealpixPixel]): if specified, only return statistics
             for the pixels indicated. Defaults to none, and returns all pixels.
+        only_numeric_columns (bool): only include columns that are numeric (integer or
+            floating point) in the statistics. If True, the entire frame should be numeric.
     Returns:
         dataframe with global summary statistics
     """
@@ -227,6 +241,7 @@ def aggregate_column_statistics(
         exclude_hats_columns=exclude_hats_columns,
         exclude_columns=exclude_columns,
         include_columns=include_columns,
+        only_numeric_columns=only_numeric_columns,
     )
     if not good_column_indexes:
         return pd.DataFrame()
@@ -271,26 +286,33 @@ def aggregate_column_statistics(
 
     stats_lists = np.array(extrema).T
 
-    frame = pd.DataFrame(
-        {
-            "column_names": column_names,
-            "min_value": stats_lists[0],
-            "max_value": stats_lists[1],
-            "null_count": stats_lists[2],
-            "row_count": stats_lists[3],
-        }
-    ).set_index("column_names")
+    frame = (
+        pd.DataFrame(
+            {
+                "column_names": column_names,
+                "min_value": stats_lists[0],
+                "max_value": stats_lists[1],
+                "null_count": stats_lists[2],
+                "row_count": stats_lists[3],
+            }
+        )
+        .set_index("column_names")
+        .astype({"null_count": int, "row_count": int})
+    )
     return frame
 
 
+# pylint: disable=too-many-positional-arguments
 def per_pixel_statistics(
     metadata_file: str | Path | UPath,
     exclude_hats_columns: bool = True,
     exclude_columns: list[str] = None,
     include_columns: list[str] = None,
+    only_numeric_columns: bool = False,
     include_stats: list[str] = None,
-    multi_index=False,
+    multi_index: bool = False,
     include_pixels: list[HealpixPixel] = None,
+    per_row_group: bool = False,
 ):
     """Read footer statistics in parquet metadata, and report on statistics about
     each pixel partition.
@@ -302,6 +324,8 @@ def per_pixel_statistics(
         exclude_columns (List[str]): additional columns to exclude from the statistics.
         include_columns (List[str]): if specified, only return statistics for the column
             names provided. Defaults to None, and returns all non-hats columns.
+        only_numeric_columns (bool): only include columns that are numeric (integer or
+            floating point) in the statistics. If True, the entire frame should be numeric.
         include_pixels (list[HealpixPixel]): if specified, only return statistics
             for the pixels indicated. Defaults to none, and returns all pixels.
         include_stats (List[str]): if specified, only return the kinds of values from list
@@ -309,6 +333,9 @@ def per_pixel_statistics(
         multi_index (bool): should the returned frame be created with a multi-index, first on
             pixel, then on column name? Default is False, and instead indexes on pixel, with
             separate columns per-data-column and stat value combination.
+        per_row_group (bool): should the returned data be even more fine-grained and provide
+            per row group (within each pixel) level statistics? Default is currently False,
+            but is very likely to change.
     Returns:
         dataframe with granular per-pixel statistics
     """
@@ -321,11 +348,13 @@ def per_pixel_statistics(
         exclude_hats_columns=exclude_hats_columns,
         exclude_columns=exclude_columns,
         include_columns=include_columns,
+        only_numeric_columns=only_numeric_columns,
     )
     if not good_column_indexes:
         return pd.DataFrame()
 
     all_stats = ["min_value", "max_value", "null_count", "row_count"]
+    int_stats = ["null_count", "row_count"]
 
     if include_stats is None or len(include_stats) == 0:
         include_stats = all_stats
@@ -333,8 +362,10 @@ def per_pixel_statistics(
         for stat in include_stats:
             if stat not in all_stats:
                 raise ValueError(f"include_stats must be from list {all_stats} (found {stat})")
+        int_stats = [stat for stat in int_stats if stat in include_stats]
 
     stat_mask = np.array([ind for ind, stat in enumerate(all_stats) if stat in include_stats])
+    combined_stats = {}
     pixels = []
     leaf_stats = []
 
@@ -356,12 +387,36 @@ def per_pixel_statistics(
             )
             for col in good_column_indexes
         ]
-        row_stats = np.take(row_stats, stat_mask, axis=1)
-        pixels.append(pixel)
-        leaf_stats.append(row_stats)
+        if per_row_group:
+            row_stats = np.take(row_stats, stat_mask, axis=1)
+            pixels.append(pixel)
+            leaf_stats.append(row_stats)
+        else:
+            if pixel not in combined_stats:
+                combined_stats[pixel] = row_stats
+            else:
+                current_stats = combined_stats[pixel]
+                combined_stats[pixel] = [
+                    (
+                        _nonemin(current_stats[i][0], row_stats[i][0]),
+                        _nonemax(current_stats[i][1], row_stats[i][1]),
+                        current_stats[i][2] + row_stats[i][2],
+                        current_stats[i][3] + row_stats[i][3],
+                    )
+                    for i in range(0, len(good_column_indexes))
+                ]
 
-    stats_lists = np.array(leaf_stats)
+    if per_row_group:
+        stats_lists = np.array(leaf_stats)
+    else:
+        pixels = list(combined_stats.keys())
+        stats_lists = np.array(
+            [np.take(row_stats, stat_mask, axis=1) for row_stats in combined_stats.values()]
+        )
     original_shape = stats_lists.shape
+
+    if len(stats_lists) == 0:
+        return pd.DataFrame()
 
     if multi_index:
         stats_lists = stats_lists.reshape((original_shape[0] * original_shape[1], original_shape[2]))
@@ -369,10 +424,14 @@ def per_pixel_statistics(
             stats_lists,
             index=pd.MultiIndex.from_product([pixels, column_names], names=["pixel", "column"]),
             columns=include_stats,
-        )
+        ).astype({stat_name: int for stat_name in int_stats})
     else:
         stats_lists = stats_lists.reshape((original_shape[0], original_shape[1] * original_shape[2]))
         mod_col_names = [[f"{col_name}: {stat}" for stat in include_stats] for col_name in column_names]
         mod_col_names = np.array(mod_col_names).flatten()
-        frame = pd.DataFrame(stats_lists, index=pixels, columns=mod_col_names)
+        int_col_names = [[f"{col_name}: {stat}" for stat in int_stats] for col_name in column_names]
+        int_col_names = np.array(int_col_names).flatten()
+        frame = pd.DataFrame(stats_lists, index=pixels, columns=mod_col_names).astype(
+            {stat_name: int for stat_name in int_col_names}
+        )
     return frame

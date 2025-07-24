@@ -169,7 +169,7 @@ class CollectionProperties(BaseModel):
         """Write fields to a java-style properties file."""
         # pylint: disable=protected-access
         parameters = self.model_dump(by_alias=True, exclude_none=True)
-        properties = Properties()
+        properties = Properties(process_escapes_in_values=False)
         properties.properties = parameters
         properties._key_order = parameters.keys()
         file_path = file_io.get_upath(catalog_dir) / "collection.properties"
