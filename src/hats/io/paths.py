@@ -31,7 +31,6 @@ HIVE_COLUMNS = [
 
 DATASET_DIR = "dataset"
 PARTITION_INFO_FILENAME = "partition_info.csv"
-PARTITION_JOIN_INFO_FILENAME = "partition_join_info.csv"
 PARQUET_METADATA_FILENAME = "_metadata"
 PARQUET_COMMON_METADATA_FILENAME = "_common_metadata"
 DATA_THUMBNAIL_FILENAME = "data_thumbnail.parquet"
@@ -236,14 +235,3 @@ def get_skymap_file_pointer(catalog_base_dir: str | Path | UPath, order: int | N
     if order is not None and order >= 0:
         return get_upath(catalog_base_dir) / f"skymap.{order}.fits"
     return get_upath(catalog_base_dir) / SKYMAP_FILENAME
-
-
-def get_partition_join_info_pointer(catalog_base_dir: str | Path | UPath) -> UPath:
-    """Get file pointer to `partition_join_info.csv` association metadata file
-
-    Args:
-        catalog_base_dir: pointer to base catalog directory
-    Returns:
-        File Pointer to the catalog's `partition_join_info.csv` association metadata file
-    """
-    return get_upath(catalog_base_dir) / PARTITION_JOIN_INFO_FILENAME

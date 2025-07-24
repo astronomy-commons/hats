@@ -1,7 +1,6 @@
 """Catalog data wrappers"""
 
 from .association_catalog import AssociationCatalog
-from .association_catalog.partition_join_info import PartitionJoinInfo
 from .catalog import Catalog
 from .catalog_collection import CatalogCollection
 from .catalog_type import CatalogType
