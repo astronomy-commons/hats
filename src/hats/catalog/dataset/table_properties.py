@@ -22,8 +22,6 @@ CATALOG_TYPE_REQUIRED_FIELDS = {
         "join_catalog",
         "join_column",
         "contains_leaf_files",
-        "assn_separation_column",
-        "assn_max_separation",
     ],
     CatalogType.INDEX: ["primary_catalog", "indexing_column"],
     CatalogType.MARGIN: ["primary_catalog", "margin_threshold"],
@@ -63,9 +61,6 @@ class TableProperties(BaseModel):
 
     join_column_association: Optional[str] = Field(default=None, alias="hats_col_assn_join_assn")
     """Column name in the association table that matches the joining (right) side of join."""
-
-    assn_separation_column: Optional[str] = Field(default=None, alias="hats_col_assn_separation")
-    """Column name in the association table containing the separation in arcseconds."""
 
     assn_max_separation: Optional[float] = Field(default=None, alias="hats_assn_max_separation")
     """The maximum separation between two points in an association catalog, expressed in arcseconds."""
