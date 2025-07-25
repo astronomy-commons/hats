@@ -100,7 +100,7 @@ def avgsize2mindist(avg_size: np.ndarray) -> np.ndarray:
     return avg_size / 1.6
 
 
-def mindist2avgsize(mindist: np.ndarray) -> np.ndarray:
+def mindist2avgsize(mindist: np.ndarray | float) -> np.ndarray | float:
     """Get the average size for a given minimum distance between pixels
 
     We don't have the precise geometry of the healpix grid yet,
@@ -121,7 +121,7 @@ def mindist2avgsize(mindist: np.ndarray) -> np.ndarray:
     return mindist * 1.6
 
 
-def avgsize2order(avg_size_arcmin: np.ndarray) -> np.ndarray:
+def avgsize2order(avg_size_arcmin: np.ndarray | float) -> np.ndarray | int:
     """Get the largest order with average healpix size larger than avg_size_arcmin
 
     Parameters
@@ -134,9 +134,9 @@ def avgsize2order(avg_size_arcmin: np.ndarray) -> np.ndarray:
     np.ndarray of int
         The largest healpix order for which the average size is larger than avg_size_arcmin
     """
-    # resolution = sqrt(4pi / (12 * 4**order)) => order = log2(sqrt(4pi / 12) / resolution)
+    avg_size_arcmin = np.asarray(avg_size_arcmin)
     order_float = np.log2(np.sqrt(np.pi / 3) / np.radians(avg_size_arcmin / 60.0))
-    return np.array(order_float, dtype=int)
+    return np.clip(order_float.astype(np.int64), a_min=0, a_max=29)
 
 
 def margin2order(margin_thr_arcmin: np.ndarray) -> np.ndarray:
