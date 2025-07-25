@@ -136,7 +136,7 @@ def avgsize2order(avg_size_arcmin: np.ndarray | float) -> np.ndarray | int:
     """
     avg_size_arcmin = np.asarray(avg_size_arcmin)
     order_float = np.log2(np.sqrt(np.pi / 3) / np.radians(avg_size_arcmin / 60.0))
-    return order_float.astype(np.int64)
+    return np.clip(order_float.astype(np.int64), a_min=0, a_max=29)
 
 
 def margin2order(margin_thr_arcmin: np.ndarray) -> np.ndarray:
