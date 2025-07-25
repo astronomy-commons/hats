@@ -4,6 +4,8 @@ from pathlib import Path
 
 from upath import UPath
 
+BLOCK_SIZE = 32 * 1024
+
 
 def get_upath(path: str | Path | UPath) -> UPath:
     """Returns a file pointer from a path string"""
@@ -22,7 +24,9 @@ def get_upath_for_protocol(path: str | Path) -> UPath:
     """
     upath = UPath(path)
     if upath.protocol == "s3":
-        upath = UPath(path, anon=True)
+        upath = UPath(path, anon=True, default_block_size=BLOCK_SIZE)
+    if upath.protocol in ("http", "https"):
+        upath = UPath(path, block_size=BLOCK_SIZE)
     return upath
 
 
