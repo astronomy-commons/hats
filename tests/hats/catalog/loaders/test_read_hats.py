@@ -116,7 +116,7 @@ def test_read_hats_initializes_upath_once(small_sky_dir, mocker):
 def test_read_hats_with_s3():
     upath = get_upath_for_protocol("s3://bucket/catalog")
     assert upath.storage_options.get("anon")
-    assert upath.fs.default_block_size == 32 * 1024
+    assert upath.storage_options["default_block_size"] == 32 * 1024
 
 
 def test_read_hats_with_http():
