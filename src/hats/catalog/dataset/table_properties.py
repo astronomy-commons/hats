@@ -62,6 +62,9 @@ class TableProperties(BaseModel):
     join_column_association: Optional[str] = Field(default=None, alias="hats_col_assn_join_assn")
     """Column name in the association table that matches the joining (right) side of join."""
 
+    assn_max_separation: Optional[float] = Field(default=None, alias="hats_assn_max_separation")
+    """The maximum separation between two points in an association catalog, expressed in arcseconds."""
+
     contains_leaf_files: Optional[bool] = Field(default=None, alias="hats_assn_leaf_files")
     """Whether or not the association catalog contains leaf parquet files."""
 
