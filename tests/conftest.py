@@ -1,11 +1,9 @@
 import os.path
 from pathlib import Path
 
-import pandas as pd
 import pyarrow as pa
 import pytest
 
-from hats.catalog.association_catalog.partition_join_info import PartitionJoinInfo
 from hats.catalog.dataset.table_properties import TableProperties
 from hats.pixel_math import HealpixPixel
 
@@ -245,20 +243,3 @@ def small_sky_source_pixels():
         HealpixPixel(2, 187),
         HealpixPixel(1, 47),
     ]
-
-
-@pytest.fixture
-def association_catalog_partition_join_file(association_catalog_path) -> str:
-    return association_catalog_path / "partition_join_info.csv"
-
-
-@pytest.fixture
-def association_catalog_join_pixels() -> pd.DataFrame:
-    return pd.DataFrame.from_dict(
-        {
-            PartitionJoinInfo.PRIMARY_ORDER_COLUMN_NAME: [0, 0, 0, 0],
-            PartitionJoinInfo.PRIMARY_PIXEL_COLUMN_NAME: [11, 11, 11, 11],
-            PartitionJoinInfo.JOIN_ORDER_COLUMN_NAME: [1, 1, 1, 1],
-            PartitionJoinInfo.JOIN_PIXEL_COLUMN_NAME: [44, 45, 46, 47],
-        }
-    )
