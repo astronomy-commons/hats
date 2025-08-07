@@ -881,6 +881,7 @@ def test_plot_existing_wrong_axes():
     np.testing.assert_array_equal(col.get_array(), pix_map)
 
 
+@pytest.mark.timeout(20)
 def test_catalog_plot_density(small_sky_dir):
     """Test plotting pixel-density for on-disk catalog.
     Confirm plotting at lower order doesn't have a warning, and creates fewer plot paths."""
