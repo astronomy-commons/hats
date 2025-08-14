@@ -51,6 +51,7 @@ dev = [
     "pytest-cov", # Used to report total code coverage
     "pytest-mock", # Used to mock objects in tests
     "pytest-timeout", # Used to test for code efficiency
+    "towncrier",
 ]
 
 [build-system]
@@ -81,3 +82,9 @@ target-version = ["py310"]
 [tool.isort]
 profile = "black"
 line_length = 110
+
+[tool.towncrier]
+directory = "changes"
+filename = "NEWS.rst"
+package = "hats"
+package_dir = "src"
