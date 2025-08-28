@@ -3,11 +3,8 @@ from __future__ import annotations
 import warnings
 from pathlib import Path
 
-import astropy.units as u
-import numpy as np
 import pandas as pd
 import pyarrow as pa
-from astropy.coordinates import SkyCoord
 from mocpy import MOC
 from typing_extensions import Self
 from upath import UPath
@@ -19,13 +16,7 @@ from hats.inspection import plot_pixels
 from hats.inspection.visualize_catalog import plot_moc
 from hats.io.parquet_metadata import aggregate_column_statistics, per_pixel_statistics
 from hats.pixel_math import HealpixPixel
-from hats.pixel_math.box_filter import generate_box_moc, wrap_ra_angles
-from hats.pixel_math.validators import (
-    validate_box,
-    validate_declination_values,
-    validate_polygon,
-    validate_radius,
-)
+from hats.pixel_math.region_to_moc import box_to_moc, cone_to_moc, pixel_list_to_moc, polygon_to_moc
 from hats.pixel_tree import PixelAlignment, PixelAlignmentType
 from hats.pixel_tree.moc_filter import filter_by_moc
 from hats.pixel_tree.pixel_alignment import align_with_mocs
@@ -136,11 +127,7 @@ class HealpixDataset(Dataset):
             A new catalog with only the pixels that overlap with the given pixels. Note that we reset the
             total_rows to None, as updating would require a scan over the new pixel sizes.
         """
-        orders = np.array([p.order for p in pixels])
-        pixel_inds = np.array([p.pixel for p in pixels])
-        max_order = np.max(orders) if len(orders) > 0 else 0
-        moc = MOC.from_healpix_cells(ipix=pixel_inds, depth=orders, max_depth=max_order)
-        return self.filter_by_moc(moc)
+        return self.filter_by_moc(pixel_list_to_moc(pixels))
 
     def filter_by_cone(self, ra: float, dec: float, radius_arcsec: float) -> Self:
         """Filter the pixels in the catalog to only include the pixels that overlap with a cone
@@ -153,15 +140,7 @@ class HealpixDataset(Dataset):
         Returns:
             A new catalog with only the pixels that overlap with the specified cone
         """
-        validate_radius(radius_arcsec)
-        validate_declination_values(dec)
-        cone_moc = MOC.from_cone(
-            lon=ra * u.deg,
-            lat=dec * u.deg,
-            radius=radius_arcsec * u.arcsec,
-            max_depth=self.get_max_coverage_order(),
-        )
-        return self.filter_by_moc(cone_moc)
+        return self.filter_by_moc(cone_to_moc(ra, dec, radius_arcsec, self.get_max_coverage_order()))
 
     def filter_by_box(self, ra: tuple[float, float], dec: tuple[float, float]) -> Self:
         """Filter the pixels in the catalog to only include the pixels that overlap with a
@@ -175,10 +154,7 @@ class HealpixDataset(Dataset):
         Returns:
             A new catalog with only the pixels that overlap with the specified region
         """
-        ra = tuple(wrap_ra_angles(ra)) if ra else None
-        validate_box(ra, dec)
-        box_moc = generate_box_moc(ra, dec, self.get_max_coverage_order())
-        return self.filter_by_moc(box_moc)
+        return self.filter_by_moc(box_to_moc(ra, dec, self.get_max_coverage_order()))
 
     def filter_by_polygon(self, vertices: list[tuple[float, float]]) -> Self:
         """Filter the pixels in the catalog to only include the pixels that overlap
@@ -191,11 +167,7 @@ class HealpixDataset(Dataset):
         Returns:
             A new catalog with only the pixels that overlap with the specified polygon.
         """
-        validate_polygon(vertices)
-        polygon_moc = MOC.from_polygon_skycoord(
-            SkyCoord(vertices, unit="deg"), max_depth=self.get_max_coverage_order()
-        )
-        return self.filter_by_moc(polygon_moc)
+        return self.filter_by_moc(polygon_to_moc(vertices, self.get_max_coverage_order()))
 
     def filter_by_moc(self, moc: MOC) -> Self:
         """Filter the pixels in the catalog to only include the pixels that overlap with the moc provided.
