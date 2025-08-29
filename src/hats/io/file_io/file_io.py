@@ -13,6 +13,7 @@ import upath.implementations.http
 import yaml
 from cdshealpix.skymap.skymap import Skymap
 from pyarrow.dataset import Dataset
+from pyarrow.fs import S3FileSystem
 from upath import UPath
 
 from hats.io.file_io.file_pointer import get_upath
@@ -158,7 +159,7 @@ def read_parquet_metadata(file_pointer: str | Path | UPath, **kwargs) -> pq.File
     file_pointer = get_upath(file_pointer)
     if file_pointer is None or not file_pointer.exists():
         raise FileNotFoundError("Parquet file does not exist")
-    parquet_file = pq.read_metadata(file_pointer.path, filesystem=file_pointer.fs, **kwargs)
+    parquet_file = pq.read_metadata(file_pointer.path, filesystem=_fsspec_to_pyarrow(file_pointer), **kwargs)
     return parquet_file
 
 
@@ -172,7 +173,7 @@ def read_parquet_file(file_pointer: str | Path | UPath, **kwargs) -> pq.ParquetF
     file_pointer = get_upath(file_pointer)
     if file_pointer is None or not file_pointer.exists():
         raise FileNotFoundError("Parquet file does not exist")
-    return pq.ParquetFile(file_pointer.path, filesystem=file_pointer.fs, **kwargs)
+    return pq.ParquetFile(file_pointer.path, filesystem=_fsspec_to_pyarrow(file_pointer), **kwargs)
 
 
 def read_parquet_dataset(source: str | Path | UPath, **kwargs) -> tuple[UPath, Dataset]:
@@ -195,11 +196,11 @@ def read_parquet_dataset(source: str | Path | UPath, **kwargs) -> tuple[UPath, D
     if pd.api.types.is_list_like(source) and len(source) > 0:
         sample_pointer = source[0]
         sample_pointer = get_upath(sample_pointer)
-        file_system = sample_pointer.fs
-        source = [str(path) for path in source]
+        file_system = _fsspec_to_pyarrow(sample_pointer)
+        source = [path.path if isinstance(path, UPath) else str(path) for path in source]
     else:
         source = get_upath(source)
-        file_system = source.fs
+        file_system = _fsspec_to_pyarrow(source)
         source = source.path
 
     dataset = pds.dataset(
@@ -296,6 +297,19 @@ def unnest_headers_for_pandas(storage_options: dict | None) -> dict | None:
         return {**storage_options_copy, **headers}
     return storage_options
 
+def _fsspec_to_pyarrow(upath):
+    if upath.protocol == "s3":
+        """Rename kwargs we understand, to utilize pyarrow's faster reads."""
+        args = upath.fs.to_dict()
+        kwargs = {}
+        if "anon" in args and args["anon"]:
+            kwargs["anonymous"] = True
+        if "client_kwargs" in args and "endpoint_url" in args["client_kwargs"]:
+            kwargs["endpoint_override"] = args["client_kwargs"]["endpoint_url"]
+        ## TODO - add conversions for other desired arguments.
+        return S3FileSystem(**kwargs)
+    ## TODO - add conversions for other desired file system types
+    return upath.fs
 
 def read_parquet_file_to_pandas(file_pointer: str | Path | UPath, **kwargs) -> npd.NestedFrame:
     """Reads parquet file(s) to a pandas DataFrame
@@ -308,19 +322,20 @@ def read_parquet_file_to_pandas(file_pointer: str | Path | UPath, **kwargs) -> n
         Pandas DataFrame with the data from the parquet file(s)
     """
     file_pointer = get_upath(file_pointer)
+    fs = _fsspec_to_pyarrow(file_pointer)
     # If we are trying to read a directory over http, we need to send the explicit list of files instead.
     # We don't want to get the list unnecessarily because it can be expensive.
     if isinstance(file_pointer, upath.implementations.http.HTTPPath) and file_pointer.is_dir():
         file_pointers = [f for f in file_pointer.iterdir() if f.is_file()]
         return npd.read_parquet(
             file_pointers,
-            filesystem=file_pointer.fs,
+            filesystem=fs,
             partitioning=None,  # Avoid the ArrowTypeError described in #367
             **kwargs,
         )
     return npd.read_parquet(
         file_pointer.path,
-        filesystem=file_pointer.fs,
+        filesystem=fs,
         partitioning=None,  # Avoid the ArrowTypeError described in #367
         **kwargs,
     )
