@@ -3,6 +3,7 @@ from importlib.metadata import version
 import pytest
 
 from hats.catalog.dataset.table_properties import TableProperties
+from hats.io.file_io.file_io import load_text_file
 
 
 @pytest.mark.parametrize("data_dir", ["catalog", "dataset", "index_catalog", "margin_cache"])
@@ -171,7 +172,7 @@ def test_extra_dict():
     assert table_properties.extra_dict() == extra_properties
 
 
-def test_provenance_dict(small_sky_dir):
+def test_provenance_dict(small_sky_dir, tmp_path):
     properties = TableProperties.new_provenance_dict(small_sky_dir)
     assert list(properties.keys()) == [
         "hats_builder",
@@ -186,6 +187,20 @@ def test_provenance_dict(small_sky_dir):
     assert properties["hats_estsize"] >= 0
     assert properties["hats_release_date"].startswith("20")
     assert properties["hats_version"].startswith("v")
+
+    properties_object = TableProperties(
+        catalog_name="foo",
+        catalog_type="index",
+        total_rows=15,
+        indexing_column="a",
+        primary_catalog="bar",
+        **properties,
+    )
+
+    properties_object.to_properties_file(tmp_path)
+
+    contents = ",".join(load_text_file(tmp_path / "hats.properties"))
+    assert "\\" not in contents
 
     # Test that we can override a property and add another.
     properties = TableProperties.new_provenance_dict(
