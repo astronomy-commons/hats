@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import tempfile
+import urllib.request
 from collections.abc import Generator
+from io import BytesIO
 from pathlib import Path
 
 import nested_pandas as npd
@@ -148,6 +150,10 @@ def write_dataframe_to_parquet(dataframe: pd.DataFrame, file_pointer):
     dataframe.to_parquet(file_pointer.path, filesystem=file_pointer.fs)
 
 
+def is_http(file_upath):
+    return isinstance(file_upath, upath.implementations.http.HTTPPath)
+
+
 def read_parquet_metadata(file_pointer: str | Path | UPath, **kwargs) -> pq.FileMetaData:
     """Read FileMetaData from footer of a single Parquet file.
 
@@ -158,8 +164,13 @@ def read_parquet_metadata(file_pointer: str | Path | UPath, **kwargs) -> pq.File
     file_pointer = get_upath(file_pointer)
     if file_pointer is None or not file_pointer.exists():
         raise FileNotFoundError("Parquet file does not exist")
-    parquet_file = pq.read_metadata(file_pointer.path, filesystem=file_pointer.fs, **kwargs)
-    return parquet_file
+    if is_http(file_pointer):
+        req_info = urllib.request.Request(file_pointer.path)
+        with urllib.request.urlopen(req_info) as req:
+            reader = BytesIO(req.read())
+            return pq.read_metadata(reader, **kwargs)
+
+    return pq.read_metadata(file_pointer.path, filesystem=file_pointer.fs, **kwargs)
 
 
 def read_parquet_file(file_pointer: str | Path | UPath, **kwargs) -> pq.ParquetFile:
@@ -172,6 +183,12 @@ def read_parquet_file(file_pointer: str | Path | UPath, **kwargs) -> pq.ParquetF
     file_pointer = get_upath(file_pointer)
     if file_pointer is None or not file_pointer.exists():
         raise FileNotFoundError("Parquet file does not exist")
+    if is_http(file_pointer):
+        req_info = urllib.request.Request(file_pointer.path)
+        with urllib.request.urlopen(req_info) as req:
+            reader = BytesIO(req.read())
+            return pq.ParquetFile(reader, **kwargs)
+
     return pq.ParquetFile(file_pointer.path, filesystem=file_pointer.fs, **kwargs)
 
 
@@ -284,19 +301,6 @@ def delete_file(file_handle: str | Path | UPath):
     file_handle.unlink()
 
 
-def unnest_headers_for_pandas(storage_options: dict | None) -> dict | None:
-    """Handle storage options for pandas read/write methods.
-    This is needed because fsspec http storage options are nested under the "headers" key,
-    see https://github.com/astronomy-commons/hipscat/issues/295
-    """
-    if storage_options is not None and "headers" in storage_options:
-        # Copy the storage options to avoid modifying the original dictionary
-        storage_options_copy = storage_options.copy()
-        headers = storage_options_copy.pop("headers")
-        return {**storage_options_copy, **headers}
-    return storage_options
-
-
 def read_parquet_file_to_pandas(file_pointer: str | Path | UPath, **kwargs) -> npd.NestedFrame:
     """Reads parquet file(s) to a pandas DataFrame
 
@@ -310,7 +314,7 @@ def read_parquet_file_to_pandas(file_pointer: str | Path | UPath, **kwargs) -> n
     file_pointer = get_upath(file_pointer)
     # If we are trying to read a directory over http, we need to send the explicit list of files instead.
     # We don't want to get the list unnecessarily because it can be expensive.
-    if isinstance(file_pointer, upath.implementations.http.HTTPPath) and file_pointer.is_dir():
+    if is_http(file_pointer) and file_pointer.is_dir():
         file_pointers = [f for f in file_pointer.iterdir() if f.is_file()]
         return npd.read_parquet(
             file_pointers,
@@ -318,6 +322,11 @@ def read_parquet_file_to_pandas(file_pointer: str | Path | UPath, **kwargs) -> n
             partitioning=None,  # Avoid the ArrowTypeError described in #367
             **kwargs,
         )
+    if is_http(file_pointer):
+        req_info = urllib.request.Request(file_pointer.path)
+        with urllib.request.urlopen(req_info) as req:
+            reader = BytesIO(req.read())
+            return npd.read_parquet(reader, partitioning=None, **kwargs)
     return npd.read_parquet(
         file_pointer.path,
         filesystem=file_pointer.fs,
