@@ -10,7 +10,6 @@ from .file_io import (
     read_parquet_file_to_pandas,
     read_parquet_metadata,
     remove_directory,
-    unnest_headers_for_pandas,
     write_dataframe_to_csv,
     write_dataframe_to_parquet,
     write_fits_image,
