@@ -151,6 +151,7 @@ def write_dataframe_to_parquet(dataframe: pd.DataFrame, file_pointer):
 
 
 def is_http(file_upath):
+    """Is this Path pointing to an HTTP resource?"""
     return isinstance(file_upath, upath.implementations.http.HTTPPath)
 
 
@@ -164,7 +165,7 @@ def read_parquet_metadata(file_pointer: str | Path | UPath, **kwargs) -> pq.File
     file_pointer = get_upath(file_pointer)
     if file_pointer is None or not file_pointer.exists():
         raise FileNotFoundError("Parquet file does not exist")
-    if is_http(file_pointer):
+    if is_http(file_pointer):  # pragma: no cover
         req_info = urllib.request.Request(file_pointer.path)
         with urllib.request.urlopen(req_info) as req:
             reader = BytesIO(req.read())
@@ -183,7 +184,7 @@ def read_parquet_file(file_pointer: str | Path | UPath, **kwargs) -> pq.ParquetF
     file_pointer = get_upath(file_pointer)
     if file_pointer is None or not file_pointer.exists():
         raise FileNotFoundError("Parquet file does not exist")
-    if is_http(file_pointer):
+    if is_http(file_pointer):  # pragma: no cover
         req_info = urllib.request.Request(file_pointer.path)
         with urllib.request.urlopen(req_info) as req:
             reader = BytesIO(req.read())
@@ -279,18 +280,6 @@ def write_fits_image(histogram: np.ndarray, map_file_pointer: str | Path | UPath
             _map_file.write(_tmp_file.read())
 
 
-def read_yaml(file_handle: str | Path | UPath):
-    """Reads yaml file from filesystem.
-
-    Args:
-        file_handle: location of yaml file
-    """
-    file_handle = get_upath(file_handle)
-    with file_handle.open("r", encoding="utf-8") as _file:
-        metadata = yaml.safe_load(_file)
-    return metadata
-
-
 def delete_file(file_handle: str | Path | UPath):
     """Deletes file from filesystem.
 
@@ -314,7 +303,7 @@ def read_parquet_file_to_pandas(file_pointer: str | Path | UPath, **kwargs) -> n
     file_pointer = get_upath(file_pointer)
     # If we are trying to read a directory over http, we need to send the explicit list of files instead.
     # We don't want to get the list unnecessarily because it can be expensive.
-    if is_http(file_pointer) and file_pointer.is_dir():
+    if is_http(file_pointer) and file_pointer.is_dir():  # pragma: no cover
         file_pointers = [f for f in file_pointer.iterdir() if f.is_file()]
         return npd.read_parquet(
             file_pointers,
@@ -322,7 +311,7 @@ def read_parquet_file_to_pandas(file_pointer: str | Path | UPath, **kwargs) -> n
             partitioning=None,  # Avoid the ArrowTypeError described in #367
             **kwargs,
         )
-    if is_http(file_pointer):
+    if is_http(file_pointer):  # pragma: no cover
         req_info = urllib.request.Request(file_pointer.path)
         with urllib.request.urlopen(req_info) as req:
             reader = BytesIO(req.read())
