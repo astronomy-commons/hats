@@ -12,7 +12,6 @@ import pandas as pd
 import pyarrow.dataset as pds
 import pyarrow.parquet as pq
 import upath.implementations.http
-import yaml
 from cdshealpix.skymap.skymap import Skymap
 from pyarrow.dataset import Dataset
 from upath import UPath
