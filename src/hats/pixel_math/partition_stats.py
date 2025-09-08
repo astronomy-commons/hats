@@ -54,7 +54,12 @@ def generate_histogram(
 
 
 def generate_alignment(
-    histogram, highest_order=10, lowest_order=0, threshold=1_000_000, drop_empty_siblings=False
+    histogram,
+    highest_order=10,
+    lowest_order=0,
+    threshold=1_000_000,
+    byte_pixel_threshold=None,
+    drop_empty_siblings=False,
 ):
     """Generate alignment from high order pixels to those of equal or lower order
 
@@ -66,20 +71,27 @@ def generate_alignment(
     Args:
         histogram (:obj:`np.array`): one-dimensional numpy array of long integers where the
             value at each index corresponds to the number of objects found at the healpix pixel.
-        highest_order (int):  the highest healpix order (e.g. 5-10)
+        highest_order (int): the highest healpix order (e.g. 5-10)
         lowest_order (int): the lowest healpix order (e.g. 1-5). specifying a lowest order
             constrains the partitioning to prevent spatially large pixels.
         threshold (int): the maximum number of objects allowed in a single pixel
+        byte_pixel_threshold (int | None): the maximum number of objects allowed in a single pixel,
+            expressed in bytes. if this is set, it will override `threshold`.
+
         drop_empty_siblings (bool): if 3 of 4 pixels are empty, keep only the non-empty pixel
     Returns:
         one-dimensional numpy array of integer 3-tuples, where the value at each index corresponds
         to the destination pixel at order less than or equal to the `highest_order`.
 
-        The tuple contains three integers:
+        The tuple contains three integers:-
 
         - order of the destination pixel
         - pixel number *at the above order*
         - the number of objects in the pixel
+
+        # TODO - would probably want to change the above, because we won't have a set number of
+        # objects per pixel if we do pixel thresholding by memory. we may want the option to pass the
+        # memory size of the pixel in the tuple instead.
     Raises:
         ValueError: if the histogram is the wrong size, or some initial histogram bins
             exceed threshold.
@@ -88,9 +100,21 @@ def generate_alignment(
         raise ValueError("histogram is not the right size")
     if lowest_order > highest_order:
         raise ValueError("lowest_order should be less than highest_order")
+
+    # Determine aggregation type and threshold
+    if byte_pixel_threshold is not None:
+        agg_threshold = byte_pixel_threshold
+        agg_type = "memory"
+    else:
+        agg_threshold = threshold
+        agg_type = "row_count"
+
+    # Check that none of the high-order pixels already exceed the threshold.
     max_bin = np.amax(histogram)
-    if max_bin > threshold:
-        raise ValueError(f"single pixel count {max_bin} exceeds threshold {threshold}")
+    if agg_type == "memory" and max_bin > agg_threshold:
+        raise ValueError(f"single pixel size {max_bin} bytes exceeds byte_pixel_threshold {agg_threshold}")
+    elif agg_type == "row_count" and max_bin > agg_threshold:
+        raise ValueError(f"single pixel count {max_bin} exceeds threshold {agg_threshold}")
 
     nested_sums = []
     for i in range(0, highest_order):
@@ -104,9 +128,10 @@ def generate_alignment(
             parent_pixel = index >> 2
             nested_sums[parent_order][parent_pixel] += nested_sums[read_order][index]
 
+    # Use the aggregation threshold for alignment
     if drop_empty_siblings:
-        return _get_alignment_dropping_siblings(nested_sums, highest_order, lowest_order, threshold)
-    return _get_alignment(nested_sums, highest_order, lowest_order, threshold)
+        return _get_alignment_dropping_siblings(nested_sums, highest_order, lowest_order, agg_threshold)
+    return _get_alignment(nested_sums, highest_order, lowest_order, agg_threshold)
 
 
 def _get_alignment(nested_sums, highest_order, lowest_order, threshold):
