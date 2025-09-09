@@ -2,6 +2,7 @@
 
 import numpy as np
 import pandas as pd
+import pyarrow.parquet as pq
 
 import hats.pixel_math.healpix_shim as hp
 
@@ -83,15 +84,13 @@ def generate_alignment(
         one-dimensional numpy array of integer 3-tuples, where the value at each index corresponds
         to the destination pixel at order less than or equal to the `highest_order`.
 
-        The tuple contains three integers:-
-
+        The tuple contains three integers:
         - order of the destination pixel
         - pixel number *at the above order*
-        - the number of objects in the pixel
+        - the number of objects in the pixel (if partitioning by row count), or the memory size (if partitioning by memory)
 
-        # TODO - would probably want to change the above, because we won't have a set number of
-        # objects per pixel if we do pixel thresholding by memory. we may want the option to pass the
-        # memory size of the pixel in the tuple instead.
+    Note:
+        If partitioning is done by memory size, the row count per partition may vary widely and will not match the row count histogram's bins.
     Raises:
         ValueError: if the histogram is the wrong size, or some initial histogram bins
             exceed threshold.
@@ -226,3 +225,44 @@ def _get_alignment_dropping_siblings(nested_sums, highest_order, lowest_order, t
     ]
 
     return np.array(nested_alignment, dtype="object")
+
+
+def generate_row_count_histogram_from_partitions(partition_files, pixel_orders, pixel_indices, highest_order):
+    """
+    Generate a row count histogram from a list of partition files and their pixel indices/orders.
+
+    Args:
+        partition_files (list[str or UPath]): List of paths to partition files.
+        pixel_orders (list[int]): List of healpix orders for each partition.
+        pixel_indices (list[int]): List of healpix pixel indices for each partition.
+        highest_order (int): The highest healpix order (for histogram size).
+
+    Returns:
+        np.ndarray: One-dimensional numpy array of long integers, where the value at each index
+            corresponds to the number of rows found at the healpix pixel.
+
+    Note:
+        If partitioning was done by memory size, this histogram will reflect the actual row counts
+        in the output partitions, which may differ significantly from the original row count histogram.
+    """
+    import logging
+
+    histogram = np.zeros(hp.order2npix(highest_order), dtype=np.int64)
+    for file_path, order, pix in zip(partition_files, pixel_orders, pixel_indices):
+        try:
+            table = pq.read_table(file_path)
+            row_count = len(table)
+            # Map pixel index to highest_order if needed
+            if order == highest_order:
+                histogram[pix] += row_count
+            else:
+                # Map lower order pixel to highest_order pixel indices
+                # Each lower order pixel covers 4**(highest_order - order) pixels
+                factor = 4 ** (highest_order - order)
+                start = pix * factor
+                end = (pix + 1) * factor
+                histogram[start:end] += row_count // factor
+        except Exception as e:
+            logging.warning(f"Could not read partition file {file_path}: {e}")
+            continue
+    return histogram
