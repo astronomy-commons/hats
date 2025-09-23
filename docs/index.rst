@@ -25,18 +25,20 @@ operations on top of these utilities. Some known extensions:
 
 .. toctree::
    :maxdepth: 1
-   :caption: Overview
+   :caption: Using HATS
 
-   getting_started
-   guide/directory_scheme
+   Getting Started <getting_started>
+   Directory Scheme <guide/directory_scheme>
    Notebooks <notebooks>
+   API Reference <autoapi/index>
 
 .. toctree::
    :maxdepth: 1
-   :caption: Developers
+   :caption: Project
 
-   guide/contributing
-   API Reference <autoapi/index>
+   About & Citation <citation>
+   Contribution Guide <guide/contributing>
+
 
 Getting Started
 -------------------------------------------------------------------------------
