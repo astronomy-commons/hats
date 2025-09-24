@@ -149,10 +149,13 @@ def write_dataframe_to_parquet(dataframe: pd.DataFrame, file_pointer):
     dataframe.to_parquet(file_pointer.path, filesystem=file_pointer.fs)
 
 
-def is_http(file_upath):
-    """Is this Path pointing to an HTTP resource?"""
-    return isinstance(file_upath, upath.implementations.http.HTTPPath)
-
+def _parquet_bytes_io(file_pointer):
+    if not isinstance(file_pointer, upath.implementations.http.HTTPPath):
+        return False
+    cache_options = file_pointer.fs.cache_options or {}
+    if "parquet_bytes_io"  not in cache_options:
+        return False
+    return cache_options["parquet_bytes_io"]
 
 def read_parquet_metadata(file_pointer: str | Path | UPath, **kwargs) -> pq.FileMetaData:
     """Read FileMetaData from footer of a single Parquet file.
@@ -164,7 +167,8 @@ def read_parquet_metadata(file_pointer: str | Path | UPath, **kwargs) -> pq.File
     file_pointer = get_upath(file_pointer)
     if file_pointer is None or not file_pointer.exists():
         raise FileNotFoundError("Parquet file does not exist")
-    if is_http(file_pointer):  # pragma: no cover
+    use_bytes_io = _parquet_bytes_io(file_pointer)
+    if use_bytes_io:  # pragma: no cover
         req_info = urllib.request.Request(file_pointer.path)
         with urllib.request.urlopen(req_info) as req:
             reader = BytesIO(req.read())
@@ -183,12 +187,13 @@ def read_parquet_file(file_pointer: str | Path | UPath, **kwargs) -> pq.ParquetF
     file_pointer = get_upath(file_pointer)
     if file_pointer is None or not file_pointer.exists():
         raise FileNotFoundError("Parquet file does not exist")
-    if is_http(file_pointer):  # pragma: no cover
+    
+    use_bytes_io = _parquet_bytes_io(file_pointer)
+    if use_bytes_io:  # pragma: no cover
         req_info = urllib.request.Request(file_pointer.path)
         with urllib.request.urlopen(req_info) as req:
             reader = BytesIO(req.read())
             return pq.ParquetFile(reader, **kwargs)
-
     return pq.ParquetFile(file_pointer.path, filesystem=file_pointer.fs, **kwargs)
 
 
@@ -302,7 +307,7 @@ def read_parquet_file_to_pandas(file_pointer: str | Path | UPath, **kwargs) -> n
     file_pointer = get_upath(file_pointer)
     # If we are trying to read a directory over http, we need to send the explicit list of files instead.
     # We don't want to get the list unnecessarily because it can be expensive.
-    if is_http(file_pointer) and file_pointer.is_dir():  # pragma: no cover
+    if isinstance(file_pointer, upath.implementations.http.HTTPPath) and file_pointer.is_dir(): # pragma: no cover
         file_pointers = [f for f in file_pointer.iterdir() if f.is_file()]
         return npd.read_parquet(
             file_pointers,
@@ -310,7 +315,8 @@ def read_parquet_file_to_pandas(file_pointer: str | Path | UPath, **kwargs) -> n
             partitioning=None,  # Avoid the ArrowTypeError described in #367
             **kwargs,
         )
-    if is_http(file_pointer):  # pragma: no cover
+    use_bytes_io = _parquet_bytes_io(file_pointer)
+    if use_bytes_io:  # pragma: no cover
         req_info = urllib.request.Request(file_pointer.path)
         with urllib.request.urlopen(req_info) as req:
             reader = BytesIO(req.read())
