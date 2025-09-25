@@ -1,6 +1,7 @@
 from unittest.mock import MagicMock
 
 import astropy.units as u
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
@@ -30,6 +31,7 @@ from hats.inspection.visualize_catalog import (
 
 # pylint: disable=no-member
 
+mpl.use("Agg")
 
 DEFAULT_CMAP_NAME = "viridis"
 DEFAULT_FOV = (320 * u.deg, 160 * u.deg)
