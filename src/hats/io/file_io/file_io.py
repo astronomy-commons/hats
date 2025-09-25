@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import tempfile
-import urllib.request
 from collections.abc import Generator
 from io import BytesIO
 from pathlib import Path
@@ -158,13 +157,6 @@ def _parquet_precache_all_bytes(file_pointer):  # pragma: no cover
     return cache_options["parquet_precache_all_bytes"]
 
 
-def _precache_all_bytes(reading_method, file_pointer, **kwargs):  # pragma: no cover
-    req_info = urllib.request.Request(file_pointer.path)
-    with urllib.request.urlopen(req_info) as req:
-        reader = BytesIO(req.read())
-        return reading_method(reader, **kwargs)
-
-
 def read_parquet_metadata(file_pointer: str | Path | UPath, **kwargs) -> pq.FileMetaData:
     """Read FileMetaData from footer of a single Parquet file.
 
@@ -176,7 +168,7 @@ def read_parquet_metadata(file_pointer: str | Path | UPath, **kwargs) -> pq.File
     if file_pointer is None or not file_pointer.exists():
         raise FileNotFoundError("Parquet file does not exist")
     if _parquet_precache_all_bytes(file_pointer):  # pragma: no cover
-        return _precache_all_bytes(pq.read_metadata, file_pointer, **kwargs)
+        return pq.read_metadata(BytesIO(file_pointer.read_bytes()), **kwargs)
 
     return pq.read_metadata(file_pointer.path, filesystem=file_pointer.fs, **kwargs)
 
@@ -193,7 +185,7 @@ def read_parquet_file(file_pointer: str | Path | UPath, **kwargs) -> pq.ParquetF
         raise FileNotFoundError("Parquet file does not exist")
 
     if _parquet_precache_all_bytes(file_pointer):  # pragma: no cover
-        return _precache_all_bytes(pq.ParquetFile, file_pointer, **kwargs)
+        return pq.ParquetFile(BytesIO(file_pointer.read_bytes()), **kwargs)
 
     return pq.ParquetFile(file_pointer.path, filesystem=file_pointer.fs, **kwargs)
 
@@ -319,7 +311,7 @@ def read_parquet_file_to_pandas(file_pointer: str | Path | UPath, **kwargs) -> n
             **kwargs,
         )
     if _parquet_precache_all_bytes(file_pointer):  # pragma: no cover
-        return _precache_all_bytes(pq.ParquetFile, file_pointer, partitioning=None, **kwargs)
+        return npd.read_parquet(BytesIO(file_pointer.read_bytes()), partitioning=None, **kwargs)
     return npd.read_parquet(
         file_pointer.path,
         filesystem=file_pointer.fs,
