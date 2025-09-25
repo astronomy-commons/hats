@@ -149,13 +149,20 @@ def write_dataframe_to_parquet(dataframe: pd.DataFrame, file_pointer):
     dataframe.to_parquet(file_pointer.path, filesystem=file_pointer.fs)
 
 
-def _parquet_bytes_io(file_pointer):  # pragma: no cover
+def _parquet_precache_all_bytes(file_pointer):  # pragma: no cover
     if not isinstance(file_pointer, upath.implementations.http.HTTPPath):
         return False
     cache_options = file_pointer.fs.cache_options or {}
-    if "parquet_bytes_io" not in cache_options:
+    if "parquet_precache_all_bytes" not in cache_options:
         return False
-    return cache_options["parquet_bytes_io"]
+    return cache_options["parquet_precache_all_bytes"]
+
+
+def _precache_all_bytes(reading_method, file_pointer, **kwargs):  # pragma: no cover
+    req_info = urllib.request.Request(file_pointer.path)
+    with urllib.request.urlopen(req_info) as req:
+        reader = BytesIO(req.read())
+        return reading_method(reader, **kwargs)
 
 
 def read_parquet_metadata(file_pointer: str | Path | UPath, **kwargs) -> pq.FileMetaData:
@@ -168,12 +175,8 @@ def read_parquet_metadata(file_pointer: str | Path | UPath, **kwargs) -> pq.File
     file_pointer = get_upath(file_pointer)
     if file_pointer is None or not file_pointer.exists():
         raise FileNotFoundError("Parquet file does not exist")
-    use_bytes_io = _parquet_bytes_io(file_pointer)
-    if use_bytes_io:  # pragma: no cover
-        req_info = urllib.request.Request(file_pointer.path)
-        with urllib.request.urlopen(req_info) as req:
-            reader = BytesIO(req.read())
-            return pq.read_metadata(reader, **kwargs)
+    if _parquet_precache_all_bytes(file_pointer):  # pragma: no cover
+        return _precache_all_bytes(pq.read_metadata, file_pointer, **kwargs)
 
     return pq.read_metadata(file_pointer.path, filesystem=file_pointer.fs, **kwargs)
 
@@ -189,12 +192,9 @@ def read_parquet_file(file_pointer: str | Path | UPath, **kwargs) -> pq.ParquetF
     if file_pointer is None or not file_pointer.exists():
         raise FileNotFoundError("Parquet file does not exist")
 
-    use_bytes_io = _parquet_bytes_io(file_pointer)
-    if use_bytes_io:  # pragma: no cover
-        req_info = urllib.request.Request(file_pointer.path)
-        with urllib.request.urlopen(req_info) as req:
-            reader = BytesIO(req.read())
-            return pq.ParquetFile(reader, **kwargs)
+    if _parquet_precache_all_bytes(file_pointer):  # pragma: no cover
+        return _precache_all_bytes(pq.ParquetFile, file_pointer, **kwargs)
+
     return pq.ParquetFile(file_pointer.path, filesystem=file_pointer.fs, **kwargs)
 
 
@@ -318,12 +318,8 @@ def read_parquet_file_to_pandas(file_pointer: str | Path | UPath, **kwargs) -> n
             partitioning=None,  # Avoid the ArrowTypeError described in #367
             **kwargs,
         )
-    use_bytes_io = _parquet_bytes_io(file_pointer)
-    if use_bytes_io:  # pragma: no cover
-        req_info = urllib.request.Request(file_pointer.path)
-        with urllib.request.urlopen(req_info) as req:
-            reader = BytesIO(req.read())
-            return npd.read_parquet(reader, partitioning=None, **kwargs)
+    if _parquet_precache_all_bytes(file_pointer):  # pragma: no cover
+        return _precache_all_bytes(pq.ParquetFile, file_pointer, partitioning=None, **kwargs)
     return npd.read_parquet(
         file_pointer.path,
         filesystem=file_pointer.fs,
