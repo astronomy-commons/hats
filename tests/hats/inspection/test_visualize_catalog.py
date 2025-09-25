@@ -30,6 +30,7 @@ from hats.inspection.visualize_catalog import (
 
 # pylint: disable=no-member
 
+plt.use("Agg")
 
 DEFAULT_CMAP_NAME = "viridis"
 DEFAULT_FOV = (320 * u.deg, 160 * u.deg)
