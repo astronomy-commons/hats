@@ -1,15 +1,15 @@
 
 [project]
 name = "hats"
-license = {file = "LICENSE"}
 description = "Hierarchical Adaptive Tiling Scheme Catalog"
+license = "BSD-3-Clause"
+license-files = ["LICENSE"]
 readme = "README.md"
 authors = [
     { name = "LINCC Frameworks", email = "lincc-frameworks-team@lists.lsst.org" }
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
-    "License :: OSI Approved :: BSD License",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
     "Operating System :: OS Independent",
@@ -43,6 +43,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "asv==0.6.4", # Used to compute performance benchmarks
+    "virtualenv==20.30", # Temporary fix to airspeed-velocity/asv#1484
     "black", # Used for static linting of files
     "jupyter", # Clears output from Jupyter notebooks
     "pre-commit", # Used to run checks before finalizing a git commit
