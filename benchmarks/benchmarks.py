@@ -3,16 +3,19 @@
 For more information on writing benchmarks:
 https://asv.readthedocs.io/en/stable/writing_benchmarks.html."""
 
-import os
+from pathlib import Path
 
 import numpy as np
 
 import hats.pixel_math as hist
 import hats.pixel_math.healpix_shim as hp
-from hats.catalog import Catalog, PartitionInfo, TableProperties
+from hats import read_hats
+from hats.catalog import Catalog, TableProperties
 from hats.pixel_math import HealpixPixel
 from hats.pixel_tree import align_trees
 from hats.pixel_tree.pixel_tree import PixelTree
+
+BENCH_DATA_DIR = Path(__file__).parent / "data"
 
 
 def time_test_alignment_even_sky():
@@ -65,42 +68,15 @@ class Suite:
         align_trees(self.pixel_tree_1, self.pixel_tree_2, alignment_type="outer")
 
 
-class MetadataSuite:
-    """Suite that generates catalog files and benchmarks the operations on them."""
+def time_open_midsize_catalog():
+    return read_hats(BENCH_DATA_DIR / "midsize_catalog")
 
-    def setup_cache(self):
-        root_dir = os.getcwd()
 
-        ## Create partition info for catalog a (only at order 7)
-        pixel_list_a = [HealpixPixel(7, pixel) for pixel in np.arange(100_000)]
-        catalog_path_a = os.path.join(root_dir, "catalog_a")
-        os.makedirs(catalog_path_a, exist_ok=True)
-        partition_info = PartitionInfo.from_healpix(pixel_list_a)
-        partition_info.write_to_file(os.path.join(catalog_path_a, "partition_info.csv"))
+def time_open_large_catalog():
+    return read_hats(BENCH_DATA_DIR / "large_catalog")
 
-        ## Create partition info for catalog a (only at order 6)
-        pixel_list_b = [HealpixPixel(6, pixel) for pixel in np.arange(25_000)]
-        catalog_path_b = os.path.join(root_dir, "catalog_b")
-        os.makedirs(catalog_path_b, exist_ok=True)
-        partition_info = PartitionInfo.from_healpix(pixel_list_b)
-        partition_info.write_to_file(os.path.join(catalog_path_b, "partition_info.csv"))
 
-        ## Fake an association catalog between the two
-        association_catalog_path = os.path.join(root_dir, "association_a_b")
-        os.makedirs(association_catalog_path, exist_ok=True)
-        tree_a = PixelTree.from_healpix(pixel_list_a)
-        tree_b = PixelTree.from_healpix(pixel_list_b)
-        alignment = align_trees(tree_a, tree_b)
-        partition_info = PartitionInfo.from_healpix(alignment.pixel_tree.get_healpix_pixels())
-        partition_info.write_to_file(os.path.join(association_catalog_path, "partition_info.csv"))
+def time_small_cone_large_catalog():
+    original_catalog = read_hats(BENCH_DATA_DIR / "large_catalog")
 
-        return (catalog_path_a, catalog_path_b, association_catalog_path)
-
-    def time_load_partition_info_order7(self, cache):
-        PartitionInfo.read_from_dir(cache[0])
-
-    def time_load_partition_info_order6(self, cache):
-        PartitionInfo.read_from_dir(cache[1])
-
-    def time_load_partition_info_association(self, cache):
-        PartitionInfo.read_from_dir(cache[2])
+    original_catalog.filter_by_cone(315, -66.443, 1)
