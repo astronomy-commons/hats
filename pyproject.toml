@@ -42,7 +42,7 @@ dependencies = [
 # On a mac, install optional dependencies with `pip install '.[dev]'` (include the single quotes)
 [project.optional-dependencies]
 dev = [
-    "asv==0.6.4", # Used to compute performance benchmarks
+    "asv==0.6.5", # Used to compute performance benchmarks
     "virtualenv==20.30", # Temporary fix to airspeed-velocity/asv#1484
     "black", # Used for static linting of files
     "jupyter", # Clears output from Jupyter notebooks
