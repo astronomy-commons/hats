@@ -21,6 +21,7 @@ from hats.pixel_tree import PixelAlignment, PixelAlignmentType
 from hats.pixel_tree.moc_filter import filter_by_moc
 from hats.pixel_tree.pixel_alignment import align_with_mocs
 from hats.pixel_tree.pixel_tree import PixelTree
+from hats.pixel_math.spatial_index import SPATIAL_INDEX_COLUMN, SPATIAL_INDEX_ORDER
 
 
 class HealpixDataset(Dataset):
@@ -309,3 +310,14 @@ class HealpixDataset(Dataset):
             multi_index=multi_index,
             include_pixels=include_pixels,
         )
+
+    def has_healpix_column(self):
+        property_column = self.catalog_info.healpix_column
+        if property_column:
+            return not self.schema or property_column in self.schema.names
+        if self.schema:
+            if SPATIAL_INDEX_COLUMN in self.schema.names:
+                self.catalog_info.healpix_column = SPATIAL_INDEX_COLUMN
+                self.catalog_info.healpix_order = SPATIAL_INDEX_ORDER
+                return True
+        return False

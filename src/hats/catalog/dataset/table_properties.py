@@ -41,6 +41,14 @@ class TableProperties(BaseModel):
     default_columns: Optional[list[str]] = Field(default=None, alias="hats_cols_default")
     """Which columns should be read from parquet files, when user doesn't otherwise specify."""
 
+    healpix_column: Optional[str] = Field(default=None, alias="hats_col_healpix")
+    """Column name that provides a spatial index of healpix values at some fixed, high order.
+    A typical value would be ``_healpix_29``, but can vary."""
+
+    healpix_order: Optional[int] = Field(default=None, alias="hats_col_healpix_order")
+    """For the spatial index of healpix values in ``hats_col_healpix``
+    what is the fixed, high order. A typicaly value would be 29, but can vary."""
+
     primary_catalog: Optional[str] = Field(default=None, alias="hats_primary_table_url")
     """Reference to object catalog. Relevant for nested, margin, association, and index."""
 
@@ -251,6 +259,6 @@ class TableProperties(BaseModel):
         properties["hats_builder"] = builder_str
         properties["hats_creation_date"] = now.strftime("%Y-%m-%dT%H:%M%Z")
         properties["hats_estsize"] = int(_estimate_dir_size(path) / 1024) if path else 0
-        properties["hats_release_date"] = "2024-09-18"
-        properties["hats_version"] = "v0.1"
+        properties["hats_release_date"] = "2025-08-22"
+        properties["hats_version"] = "v1.0"
         return properties | kwargs
