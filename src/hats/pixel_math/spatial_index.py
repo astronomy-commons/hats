@@ -29,7 +29,9 @@ def compute_spatial_index(ra_values: float | list[float], dec_values: float | li
     return hp.radec2pix(SPATIAL_INDEX_ORDER, ra_values, dec_values)
 
 
-def spatial_index_to_healpix(ids: list[int], target_order: int = SPATIAL_INDEX_ORDER) -> np.ndarray:
+def spatial_index_to_healpix(
+    ids: list[int], target_order: int = SPATIAL_INDEX_ORDER, spatial_index_order: int = SPATIAL_INDEX_ORDER
+) -> np.ndarray:
     """Convert _healpix_29 values to the healpix pixel at the specified order
 
     Args:
@@ -39,7 +41,7 @@ def spatial_index_to_healpix(ids: list[int], target_order: int = SPATIAL_INDEX_O
     Returns:
         numpy array of target_order pixels from the healpix index
     """
-    delta_order = SPATIAL_INDEX_ORDER - target_order
+    delta_order = spatial_index_order - target_order
     return np.array(ids) >> (2 * delta_order)
 
 

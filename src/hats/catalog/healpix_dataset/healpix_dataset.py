@@ -17,11 +17,11 @@ from hats.inspection.visualize_catalog import plot_moc
 from hats.io.parquet_metadata import aggregate_column_statistics, per_pixel_statistics
 from hats.pixel_math import HealpixPixel
 from hats.pixel_math.region_to_moc import box_to_moc, cone_to_moc, pixel_list_to_moc, polygon_to_moc
+from hats.pixel_math.spatial_index import SPATIAL_INDEX_COLUMN, SPATIAL_INDEX_ORDER
 from hats.pixel_tree import PixelAlignment, PixelAlignmentType
 from hats.pixel_tree.moc_filter import filter_by_moc
 from hats.pixel_tree.pixel_alignment import align_with_mocs
 from hats.pixel_tree.pixel_tree import PixelTree
-from hats.pixel_math.spatial_index import SPATIAL_INDEX_COLUMN, SPATIAL_INDEX_ORDER
 
 
 class HealpixDataset(Dataset):
