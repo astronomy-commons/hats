@@ -207,7 +207,8 @@ class HealpixDataset(Dataset):
         Args:
             other_cat (Catalog): The catalog to align to
             alignment_type (PixelAlignmentType): The type of alignment describing how to handle nodes which
-            exist in one tree but not the other. Mirrors the 'how' argument of a pandas/sql join. Options are:
+                exist in one tree but not the other. Mirrors the 'how' argument of a pandas/sql join.
+                Options are:
 
                 - "inner" - only use pixels that appear in both catalogs
                 - "left" - use all pixels that appear in the left catalog and any overlapping from the right
@@ -312,6 +313,14 @@ class HealpixDataset(Dataset):
         )
 
     def has_healpix_column(self):
+        """Does this catalog's schema contain a healpix spatial index column?
+
+        This is True if either:
+
+        - there is a value for the ``hats_col_healpix`` property, and that string
+          exists as a column name in the pyarrow schema
+        - there is a ``_healpix_29`` column in the pyarrow schema
+        """
         property_column = self.catalog_info.healpix_column
         if property_column:
             return not self.schema or property_column in self.schema.names

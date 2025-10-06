@@ -579,6 +579,10 @@ def test_has_healpix_column(small_sky_order1_dir, test_data_dir):
     assert cat.catalog_info.healpix_column == "_healpix_29"
     assert cat.catalog_info.healpix_order == 29
 
+    ## Uses the default spatial index column, so we'll still find it.
+    cat.catalog_info.healpix_column = None
+    assert cat.has_healpix_column()
+
     cat = read_hats(test_data_dir / "small_sky_healpix13")
     assert cat.schema == cat.original_schema
     assert cat.has_healpix_column()
