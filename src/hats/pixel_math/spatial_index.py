@@ -32,7 +32,7 @@ def compute_spatial_index(ra_values: float | list[float], dec_values: float | li
 def spatial_index_to_healpix(
     ids: list[int], target_order: int = SPATIAL_INDEX_ORDER, spatial_index_order: int = SPATIAL_INDEX_ORDER
 ) -> np.ndarray:
-    """Convert _healpix_29 values to the healpix pixel at the specified order
+    """Convert healpix index values to the healpix pixel at the specified order
 
     Args:
         ids (List[int64]): list of well-formatted _healpix_29 values
@@ -50,7 +50,7 @@ def healpix_to_spatial_index(
 ) -> np.int64 | np.ndarray:
     """Convert a healpix pixel to the healpix index
 
-    This maps the healpix pixel to the lowest pixel number within that pixel at order 29.
+    This maps the healpix pixel to the lowest pixel number within that pixel at the specified healpix order.
 
     Useful for operations such as filtering by _healpix_29.
 
