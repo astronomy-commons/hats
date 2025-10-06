@@ -103,14 +103,14 @@ def generate_alignment(
     # Determine aggregation type and threshold
     if byte_pixel_threshold is not None:
         agg_threshold = byte_pixel_threshold
-        agg_type = "memory"
+        agg_type = "mem_size"
     else:
         agg_threshold = threshold
         agg_type = "row_count"
 
     # Check that none of the high-order pixels already exceed the threshold.
     max_bin = np.amax(histogram)
-    if agg_type == "memory" and max_bin > agg_threshold:
+    if agg_type == "mem_size" and max_bin > agg_threshold:
         raise ValueError(f"single pixel size {max_bin} bytes exceeds byte_pixel_threshold {agg_threshold}")
     elif agg_type == "row_count" and max_bin > agg_threshold:
         raise ValueError(f"single pixel count {max_bin} exceeds threshold {agg_threshold}")
