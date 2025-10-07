@@ -1,9 +1,9 @@
 """Utilities for generating and manipulating object count histograms"""
 
+import logging
 import numpy as np
 import pandas as pd
 import pyarrow.parquet as pq
-
 import hats.pixel_math.healpix_shim as hp
 
 
@@ -78,8 +78,8 @@ def generate_alignment(
         threshold (int): the maximum number of objects allowed in a single pixel
         byte_pixel_threshold (int | None): the maximum number of objects allowed in a single pixel,
             expressed in bytes. if this is set, it will override `threshold`.
-
         drop_empty_siblings (bool): if 3 of 4 pixels are empty, keep only the non-empty pixel
+
     Returns:
         one-dimensional numpy array of integer 3-tuples, where the value at each index corresponds
         to the destination pixel at order less than or equal to the `highest_order`.
@@ -87,10 +87,12 @@ def generate_alignment(
         The tuple contains three integers:
         - order of the destination pixel
         - pixel number *at the above order*
-        - the number of objects in the pixel (if partitioning by row count), or the memory size (if partitioning by memory)
+        - the number of objects in the pixel (if partitioning by row count), or the memory size (if
+          partitioning by memory)
 
     Note:
-        If partitioning is done by memory size, the row count per partition may vary widely and will not match the row count histogram's bins.
+        If partitioning is done by memory size, the row count per partition may vary widely and will
+        not match the row count histogram's bins.
     Raises:
         ValueError: if the histogram is the wrong size, or some initial histogram bins
             exceed threshold.
@@ -112,7 +114,7 @@ def generate_alignment(
     max_bin = np.amax(histogram)
     if agg_type == "mem_size" and max_bin > agg_threshold:
         raise ValueError(f"single pixel size {max_bin} bytes exceeds byte_pixel_threshold {agg_threshold}")
-    elif agg_type == "row_count" and max_bin > agg_threshold:
+    if agg_type == "row_count" and max_bin > agg_threshold:
         raise ValueError(f"single pixel count {max_bin} exceeds threshold {agg_threshold}")
 
     nested_sums = []
@@ -153,9 +155,9 @@ def _get_alignment(nested_sums, highest_order, lowest_order, threshold):
 
             if parent_alignment:
                 nested_alignment[read_order][index] = parent_alignment
-            elif nested_sums[read_order][index] == 0:
+            elif nested_sums[read_order][index] == 0:  # pylint: disable=no-else-raise
                 continue
-            elif nested_sums[read_order][index] <= threshold:
+            elif nested_sums[read_order][index] <= threshold:  # pylint: disable=no-else-raise
                 nested_alignment[read_order][index] = (
                     read_order,
                     index,
@@ -228,8 +230,7 @@ def _get_alignment_dropping_siblings(nested_sums, highest_order, lowest_order, t
 
 
 def generate_row_count_histogram_from_partitions(partition_files, pixel_orders, pixel_indices, highest_order):
-    """
-    Generate a row count histogram from a list of partition files and their pixel indices/orders.
+    """Generate a row count histogram from a list of partition files and their pixel indices/orders.
 
     Args:
         partition_files (list[str or UPath]): List of paths to partition files.
@@ -245,8 +246,6 @@ def generate_row_count_histogram_from_partitions(partition_files, pixel_orders, 
         If partitioning was done by memory size, this histogram will reflect the actual row counts
         in the output partitions, which may differ significantly from the original row count histogram.
     """
-    import logging
-
     histogram = np.zeros(hp.order2npix(highest_order), dtype=np.int64)
     for file_path, order, pix in zip(partition_files, pixel_orders, pixel_indices):
         try:
@@ -262,7 +261,7 @@ def generate_row_count_histogram_from_partitions(partition_files, pixel_orders, 
                 start = pix * factor
                 end = (pix + 1) * factor
                 histogram[start:end] += row_count // factor
-        except Exception as e:
-            logging.warning(f"Could not read partition file {file_path}: {e}")
+        except (OSError, ValueError) as e:
+            logging.warning("Could not read partition file %s: %s", file_path, e)
             continue
     return histogram
