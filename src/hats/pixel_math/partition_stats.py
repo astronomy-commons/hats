@@ -1,9 +1,11 @@
 """Utilities for generating and manipulating object count histograms"""
 
 import logging
+
 import numpy as np
 import pandas as pd
 import pyarrow.parquet as pq
+
 import hats.pixel_math.healpix_shim as hp
 
 
