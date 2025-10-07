@@ -17,6 +17,7 @@ from hats.inspection.visualize_catalog import plot_moc
 from hats.io.parquet_metadata import aggregate_column_statistics, per_pixel_statistics
 from hats.pixel_math import HealpixPixel
 from hats.pixel_math.region_to_moc import box_to_moc, cone_to_moc, pixel_list_to_moc, polygon_to_moc
+from hats.pixel_math.spatial_index import SPATIAL_INDEX_COLUMN, SPATIAL_INDEX_ORDER
 from hats.pixel_tree import PixelAlignment, PixelAlignmentType
 from hats.pixel_tree.moc_filter import filter_by_moc
 from hats.pixel_tree.pixel_alignment import align_with_mocs
@@ -206,7 +207,8 @@ class HealpixDataset(Dataset):
         Args:
             other_cat (Catalog): The catalog to align to
             alignment_type (PixelAlignmentType): The type of alignment describing how to handle nodes which
-            exist in one tree but not the other. Mirrors the 'how' argument of a pandas/sql join. Options are:
+                exist in one tree but not the other. Mirrors the 'how' argument of a pandas/sql join.
+                Options are:
 
                 - "inner" - only use pixels that appear in both catalogs
                 - "left" - use all pixels that appear in the left catalog and any overlapping from the right
@@ -309,3 +311,22 @@ class HealpixDataset(Dataset):
             multi_index=multi_index,
             include_pixels=include_pixels,
         )
+
+    def has_healpix_column(self):
+        """Does this catalog's schema contain a healpix spatial index column?
+
+        This is True if either:
+
+        - there is a value for the ``hats_col_healpix`` property, and that string
+          exists as a column name in the pyarrow schema
+        - there is a ``_healpix_29`` column in the pyarrow schema
+        """
+        property_column = self.catalog_info.healpix_column
+        if property_column:
+            return not self.schema or property_column in self.schema.names
+        if self.schema:
+            if SPATIAL_INDEX_COLUMN in self.schema.names:
+                self.catalog_info.healpix_column = SPATIAL_INDEX_COLUMN
+                self.catalog_info.healpix_order = SPATIAL_INDEX_ORDER
+                return True
+        return False

@@ -570,3 +570,25 @@ def test_catalog_len_is_undetermined(small_sky_order1_catalog):
         len(small_sky_order1_catalog.filter_by_box(ra=(280, 300), dec=(0, 30)))
     with pytest.raises(ValueError, match="undetermined"):
         len(small_sky_order1_catalog.filter_from_pixel_list([HealpixPixel(0, 11)]))
+
+
+def test_has_healpix_column(small_sky_order1_dir, test_data_dir):
+    cat = read_hats(small_sky_order1_dir)
+    assert cat.schema == cat.original_schema
+    assert cat.has_healpix_column()
+    assert cat.catalog_info.healpix_column == "_healpix_29"
+    assert cat.catalog_info.healpix_order == 29
+
+    ## Uses the default spatial index column, so we'll still find it.
+    cat.catalog_info.healpix_column = None
+    assert cat.has_healpix_column()
+
+    cat = read_hats(test_data_dir / "small_sky_healpix13")
+    assert cat.schema == cat.original_schema
+    assert cat.has_healpix_column()
+    assert cat.catalog_info.healpix_column == "healpix13"
+    assert cat.catalog_info.healpix_order == 13
+
+    # There is no `_healpix_29` column, and we don't have the special property anymore.
+    cat.catalog_info.healpix_column = None
+    assert not cat.has_healpix_column()

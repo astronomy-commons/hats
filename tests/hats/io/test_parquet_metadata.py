@@ -23,7 +23,7 @@ def test_write_parquet_metadata(tmp_path, small_sky_dir, small_sky_schema, check
         catalog_base_dir,
     )
 
-    total_rows = write_parquet_metadata(catalog_base_dir)
+    total_rows = write_parquet_metadata(catalog_base_dir, create_thumbnail=True)
     assert total_rows == 131
     check_parquet_schema(catalog_base_dir / "dataset" / "_metadata", small_sky_schema)
     ## _common_metadata has 0 row groups
