@@ -190,7 +190,9 @@ def read_parquet_file(file_pointer: str | Path | UPath, **kwargs) -> pq.ParquetF
     return pq.ParquetFile(file_pointer.path, filesystem=file_pointer.fs, **kwargs)
 
 
-def read_parquet_dataset(source: str | Path | UPath, **kwargs) -> tuple[UPath, Dataset]:
+def read_parquet_dataset(
+    source: str | Path | UPath | list[str | Path | UPath], **kwargs
+) -> tuple[str | list[str], Dataset]:
     """Read parquet dataset from directory pointer or list of files.
 
     Note that pyarrow.dataset reads require that directory pointers don't contain a
@@ -208,10 +210,9 @@ def read_parquet_dataset(source: str | Path | UPath, **kwargs) -> tuple[UPath, D
         and the dataset read from disk.
     """
     if pd.api.types.is_list_like(source) and len(source) > 0:
-        sample_pointer = source[0]
-        sample_pointer = get_upath(sample_pointer)
-        file_system = sample_pointer.fs
-        source = [str(path) for path in source]
+        upaths = [get_upath(path) for path in source]
+        file_system = upaths[0].fs
+        source = [path.path for path in upaths]
     else:
         source = get_upath(source)
         file_system = source.fs
@@ -223,7 +224,7 @@ def read_parquet_dataset(source: str | Path | UPath, **kwargs) -> tuple[UPath, D
         format="parquet",
         **kwargs,
     )
-    return (str(source), dataset)
+    return (source, dataset)
 
 
 def write_parquet_metadata(
