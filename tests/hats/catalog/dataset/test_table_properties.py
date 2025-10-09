@@ -35,19 +35,19 @@ def test_properties_parsing():
     assert table_properties.extra_columns == ["a", "b"]
 
     # hats_copyright is not part of the named args, so it shouldn't show up in the debug string
-    assert (
-        str(table_properties)
-        == """  catalog_name foo
-  catalog_type index
-  total_rows 15
-  primary_catalog bar
-  indexing_column a
-  extra_columns a b
-  npix_suffix .parquet
-  skymap_order 7
-  skymap_alt_orders 2 3 4
+    expected_str = """catalog_name      foo
+catalog_type      index
+total_rows        15
+primary_catalog   bar
+indexing_column   a
+extra_columns     a b
+npix_suffix       .parquet
+skymap_order      7
+skymap_alt_orders 2 3 4
 """
-    )
+    assert str(table_properties) == expected_str
+    assert repr(table_properties) == expected_str
+
     table_properties_using_list = TableProperties(
         catalog_name="foo",
         catalog_type="index",

@@ -185,12 +185,16 @@ class TableProperties(BaseModel):
         extra_keys = self.__pydantic_extra__.keys()
         return {key: val for key, val in explicit.items() if key in extra_keys}
 
+    def __repr__(self):
+        return self.__str__()
+
     def __str__(self):
         """Friendly string representation based on named fields."""
         parameters = self.explicit_dict()
+        longest_length = max(len(key) for key in parameters.keys())
         formatted_string = ""
         for name, value in parameters.items():
-            formatted_string += f"  {name} {value}\n"
+            formatted_string += f"{name.ljust(longest_length)} {value}\n"
         return formatted_string
 
     @classmethod
