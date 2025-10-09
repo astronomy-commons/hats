@@ -191,7 +191,7 @@ class TableProperties(BaseModel):
     def __str__(self):
         """Friendly string representation based on named fields."""
         parameters = self.explicit_dict()
-        longest_length = max([len(key) for key in parameters.keys()])
+        longest_length = max(len(key) for key in parameters.keys())
         formatted_string = ""
         for name, value in parameters.items():
             formatted_string += f"{name.ljust(longest_length)} {value}\n"
