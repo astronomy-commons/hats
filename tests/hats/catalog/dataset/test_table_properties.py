@@ -46,7 +46,7 @@ skymap_order      7
 skymap_alt_orders 2 3 4
 """
     assert str(table_properties) == expected_str
-    assert table_properties.__repr__() == expected_str
+    assert table_properties.repr() == expected_str
 
     table_properties_using_list = TableProperties(
         catalog_name="foo",
