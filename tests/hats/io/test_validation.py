@@ -198,3 +198,87 @@ def test_is_valid_catalog_fail_with_missing_partitions(small_sky_source_dir, tmp
     )
     with pytest.raises(ValueError, match="partition is missing"):
         assert is_valid_catalog(tmp_path / "copy", **flags)
+
+
+def test_is_valid_collection_fail_with_missing_primary_lax(tmp_path):
+    properties = """#HATS Collection
+obs_collection=small_sky_o1_collection
+hats_primary_table_url=small_sky_order1
+"""
+    with (tmp_path / "collection.properties").open("w", encoding="utf-8") as file:
+        file.write(properties)
+
+    assert not is_valid_catalog(tmp_path)
+
+    properties = """#HATS Collection
+obs_collection=small_sky_o1_collection
+"""
+    with (tmp_path / "collection.properties").open("w", encoding="utf-8") as file:
+        file.write(properties)
+
+    assert not is_valid_catalog(tmp_path)
+
+
+def test_is_valid_collection_fail_with_missing_strict(tmp_path):
+    flags = {
+        "strict": True,  # more intensive checks
+        "fail_fast": False,  # check everything, and just return true/false
+        "verbose": False,  # don't bother printing anything.
+    }
+    properties = """#HATS Collection
+obs_collection=small_sky_o1_collection
+hats_primary_table_url=small_sky_order1
+all_margins=small_sky_order1
+default_margin=small_sky_order1
+all_indexes=foo small_sky_order1
+"""
+    with (tmp_path / "collection.properties").open("w", encoding="utf-8") as file:
+        file.write(properties)
+
+    assert not is_valid_catalog(tmp_path, **flags)
+
+    properties = """#HATS Collection
+obs_collection=small_sky_o1_collection
+"""
+    with (tmp_path / "collection.properties").open("w", encoding="utf-8") as file:
+        file.write(properties)
+
+    assert not is_valid_catalog(tmp_path, **flags)
+
+
+def test_is_valid_collection_fail_with_wrong_types(tmp_path, small_sky_collection_dir):
+    """Using a totally valid copy of the small sky collection, modify the
+    `collection.properties` file to point to the wrong types of catalogs."""
+    flags = {
+        "strict": True,  # more intensive checks
+        "fail_fast": False,  # check everything, and just return true/false
+        "verbose": False,  # don't bother printing anything.
+    }
+
+    shutil.copytree(small_sky_collection_dir, tmp_path / "copy")
+    assert is_valid_catalog(tmp_path / "copy", **flags)
+
+    catalog_relative = "small_sky_order1"
+    margin_relative = "small_sky_order1_margin"
+    index_relative = "small_sky_order1_id_index"
+    properties = f"""#HATS Collection
+obs_collection=small_sky_o1_collection
+hats_primary_table_url={catalog_relative}
+all_margins={margin_relative}
+default_margin={margin_relative}
+all_indexes=id {index_relative}
+"""
+    with (tmp_path / "copy" / "collection.properties").open("w", encoding="utf-8") as file:
+        file.write(properties)
+    assert is_valid_catalog(tmp_path / "copy", **flags)
+
+    properties = f"""#HATS Collection
+obs_collection=small_sky_o1_collection
+hats_primary_table_url={margin_relative}
+all_margins={index_relative}
+default_margin={index_relative}
+all_indexes=foo {catalog_relative}
+"""
+    with (tmp_path / "copy" / "collection.properties").open("w", encoding="utf-8") as file:
+        file.write(properties)
+    assert not is_valid_catalog(tmp_path / "copy", **flags)

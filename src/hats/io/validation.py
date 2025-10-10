@@ -56,9 +56,6 @@ def is_valid_catalog(
             return is_valid_catalog(pointer / collection_properties.hats_primary_table_url)
         return False
 
-    if verbose:
-        print(f"Validating catalog at path {pointer} ... ")
-
     def handle_error(msg):
         """inline-method to handle repeated logic of raising error or warning and
         continuing."""
@@ -74,6 +71,10 @@ def is_valid_catalog(
     if is_collection_info_valid(pointer):
         # For catalog collections, we will confirm that all the member catalogs listed in the
         # collection properties exist and are valid, according to their expected types.
+
+        if verbose:
+            print(f"Validating collection at path {pointer} ... ")
+
         is_valid = True
 
         collection_properties = CollectionProperties.read_from_dir(pointer)
@@ -82,41 +83,50 @@ def is_valid_catalog(
             handle_error,
             verbose,
         )
-        is_valid |= subcatalog_valid
+        is_valid &= subcatalog_valid
 
         if sub_catalog and not isinstance(sub_catalog, Catalog):
-            handle_error(f"Primary catalog is the wrong type (expected Catalog, found {type(sub_catalog)}).")
+            handle_error(
+                "Primary catalog is the wrong type (expected Catalog, "
+                f"found {sub_catalog.catalog_info.catalog_type})."
+            )
             is_valid = False
 
-        for margin in collection_properties.all_margins:
-            (subcatalog_valid, sub_catalog) = _is_valid_catalog_strict(
-                pointer / margin,
-                handle_error,
-                verbose,
-            )
-            is_valid |= subcatalog_valid
-
-            if sub_catalog and not isinstance(sub_catalog, MarginCatalog):
-                handle_error(
-                    f"Catalog is the wrong type (expected MarginCatalog, found {type(sub_catalog)})."
+        if collection_properties.all_margins:
+            for margin in collection_properties.all_margins:
+                (subcatalog_valid, sub_catalog) = _is_valid_catalog_strict(
+                    pointer / margin,
+                    handle_error,
+                    verbose,
                 )
-                is_valid = False
+                is_valid &= subcatalog_valid
 
-        for index_field, index_dir in collection_properties.all_indexes.items():
-            (subcatalog_valid, sub_catalog) = _is_valid_catalog_strict(
-                pointer / index_dir, handle_error, verbose
-            )
-            is_valid |= subcatalog_valid
+                if sub_catalog and not isinstance(sub_catalog, MarginCatalog):
+                    handle_error(
+                        "Margin catalog is the wrong type (expected margin, "
+                        f"found {sub_catalog.catalog_info.catalog_type})."
+                    )
+                    is_valid = False
 
-            if sub_catalog and not isinstance(sub_catalog, IndexCatalog):
-                handle_error(f"Catalog is the wrong type (expected IndexCatalog, found {type(sub_catalog)}).")
-                is_valid = False
-            if sub_catalog and sub_catalog.catalog_info.indexing_column != index_field:
-                handle_error(
-                    f"Index catalog index columns don't match (expected {index_field}, "
-                    f"found {sub_catalog.catalog_info.indexing_column})."
+        if collection_properties.all_indexes:
+            for index_field, index_dir in collection_properties.all_indexes.items():
+                (subcatalog_valid, sub_catalog) = _is_valid_catalog_strict(
+                    pointer / index_dir, handle_error, verbose
                 )
-                is_valid = False
+                is_valid &= subcatalog_valid
+
+                if sub_catalog and not isinstance(sub_catalog, IndexCatalog):
+                    handle_error(
+                        f"Index catalog is the wrong type (expected index, "
+                        f"found {sub_catalog.catalog_info.catalog_type})."
+                    )
+                    is_valid = False
+                if sub_catalog and sub_catalog.catalog_info.indexing_column != index_field:
+                    handle_error(
+                        f"Index catalog index columns don't match (expected {index_field}, "
+                        f"found {sub_catalog.catalog_info.indexing_column})."
+                    )
+                    is_valid = False
         return is_valid
 
     (is_valid, _) = _is_valid_catalog_strict(pointer, handle_error, verbose)
@@ -128,6 +138,9 @@ def _is_valid_catalog_strict(pointer, handle_error, verbose):
 
     If a catalog object can be loaded (even if it's not strictly valid),
     return it as well, for type-specific checks."""
+    if verbose:
+        print(f"Validating catalog at path {pointer} ... ")
+
     is_valid = True
     if not is_catalog_info_valid(pointer):
         handle_error("properties file does not exist or is invalid.")
