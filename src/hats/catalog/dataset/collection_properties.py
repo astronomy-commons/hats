@@ -1,7 +1,7 @@
 import re
 from functools import reduce
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import Annotated, Iterable, Optional
 
 import pandas as pd
 from jproperties import Properties
@@ -51,10 +51,10 @@ class CollectionProperties(BaseModel):
     hats_primary_table_url: str = Field(..., alias="hats_primary_table_url")
     """Reference to object catalog. Relevant for nested, margin, association, and index."""
 
-    all_margins: Optional[list[str]] = Field(default=None)
+    all_margins: Annotated[Optional[list[str]], Field(default=None)]
     default_margin: Optional[str] = Field(default=None)
 
-    all_indexes: Optional[dict[str, str]] = Field(default=None)
+    all_indexes: Annotated[Optional[dict[str, str]], Field(default=None)]
     default_index: Optional[str] = Field(default=None)
 
     ## Allow any extra keyword args to be stored on the properties object.
