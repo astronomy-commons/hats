@@ -163,10 +163,6 @@ def _is_valid_catalog_strict(pointer, handle_error, verbose):
     catalog = read_hats(pointer)
     metadata_file = get_parquet_metadata_pointer(pointer)
 
-    ## Load as parquet dataset. Allow errors, and check pixel set against _metadata
-    # As a side effect, this confirms that we can load the directory as a valid dataset.
-    dataset = pds.parquet_dataset(metadata_file.path, filesystem=metadata_file.fs)
-
     if isinstance(catalog, HealpixDataset):
         if not is_partition_info_valid(pointer):
             handle_error("partition_info.csv file does not exist.")
@@ -178,7 +174,10 @@ def _is_valid_catalog_strict(pointer, handle_error, verbose):
             print(f"Found {len(expected_pixels)} partitions.")
 
         ## Compare the pixels in _metadata with partition_info.csv
-        metadata_pixels = sort_pixels(PartitionInfo.read_from_file(metadata_file).get_healpix_pixels())
+        # We typically warn when reading from _metadata, but it's expected right now.
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            metadata_pixels = sort_pixels(PartitionInfo.read_from_file(metadata_file).get_healpix_pixels())
         if not np.array_equal(expected_pixels, metadata_pixels):
             handle_error("Partition pixels differ between catalog and _metadata file")
             is_valid = False
@@ -189,6 +188,10 @@ def _is_valid_catalog_strict(pointer, handle_error, verbose):
         if not np.array_equal(expected_pixels, csv_pixels):
             handle_error("Partition pixels differ between catalog and partition_info.csv file")
             is_valid = False
+
+        ## Load as parquet dataset. Allow errors, and check pixel set against _metadata
+        # As a side effect, this confirms that we can load the directory as a valid dataset.
+        dataset = pds.parquet_dataset(metadata_file.path, filesystem=metadata_file.fs)
 
         parquet_path_pixels = []
         for hats_file in dataset.files:
@@ -214,6 +217,10 @@ def _is_valid_catalog_strict(pointer, handle_error, verbose):
                 "Approximate coverage is "
                 f"{partition_info.calculate_fractional_coverage()*100:0.2f} % of the sky."
             )
+    else:
+        ## Load as parquet dataset. Allow errors, and check pixel set against _metadata
+        # As a side effect, this confirms that we can load the directory as a valid dataset.
+        dataset = pds.parquet_dataset(metadata_file.path, filesystem=metadata_file.fs)
 
     return (is_valid, catalog)
 

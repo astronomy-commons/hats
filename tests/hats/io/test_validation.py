@@ -165,7 +165,7 @@ def test_valid_catalog_strict_all(
     assert is_valid_catalog(small_sky_collection_dir, **flags)
 
 
-def test_valid_catalog_not_strict_all(
+def test_valid_catalog_all_basic(
     small_sky_source_dir,
     small_sky_order1_dir,
     small_sky_dir,
@@ -174,30 +174,40 @@ def test_valid_catalog_not_strict_all(
     small_sky_collection_dir,
 ):
     """Check that all of our object catalogs in test data are valid"""
-    flags = {
-        "strict": False,  # lax checks
-    }
-    assert is_valid_catalog(small_sky_source_dir, **flags)
-    assert is_valid_catalog(small_sky_order1_dir, **flags)
-    assert is_valid_catalog(small_sky_dir, **flags)
-    assert is_valid_catalog(small_sky_source_object_index_dir, **flags)
-    assert is_valid_catalog(margin_catalog_path, **flags)
-    assert is_valid_catalog(small_sky_collection_dir, **flags)
+    assert is_valid_catalog(small_sky_source_dir)
+    assert is_valid_catalog(small_sky_order1_dir)
+    assert is_valid_catalog(small_sky_dir)
+    assert is_valid_catalog(small_sky_source_object_index_dir)
+    assert is_valid_catalog(margin_catalog_path)
+    assert is_valid_catalog(small_sky_collection_dir)
 
 
 def test_is_valid_catalog_fail_with_missing_partitions(small_sky_source_dir, tmp_path):
     """Test that if some files are missing an error is raised"""
     flags = {
         "strict": True,  # more intensive checks
-        "fail_fast": True,  # check everything, and just return true/false
+        "fail_fast": False,  # check everything, and just return true/false
         "verbose": False,  # don't bother printing anything.
     }
     # copy all partitions but two
     shutil.copytree(
         small_sky_source_dir, tmp_path / "copy", ignore=lambda _, f: ["Npix=4.parquet", "Npix=176.parquet"]
     )
-    with pytest.raises(ValueError, match="partition is missing"):
-        assert is_valid_catalog(tmp_path / "copy", **flags)
+    with pytest.warns(match="partition is missing"):
+        assert not is_valid_catalog(tmp_path / "copy", **flags)
+
+
+def test_is_valid_catalog_fail_with_missing_partition_info(small_sky_source_dir, tmp_path):
+    """Test that if some files are missing an error is raised"""
+    flags = {
+        "strict": True,  # more intensive checks
+        "fail_fast": False,  # check everything, and just return true/false
+        "verbose": False,  # don't bother printing anything.
+    }
+    # copy everything but the partition info file.
+    shutil.copytree(small_sky_source_dir, tmp_path / "copy", ignore=lambda _, f: ["partition_info.csv"])
+    with pytest.warns(match="partition_info.csv file does not exist."):
+        assert not is_valid_catalog(tmp_path / "copy", **flags)
 
 
 def test_is_valid_collection_fail_with_missing_primary_lax(tmp_path):
@@ -246,13 +256,13 @@ obs_collection=small_sky_o1_collection
     assert not is_valid_catalog(tmp_path, **flags)
 
 
-def test_is_valid_collection_fail_with_wrong_types(tmp_path, small_sky_collection_dir):
+def test_is_valid_collection_fail_with_wrong_types(tmp_path, small_sky_collection_dir, capsys):
     """Using a totally valid copy of the small sky collection, modify the
     `collection.properties` file to point to the wrong types of catalogs."""
     flags = {
         "strict": True,  # more intensive checks
         "fail_fast": False,  # check everything, and just return true/false
-        "verbose": False,  # don't bother printing anything.
+        "verbose": True,  # don't bother printing anything.
     }
 
     shutil.copytree(small_sky_collection_dir, tmp_path / "copy")
@@ -271,6 +281,7 @@ all_indexes=id {index_relative}
     with (tmp_path / "copy" / "collection.properties").open("w", encoding="utf-8") as file:
         file.write(properties)
     assert is_valid_catalog(tmp_path / "copy", **flags)
+    captured = capsys.readouterr().out
 
     properties = f"""#HATS Collection
 obs_collection=small_sky_o1_collection
@@ -282,3 +293,10 @@ all_indexes=foo {catalog_relative}
     with (tmp_path / "copy" / "collection.properties").open("w", encoding="utf-8") as file:
         file.write(properties)
     assert not is_valid_catalog(tmp_path / "copy", **flags)
+
+    captured = capsys.readouterr().out
+    assert "Validating collection at path" in captured
+    assert "Primary catalog is the wrong type (expected Catalog, found margin)" in captured
+    assert "Margin catalog is the wrong type (expected margin, found index)" in captured
+    assert "Index catalog is the wrong type (expected index, found object)" in captured
+    assert "Index catalog index columns don't match (expected foo, found None)" in captured
