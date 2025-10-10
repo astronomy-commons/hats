@@ -7,8 +7,12 @@ import numpy as np
 import pyarrow.dataset as pds
 from upath import UPath
 
+from hats.catalog.catalog import Catalog
+from hats.catalog.dataset.collection_properties import CollectionProperties
 from hats.catalog.dataset.table_properties import TableProperties
 from hats.catalog.healpix_dataset.healpix_dataset import HealpixDataset
+from hats.catalog.index.index_catalog import IndexCatalog
+from hats.catalog.margin_cache.margin_catalog import MarginCatalog
 from hats.catalog.partition_info import PartitionInfo
 from hats.io import get_common_metadata_pointer, get_parquet_metadata_pointer, get_partition_info_pointer
 from hats.io.file_io import does_file_or_directory_exist, get_upath
@@ -43,20 +47,22 @@ def is_valid_catalog(
     """
     pointer = get_upath(pointer)
     if not strict:
-        return is_catalog_info_valid(pointer) and (
+        if is_catalog_info_valid(pointer) and (
             is_partition_info_valid(pointer) or is_metadata_valid(pointer)
-        )
+        ):
+            return True
+        if is_collection_info_valid(pointer):
+            collection_properties = CollectionProperties.read_from_dir(pointer)
+            return is_valid_catalog(pointer / collection_properties.hats_primary_table_url)
+        return False
 
     if verbose:
         print(f"Validating catalog at path {pointer} ... ")
-
-    is_valid = True
 
     def handle_error(msg):
         """inline-method to handle repeated logic of raising error or warning and
         continuing."""
         nonlocal fail_fast
-        nonlocal is_valid
         nonlocal verbose
         if fail_fast:
             raise ValueError(msg)
@@ -64,21 +70,81 @@ def is_valid_catalog(
             print(msg)
         else:
             warnings.warn(msg)
-        is_valid = False
 
+    if is_collection_info_valid(pointer):
+        # For catalog collections, we will confirm that all the member catalogs listed in the
+        # collection properties exist and are valid, according to their expected types.
+        is_valid = True
+
+        collection_properties = CollectionProperties.read_from_dir(pointer)
+        (subcatalog_valid, sub_catalog) = _is_valid_catalog_strict(
+            pointer / collection_properties.hats_primary_table_url,
+            handle_error,
+            verbose,
+        )
+        is_valid |= subcatalog_valid
+
+        if sub_catalog and not isinstance(sub_catalog, Catalog):
+            handle_error(f"Primary catalog is the wrong type (expected Catalog, found {type(sub_catalog)}).")
+            is_valid = False
+
+        for margin in collection_properties.all_margins:
+            (subcatalog_valid, sub_catalog) = _is_valid_catalog_strict(
+                pointer / margin,
+                handle_error,
+                verbose,
+            )
+            is_valid |= subcatalog_valid
+
+            if sub_catalog and not isinstance(sub_catalog, MarginCatalog):
+                handle_error(
+                    f"Catalog is the wrong type (expected MarginCatalog, found {type(sub_catalog)})."
+                )
+                is_valid = False
+
+        for index_field, index_dir in collection_properties.all_indexes.items():
+            (subcatalog_valid, sub_catalog) = _is_valid_catalog_strict(
+                pointer / index_dir, handle_error, verbose
+            )
+            is_valid |= subcatalog_valid
+
+            if sub_catalog and not isinstance(sub_catalog, IndexCatalog):
+                handle_error(f"Catalog is the wrong type (expected IndexCatalog, found {type(sub_catalog)}).")
+                is_valid = False
+            if sub_catalog and sub_catalog.catalog_info.indexing_column != index_field:
+                handle_error(
+                    f"Index catalog index columns don't match (expected {index_field}, "
+                    f"found {sub_catalog.catalog_info.indexing_column})."
+                )
+                is_valid = False
+        return is_valid
+
+    (is_valid, _) = _is_valid_catalog_strict(pointer, handle_error, verbose)
+    return is_valid
+
+
+def _is_valid_catalog_strict(pointer, handle_error, verbose):
+    """Determine if this is a valid catalog, using strict criteria.
+
+    If a catalog object can be loaded (even if it's not strictly valid),
+    return it as well, for type-specific checks."""
+    is_valid = True
     if not is_catalog_info_valid(pointer):
         handle_error("properties file does not exist or is invalid.")
+        is_valid = False
 
     if not is_metadata_valid(pointer):
         handle_error("_metadata file does not exist.")
+        is_valid = False
 
     if not is_common_metadata_valid(pointer):
         handle_error("_common_metadata file does not exist.")
+        is_valid = False
 
     if not is_valid:
         # Even if we're not failing fast, we need to stop here if the metadata
         # files don't exist.
-        return is_valid
+        return (False, None)
 
     # Load as a catalog object. Confirms that the catalog info matches type.
     catalog = read_hats(pointer)
@@ -86,15 +152,12 @@ def is_valid_catalog(
 
     ## Load as parquet dataset. Allow errors, and check pixel set against _metadata
     # As a side effect, this confirms that we can load the directory as a valid dataset.
-    dataset = pds.parquet_dataset(
-        metadata_file.path,
-        filesystem=metadata_file.fs,
-    )
+    dataset = pds.parquet_dataset(metadata_file.path, filesystem=metadata_file.fs)
 
     if isinstance(catalog, HealpixDataset):
         if not is_partition_info_valid(pointer):
             handle_error("partition_info.csv file does not exist.")
-            return is_valid
+            return (False, catalog)
 
         expected_pixels = sort_pixels(catalog.get_healpix_pixels())
 
@@ -105,27 +168,32 @@ def is_valid_catalog(
         metadata_pixels = sort_pixels(PartitionInfo.read_from_file(metadata_file).get_healpix_pixels())
         if not np.array_equal(expected_pixels, metadata_pixels):
             handle_error("Partition pixels differ between catalog and _metadata file")
+            is_valid = False
 
         partition_info_file = get_partition_info_pointer(pointer)
         partition_info = PartitionInfo.read_from_csv(partition_info_file)
         csv_pixels = sort_pixels(partition_info.get_healpix_pixels())
         if not np.array_equal(expected_pixels, csv_pixels):
             handle_error("Partition pixels differ between catalog and partition_info.csv file")
+            is_valid = False
 
         parquet_path_pixels = []
         for hats_file in dataset.files:
             hats_fp = UPath(hats_file, protocol=metadata_file.protocol, **metadata_file.storage_options)
             if not does_file_or_directory_exist(hats_fp):
                 handle_error(f"Pixel partition is missing: {hats_fp}")
+                is_valid = False
             healpix_pixel = get_healpix_from_path(hats_file)
             if healpix_pixel == INVALID_PIXEL:
                 handle_error(f"Could not derive partition pixel from parquet path: {str(hats_fp)}")
+                is_valid = False
             parquet_path_pixels.append(healpix_pixel)
 
         parquet_path_pixels = sort_pixels(parquet_path_pixels)
 
         if not np.array_equal(expected_pixels, parquet_path_pixels):
             handle_error("Partition pixels differ between catalog and parquet paths")
+            is_valid = False
 
         if verbose:
             # Print a few more stats
@@ -134,7 +202,7 @@ def is_valid_catalog(
                 f"{partition_info.calculate_fractional_coverage()*100:0.2f} % of the sky."
             )
 
-    return is_valid
+    return (is_valid, catalog)
 
 
 def is_catalog_info_valid(pointer: str | Path | UPath) -> bool:
@@ -149,6 +217,23 @@ def is_catalog_info_valid(pointer: str | Path | UPath) -> bool:
     """
     try:
         TableProperties.read_from_dir(pointer)
+    except (FileNotFoundError, ValueError, NotImplementedError):
+        return False
+    return True
+
+
+def is_collection_info_valid(pointer: str | Path | UPath) -> bool:
+    """Checks if collection.properties file is valid for a given base catalog pointer
+
+    Args:
+        pointer (UPath): pointer to base catalog collection directory
+
+    Returns:
+        True if the properties file exists, and it is correctly formatted,
+        False otherwise
+    """
+    try:
+        CollectionProperties.read_from_dir(pointer)
     except (FileNotFoundError, ValueError, NotImplementedError):
         return False
     return True

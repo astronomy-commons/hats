@@ -149,6 +149,7 @@ def test_valid_catalog_strict_all(
     small_sky_dir,
     small_sky_source_object_index_dir,
     margin_catalog_path,
+    small_sky_collection_dir,
 ):
     """Check that all of our object catalogs in test data are valid, using strict mechanism"""
     flags = {
@@ -161,6 +162,27 @@ def test_valid_catalog_strict_all(
     assert is_valid_catalog(small_sky_dir, **flags)
     assert is_valid_catalog(small_sky_source_object_index_dir, **flags)
     assert is_valid_catalog(margin_catalog_path, **flags)
+    assert is_valid_catalog(small_sky_collection_dir, **flags)
+
+
+def test_valid_catalog_not_strict_all(
+    small_sky_source_dir,
+    small_sky_order1_dir,
+    small_sky_dir,
+    small_sky_source_object_index_dir,
+    margin_catalog_path,
+    small_sky_collection_dir,
+):
+    """Check that all of our object catalogs in test data are valid"""
+    flags = {
+        "strict": False,  # lax checks
+    }
+    assert is_valid_catalog(small_sky_source_dir, **flags)
+    assert is_valid_catalog(small_sky_order1_dir, **flags)
+    assert is_valid_catalog(small_sky_dir, **flags)
+    assert is_valid_catalog(small_sky_source_object_index_dir, **flags)
+    assert is_valid_catalog(margin_catalog_path, **flags)
+    assert is_valid_catalog(small_sky_collection_dir, **flags)
 
 
 def test_is_valid_catalog_fail_with_missing_partitions(small_sky_source_dir, tmp_path):
