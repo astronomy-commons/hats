@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-import hats.pixel_math.healpix_shim as hp
 import nested_pandas as npd
 import numpy as np
+
+import hats.pixel_math.healpix_shim as hp
 from hats.catalog import TableProperties
 from hats.pixel_math.region_to_moc import wrap_ra_angles
 
@@ -45,7 +46,6 @@ def _create_ra_mask(ra: tuple[float, float], values: np.ndarray) -> np.ndarray:
     return mask
 
 
-
 def cone_filter(data_frame: npd.NestedFrame, ra, dec, radius_arcsec, metadata: TableProperties):
     """Filters a dataframe to only include points within the specified cone
 
@@ -72,7 +72,6 @@ def cone_filter(data_frame: npd.NestedFrame, ra, dec, radius_arcsec, metadata: T
     cos_radius = np.cos(np.radians(radius_arcsec / 3600))
     data_frame = data_frame[cos_separation >= cos_radius]
     return data_frame
-
 
 
 def polygon_filter(data_frame: npd.NestedFrame, polygon, metadata: TableProperties) -> npd.NestedFrame:
