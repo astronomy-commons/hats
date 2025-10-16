@@ -9,11 +9,14 @@ from astropy.coordinates import SkyCoord
 from astropy.units import Quantity
 from astropy.visualization.wcsaxes import WCSAxes
 from astropy.visualization.wcsaxes.frame import BaseFrame
+
 from hats.catalog import TableProperties
+
 try:
-    from hats.inspection.visualize_catalog import initialize_wcs_axes
     from matplotlib import pyplot as plt
     from matplotlib.figure import Figure
+
+    from hats.inspection.visualize_catalog import initialize_wcs_axes
     _HAS_MATPLOTLIB = True
 except ImportError:
     _HAS_MATPLOTLIB = False

@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import astropy.units as u
-import hats.pixel_math.healpix_shim as hp
 import nested_pandas as npd
 import numpy as np
 import pandas as pd
 from astropy.visualization.wcsaxes import SphericalCircle, WCSAxes
+from mocpy import MOC
+
+import hats.pixel_math.healpix_shim as hp
 from hats.catalog import TableProperties
+from hats.catalog.healpix_dataset.healpix_dataset import HealpixDataset
 from hats.pixel_math import HealpixPixel, get_healpix_pixel, spatial_index
 from hats.pixel_math.region_to_moc import wrap_ra_angles
 from hats.pixel_math.validators import (
@@ -15,10 +18,7 @@ from hats.pixel_math.validators import (
     validate_polygon,
     validate_radius,
 )
-from mocpy import MOC
-
 from hats.search.abstract_search import AbstractSearch
-from hats.types import HCCatalogTypeVar
 
 
 class BoxSearch(AbstractSearch):
@@ -36,7 +36,7 @@ class BoxSearch(AbstractSearch):
         validate_box(ra, dec)
         self.ra, self.dec = ra, dec
 
-    def perform_hc_catalog_filter(self, hc_structure: HCCatalogTypeVar) -> MOC:
+    def perform_hc_catalog_filter(self, hc_structure: HealpixDataset) -> MOC:
         """Filters catalog pixels according to the box"""
         return hc_structure.filter_by_box(self.ra, self.dec)
 

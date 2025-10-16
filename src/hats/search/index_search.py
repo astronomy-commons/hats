@@ -4,10 +4,10 @@ from typing import Any
 
 import nested_pandas as npd
 import numpy as np
-from hats.catalog.index.index_catalog import IndexCatalog as HCIndexCatalog
 
+from hats.catalog.healpix_dataset.healpix_dataset import HealpixDataset
+from hats.catalog.index.index_catalog import IndexCatalog as HCIndexCatalog
 from hats.search.abstract_search import AbstractSearch
-from hats.types import HCCatalogTypeVar
 
 
 class IndexSearch(AbstractSearch):
@@ -30,7 +30,7 @@ class IndexSearch(AbstractSearch):
         self.values = values
         self.index_catalogs = index_catalogs
 
-    def perform_hc_catalog_filter(self, hc_structure: HCCatalogTypeVar) -> HCCatalogTypeVar:
+    def perform_hc_catalog_filter(self, hc_structure: HealpixDataset) -> HealpixDataset:
         """Determine the pixels for which there is a result in each field"""
         all_pixels = set(hc_structure.get_healpix_pixels())
         for field_name, field_value in self.values.items():
