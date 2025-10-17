@@ -324,7 +324,8 @@ def per_pixel_statistics(
         include_pixels (list[HealpixPixel]): if specified, only return statistics
             for the pixels indicated. Defaults to none, and returns all pixels.
         include_stats (List[str]): if specified, only return the kinds of values from list
-            (min_value, max_value, null_count, row_count). Defaults to None, and returns all values.
+            (min_value, max_value, null_count, row_count, uncompressed_size).
+            Defaults to None, and returns all values.
         multi_index (bool): should the returned frame be created with a multi-index, first on
             pixel, then on column name? Default is False, and instead indexes on pixel, with
             separate columns per-data-column and stat value combination.
@@ -348,7 +349,7 @@ def per_pixel_statistics(
     if not good_column_indexes:
         return pd.DataFrame()
 
-    all_stats = ["min_value", "max_value", "null_count", "row_count"]
+    all_stats = ["min_value", "max_value", "null_count", "row_count", "uncompressed_size"]
     int_stats = ["null_count", "row_count"]
 
     if include_stats is None or len(include_stats) == 0:
@@ -378,6 +379,7 @@ def per_pixel_statistics(
                     row_group.column(col).statistics.max,
                     row_group.column(col).statistics.null_count,
                     row_group.column(col).num_values,
+                    row_group.column(col).total_uncompressed_size,
                 ]
             )
             for col in good_column_indexes
@@ -397,6 +399,7 @@ def per_pixel_statistics(
                         _nonemax(current_stats[i][1], row_stats[i][1]),
                         current_stats[i][2] + row_stats[i][2],
                         current_stats[i][3] + row_stats[i][3],
+                        current_stats[i][4] + row_stats[i][4],
                     )
                     for i in range(0, len(good_column_indexes))
                 ]

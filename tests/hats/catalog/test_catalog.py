@@ -121,21 +121,26 @@ def test_catalog_statistics(small_sky_order1_dir):
     assert_column_stat_as_floats(result_frame, "dec", min_value=-69.5, max_value=-47.5, row_count=42)
 
     result_frame = cat.per_pixel_statistics()
-    # 20 = 5 columns * 4 pixels
-    assert result_frame.shape == (4, 20)
+    # 4 = 4 pixels
+    # 25 = 5 columns * 5 stats per-column
+    assert result_frame.shape == (4, 25)
 
     result_frame = cat.per_pixel_statistics(exclude_hats_columns=False)
-    # 24 = 6 columns * 4 stats per-column
-    assert result_frame.shape == (4, 24)
+    # 4 = 4 pixels
+    # 30 = 6 columns * 5 stats per-column
+    assert result_frame.shape == (4, 30)
 
     result_frame = cat.per_pixel_statistics(
         include_columns=["ra", "dec"], include_stats=["min_value", "max_value"]
     )
+    # 4 = 4 pixels
     # 4 = 2 columns * 2 stats per-column
     assert result_frame.shape == (4, 4)
 
     result_frame = filtered_catalog.per_pixel_statistics()
-    assert result_frame.shape == (1, 20)
+    # 1 = 1 pixels
+    # 25 = 5 columns * 5 stats per-column
+    assert result_frame.shape == (1, 25)
 
 
 def test_catalog_statistics_inmemory(catalog_info, catalog_pixels):
