@@ -5,6 +5,7 @@ import pyarrow as pa
 import pytest
 
 from hats.catalog.dataset.table_properties import TableProperties
+from hats.loaders import read_hats
 from hats.pixel_math import HealpixPixel
 
 DATA_DIR_NAME = "data"
@@ -243,3 +244,29 @@ def small_sky_source_pixels():
         HealpixPixel(2, 187),
         HealpixPixel(1, 47),
     ]
+
+
+@pytest.fixture
+def small_sky_catalog(small_sky_dir):
+    return read_hats(small_sky_dir)
+
+
+# pylint: disable=import-outside-toplevel
+def pytest_collection_modifyitems(items):
+    """Modify tests that use the `lsst-sphgeom` package to only run when that
+    package has been installed in the development environment.
+
+    If we detect that we can import `lsst-sphgeom`, this method exits early
+    and does not modify any test items.
+    """
+    try:
+        # pylint: disable=unused-import
+        from lsst.sphgeom import ConvexPolygon
+
+        return
+    except ImportError:
+        pass
+
+    for item in items:
+        if any(item.iter_markers(name="sphgeom")):
+            item.add_marker(pytest.mark.skip(reason="lsst-sphgeom is not installed"))

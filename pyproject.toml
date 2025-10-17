@@ -53,6 +53,10 @@ dev = [
     "pytest-mock", # Used to mock objects in tests
     "pytest-timeout", # Used to test for code efficiency
 ]
+full = [
+    "fsspec[full]", # complete file system specs.
+    "lsst-sphgeom ; sys_platform == 'darwin' or sys_platform == 'linux'", # To handle spherical sky polygons, not available on Windows
+]
 
 [build-system]
 requires = [
