@@ -312,6 +312,17 @@ def per_pixel_statistics(
     """Read footer statistics in parquet metadata, and report on statistics about
     each pixel partition.
 
+    The statistics gathered are a subset of the available attributes in the
+    ``pyarrow.parquet.ColumnChunkMetaData``:
+
+    - ``min_value`` - minimum value seen in a single data partition
+    - ``max_value`` - maximum value seen in a single data partition
+    - ``null_count`` - number of null values
+    - ``row_count`` - total number of values. note that this will only vary by column
+      if you have some nested columns in your dataset
+    - ``disk_bytes`` - Compressed size of the data in the parquet file, in bytes
+    - ``memory_bytes`` - Uncompressed size, in bytes
+
     Args:
         metadata_file (str | Path | UPath): path to `_metadata` file
         exclude_hats_columns (bool): exclude HATS spatial and partitioning fields
@@ -324,7 +335,7 @@ def per_pixel_statistics(
         include_pixels (list[HealpixPixel]): if specified, only return statistics
             for the pixels indicated. Defaults to none, and returns all pixels.
         include_stats (List[str]): if specified, only return the kinds of values from list
-            (min_value, max_value, null_count, row_count, uncompressed_size).
+            (min_value, max_value, null_count, row_count, disk_bytes, memory_bytes).
             Defaults to None, and returns all values.
         multi_index (bool): should the returned frame be created with a multi-index, first on
             pixel, then on column name? Default is False, and instead indexes on pixel, with
@@ -349,7 +360,7 @@ def per_pixel_statistics(
     if not good_column_indexes:
         return pd.DataFrame()
 
-    all_stats = ["min_value", "max_value", "null_count", "row_count", "uncompressed_size"]
+    all_stats = ["min_value", "max_value", "null_count", "row_count", "disk_bytes", "memory_bytes"]
     int_stats = ["null_count", "row_count"]
 
     if include_stats is None or len(include_stats) == 0:
@@ -379,6 +390,7 @@ def per_pixel_statistics(
                     row_group.column(col).statistics.max,
                     row_group.column(col).statistics.null_count,
                     row_group.column(col).num_values,
+                    row_group.column(col).total_compressed_size,
                     row_group.column(col).total_uncompressed_size,
                 ]
             )
@@ -400,6 +412,7 @@ def per_pixel_statistics(
                         current_stats[i][2] + row_stats[i][2],
                         current_stats[i][3] + row_stats[i][3],
                         current_stats[i][4] + row_stats[i][4],
+                        current_stats[i][5] + row_stats[i][5],
                     )
                     for i in range(0, len(good_column_indexes))
                 ]
