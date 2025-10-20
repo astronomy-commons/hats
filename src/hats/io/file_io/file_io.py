@@ -264,7 +264,7 @@ def read_fits_image(map_file_pointer: str | Path | UPath) -> np.ndarray:
         return Skymap.from_fits(_tmp_file.name).values
     finally:
         _tmp_file.close()
-        os.remove(_tmp_file.name)
+        os.unlink(_tmp_file.name)
 
 
 def write_fits_image(histogram: np.ndarray, map_file_pointer: str | Path | UPath):
