@@ -28,13 +28,14 @@ jobs:
       uses: actions/setup-python@v6
       with:
         python-version: ${{ matrix.python-version }}
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
     - name: Install dependencies
       run: |
         sudo apt-get update
-        python -m pip install --upgrade pip
-        pip install -e .[dev]
-        pip install -e .[full]
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        uv pip install --system -e .[dev]
+        uv pip install --system -e .[full]
+        if [ -f requirements.txt ]; then uv pip install --system -r requirements.txt; fi
     - name: List dependencies
       run: |
         pip list
