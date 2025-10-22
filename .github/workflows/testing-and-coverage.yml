@@ -31,7 +31,7 @@ jobs:
         sudo apt-get update
         uv pip install --system -e .[dev]
         uv pip install --system -e .[full]
-        if [ -f requirements.txt ]; then uv pip install -r requirements.txt; fi
+        if [ -f requirements.txt ]; then uv pip install --system -r requirements.txt; fi
     - name: Run unit tests with pytest
       run: |
         python -m pytest --cov=hats --cov-report=xml
