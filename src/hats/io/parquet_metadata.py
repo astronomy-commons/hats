@@ -33,18 +33,26 @@ def write_parquet_metadata(
     For more information on the general parquet metadata files, and why we write them, see
     https://arrow.apache.org/docs/python/parquet.html#writing-metadata-and-common-metadata-files
 
-    Args:
-        catalog_path (str): base path for the catalog
-        order_by_healpix (bool): use False if the dataset is not to be reordered by
-            breadth-first healpix pixel (e.g. secondary indexes)
-        output_path (str): base path for writing out metadata files
-            defaults to `catalog_path` if unspecified
-        create_thumbnail (bool): if True, create a data thumbnail parquet file for
-            the dataset. Defaults to True.
-        thumbnail_threshold (int): maximum number of rows in the data thumbnail,
-            which is otherwise one row/partition. Defaults to 1_000_000.
+    Parameters
+    ----------
+    catalog_path : str
+        base path for the catalog
+    order_by_healpix : bool
+        use False if the dataset is not to be reordered by
+        breadth-first healpix pixel (e.g. secondary indexes) (Default value = True)
+    output_path : str | Path | UPath | None
+        base path for writing out metadata files
+        defaults to `catalog_path` if unspecified
+    create_thumbnail : bool
+        if True, create a data thumbnail parquet file for
+        the dataset. Defaults to True.
+    thumbnail_threshold : int
+        maximum number of rows in the data thumbnail,
+        which is otherwise one row/partition. Defaults to 1_000_000.
 
-    Returns:
+    Returns
+    -------
+    int
         sum of the number of rows in the dataset.
     """
     ignore_prefixes = [
@@ -125,8 +133,15 @@ def write_parquet_metadata(
 def read_row_group_fragments(metadata_file: str):
     """Generator for metadata fragment row groups in a parquet metadata file.
 
-    Args:
-        metadata_file (str): path to `_metadata` file.
+    Parameters
+    ----------
+    metadata_file : str
+        path to `_metadata` file.
+
+    Yields
+    -------
+    RowGroupFragment
+        metadata for individual row groups
     """
     metadata_file = get_upath(metadata_file)
     if not file_io.is_regular_file(metadata_file):
@@ -141,7 +156,8 @@ def read_row_group_fragments(metadata_file: str):
 def _nonemin(value1, value2):
     """Similar to numpy's nanmin, but excludes `None` values.
 
-    NB: If both values are `None`, this will still return `None`"""
+    NB: If both values are `None`, this will still return `None`
+    """
     if value1 is None:
         return value2
     if value2 is None:
@@ -152,7 +168,8 @@ def _nonemin(value1, value2):
 def _nonemax(value1, value2):
     """Similar to numpy's nanmax, but excludes `None` values.
 
-    NB: If both values are `None`, this will still return `None`"""
+    NB: If both values are `None`, this will still return `None`
+    """
     if value1 is None:
         return value2
     if value2 is None:
@@ -168,7 +185,8 @@ def _pick_columns(
     only_numeric_columns: bool = False,
 ):
     """Convenience method to find the desired columns and their indexes, given
-    some conventional user preferences."""
+    some conventional user preferences.
+    """
 
     if include_columns is None:
         include_columns = []
@@ -213,18 +231,28 @@ def aggregate_column_statistics(
 ):
     """Read footer statistics in parquet metadata, and report on global min/max values.
 
-    Args:
-        metadata_file (str | Path | UPath): path to `_metadata` file
-        exclude_hats_columns (bool): exclude HATS spatial and partitioning fields
-            from the statistics. Defaults to True.
-        exclude_columns (List[str]): additional columns to exclude from the statistics.
-        include_columns (List[str]): if specified, only return statistics for the column
-            names provided. Defaults to None, and returns all non-hats columns.
-        include_pixels (list[HealpixPixel]): if specified, only return statistics
-            for the pixels indicated. Defaults to none, and returns all pixels.
-        only_numeric_columns (bool): only include columns that are numeric (integer or
-            floating point) in the statistics. If True, the entire frame should be numeric.
-    Returns:
+    Parameters
+    ----------
+    metadata_file : str | Path | UPath
+        path to `_metadata` file
+    exclude_hats_columns : bool
+        exclude HATS spatial and partitioning fields
+        from the statistics. Defaults to True.
+    exclude_columns : List[str]
+        additional columns to exclude from the statistics.
+    include_columns : List[str]
+        if specified, only return statistics for the column
+        names provided. Defaults to None, and returns all non-hats columns.
+    include_pixels : list[HealpixPixel]
+        if specified, only return statistics
+        for the pixels indicated. Defaults to none, and returns all pixels.
+    only_numeric_columns : bool
+        only include columns that are numeric (integer or
+    metadata_file: str | Path | UPath :
+
+    Returns
+    -------
+    Dataframe
         dataframe with global summary statistics
     """
     total_metadata = file_io.read_parquet_metadata(metadata_file)
@@ -323,27 +351,39 @@ def per_pixel_statistics(
     - ``disk_bytes`` - Compressed size of the data in the parquet file, in bytes
     - ``memory_bytes`` - Uncompressed size, in bytes
 
-    Args:
-        metadata_file (str | Path | UPath): path to `_metadata` file
-        exclude_hats_columns (bool): exclude HATS spatial and partitioning fields
-            from the statistics. Defaults to True.
-        exclude_columns (List[str]): additional columns to exclude from the statistics.
-        include_columns (List[str]): if specified, only return statistics for the column
-            names provided. Defaults to None, and returns all non-hats columns.
-        only_numeric_columns (bool): only include columns that are numeric (integer or
-            floating point) in the statistics. If True, the entire frame should be numeric.
-        include_pixels (list[HealpixPixel]): if specified, only return statistics
-            for the pixels indicated. Defaults to none, and returns all pixels.
-        include_stats (List[str]): if specified, only return the kinds of values from list
-            (min_value, max_value, null_count, row_count, disk_bytes, memory_bytes).
-            Defaults to None, and returns all values.
-        multi_index (bool): should the returned frame be created with a multi-index, first on
-            pixel, then on column name? Default is False, and instead indexes on pixel, with
-            separate columns per-data-column and stat value combination.
-        per_row_group (bool): should the returned data be even more fine-grained and provide
-            per row group (within each pixel) level statistics? Default is currently False,
-            but is very likely to change.
-    Returns:
+    Parameters
+    ----------
+    metadata_file : str | Path | UPath
+        path to `_metadata` file
+    exclude_hats_columns : bool
+        exclude HATS spatial and partitioning fields
+        from the statistics. Defaults to True.
+    exclude_columns : List[str]
+        additional columns to exclude from the statistics.
+    include_columns : List[str]
+        if specified, only return statistics for the column
+        names provided. Defaults to None, and returns all non-hats columns.
+    only_numeric_columns : bool
+        only include columns that are numeric (integer or
+        floating point) in the statistics. If True, the entire frame should be numeric.
+    include_pixels : list[HealpixPixel]
+        if specified, only return statistics
+        for the pixels indicated. Defaults to none, and returns all pixels.
+    include_stats : List[str]
+        if specified, only return the kinds of values from list
+        (min_value, max_value, null_count, row_count, disk_bytes, memory_bytes).
+        Defaults to None, and returns all values.
+    multi_index : bool
+        should the returned frame be created with a multi-index, first on
+        pixel, then on column name? Default is False, and instead indexes on pixel, with
+        separate columns per-data-column and stat value combination.
+    per_row_group : bool
+        should the returned data be even more fine-grained and provide
+        per row group (within each pixel) level statistics? Default is currently False,
+
+    Returns
+    -------
+    Dataframe
         dataframe with granular per-pixel statistics
     """
     total_metadata = file_io.read_parquet_metadata(metadata_file)

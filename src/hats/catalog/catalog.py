@@ -22,7 +22,13 @@ class Catalog(HealpixDataset):
         order 0, then this method would return order 0's pixels 1 through 11.
         Used for getting full coverage on margin caches.
 
-        Returns:
+        Parameters
+        ----------
+
+        Returns
+        -------
+        list[HealpixPixel]
             List of HealpixPixels representing the 'negative tree' for the catalog.
+
         """
         return compute_negative_tree_pixels(self.pixel_tree)

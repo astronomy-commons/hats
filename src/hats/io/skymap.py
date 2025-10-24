@@ -11,12 +11,17 @@ from hats.io import file_io, paths
 def read_skymap(catalog, order):
     """Read the object spatial distribution information from a healpix skymap FITS file.
 
-    Args:
-        catalog: Catalog object corresponding to an on-disk catalog.
-        order: healpix order to read the skymap at. If None, the order of the default
-            skymap will be used. We will try to load from alternative skymap orders,
-            where appropriate.
-    Returns:
+    Parameters
+    ----------
+    catalog :
+        Catalog object corresponding to an on-disk catalog.
+    order :
+        healpix order to read the skymap at. If None, the order of the default
+        skymap will be used. We will try to load from alternative skymap orders,
+
+    Returns
+    -------
+    np.ndarray
         one-dimensional numpy array of long integers where the value at each index
         corresponds to the number of objects found at the healpix pixel.
     """
@@ -66,13 +71,17 @@ def read_skymap(catalog, order):
 def write_skymap(histogram: np.ndarray, catalog_dir: str | Path | UPath, orders: list | int | None = None):
     """Write the object spatial distribution information to a healpix SKYMAP FITS file.
 
-    Args:
-        histogram (:obj:`np.ndarray`): one-dimensional numpy array of long integers where the
-            value at each index corresponds to the number of objects found at the healpix pixel.
-        catalog_dir (path-like): base directory of the catalog in which to write the skymap file(s)
-        order (list): list of orders to write additional skymap files. if provided and not empty,
-            we will write a `skymap.K.fits` for each integer K in the list. if empty or None,
-            we will not write additional files.
+    Parameters
+    ----------
+    histogram : ( obj:`np.ndarray`): 
+        one-dimensional numpy array of long integers where the
+        value at each index corresponds to the number of objects found at the healpix pixel.
+    catalog_dir : str | Path | UPath
+        base directory of the catalog in which to write the skymap file(s)
+    order : list | int | None
+        list of orders to write additional skymap files. if provided and not empty,
+        we will write a `skymap.K.fits` for each integer K in the list. if empty or None,
+        we will not write additional files.
     """
     catalog_dir = file_io.get_upath(catalog_dir)
     map_file_pointer = paths.get_skymap_file_pointer(catalog_dir)

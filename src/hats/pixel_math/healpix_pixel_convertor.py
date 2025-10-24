@@ -7,10 +7,16 @@ def get_healpix_pixel(pixel: HealpixPixel | tuple[int, int]) -> HealpixPixel:
     """Function to convert argument of either HealpixPixel or a tuple of (order, pixel) to a
     HealpixPixel
 
-    Args:
-        pixel: an object to be converted to a HealpixPixel object
-    """
+    Parameters
+    ----------
+    pixel : HealpixPixel | tuple[int, int]
+        an object to be converted to a HealpixPixel object
 
+    Returns
+    -------
+    HealpixPixel
+        the pixel
+    """
     if isinstance(pixel, tuple):
         if len(pixel) != 2:
             raise ValueError("Tuple must contain two values: HEALPix order and HEALPix pixel number")
@@ -24,10 +30,16 @@ def get_healpix_tuple(pixel: HealpixPixel | tuple[int, int]) -> tuple[int, int]:
     """Function to convert argument of either HealpixPixel or a tuple of (order, pixel) to a
     tuple of (order, pixel)
 
-    Args:
-        pixel: an object to be converted to a HealpixPixel object
-    """
+    Parameters
+    ----------
+    pixel : HealpixPixel | tuple[int, int]
+        an object to be converted to a HealpixPixel object
 
+    Returns
+    -------
+    tuple[int, int]
+        tuples representing order and pixel data
+    """
     if isinstance(pixel, tuple):
         if len(pixel) != 2:
             raise ValueError("Tuple must contain two values: HEALPix order and HEALPix pixel number")

@@ -24,10 +24,14 @@ class MarginCatalog(HealpixDataset):
         This is not always done with a high accuracy, but always includes any pixels that will overlap,
         and may include extra partitions that do not.
 
-        Args:
-            moc (mocpy.MOC): the moc to filter by
+        Parameters
+        ----------
+        moc : mocpy.MOC
+            the moc to filter by
 
-        Returns:
+        Returns
+        -------
+        MarginCatalog
             A new margin catalog with only the pixels that overlap or that have margin area that overlap with
             the moc. Note that we reset the total_rows to None, as updating would require a scan over the new
             pixel sizes.
