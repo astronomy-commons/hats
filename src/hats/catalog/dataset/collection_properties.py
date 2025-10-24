@@ -63,7 +63,18 @@ class CollectionProperties(BaseModel):
     @field_validator("all_margins", mode="before")
     @classmethod
     def space_delimited_list(cls, str_value: str) -> list[str]:
-        """Convert a space-delimited list string into a python list of strings."""
+        """Convert a space-delimited list string into a python list of strings.
+
+        Parameters
+        ----------
+        str_value: str
+            a space-delimited list string
+
+        Returns
+        -------
+        list[str]
+            a python list of strings
+        """
         if str_value is None:
             return None
         if pd.api.types.is_list_like(str_value):
@@ -77,7 +88,18 @@ class CollectionProperties(BaseModel):
     @field_validator("all_indexes", mode="before")
     @classmethod
     def index_tuples(cls, str_value: str) -> dict[str, str]:
-        """Convert a space-delimited list string into a python list of strings."""
+        """Convert a space-delimited list string into a python list of strings.
+
+        Parameters
+        ----------
+        str_value: str
+            a space-delimited list string
+
+        Returns
+        -------
+        dict[str, str]
+            a python dict of strings
+        """
         if str_value is None:
             return None
         if pd.api.types.is_dict_like(str_value):
@@ -98,14 +120,36 @@ class CollectionProperties(BaseModel):
 
     @field_serializer("all_margins")
     def serialize_list_as_space_delimited_list(self, str_list: Iterable[str]) -> str:
-        """Convert a python list of strings into a space-delimited string."""
+        """Convert a python list of strings into a space-delimited string.
+
+        Parameters
+        ----------
+        str_list: Iterable[str]
+            a python list of strings
+
+        Returns
+        -------
+        str
+            a space-delimited string
+        """
         if str_list is None or len(str_list) == 0:
             return ""
         return " ".join(str_list)
 
     @field_serializer("all_indexes")
     def serialize_dict_as_space_delimited_list(self, str_dict: dict[str, str]) -> str:
-        """Convert a python list of strings into a space-delimited string."""
+        """Convert a python list of strings into a space-delimited string.
+
+        Parameters
+        ----------
+        str_dict: dict[str, str]
+            a python list of strings
+
+        Returns
+        -------
+        str
+            a space-delimited string
+        """
         if str_dict is None or len(str_dict) == 0:
             return ""
         str_list = list(reduce(lambda x, y: x + y, str_dict.items()))
@@ -156,7 +200,18 @@ class CollectionProperties(BaseModel):
 
     @classmethod
     def read_from_dir(cls, catalog_dir: str | Path | UPath) -> Self:
-        """Read field values from a java-style properties file."""
+        """Read field values from a java-style properties file.
+
+        Parameters
+        ----------
+        catalog_dir: str | Path | UPath :
+
+
+        Returns
+        -------
+        CollectionProperties
+            new object from the contents of a ``collection.properties`` file in the directory.
+        """
         file_path = file_io.get_upath(catalog_dir) / "collection.properties"
         if not file_io.does_file_or_directory_exist(file_path):
             raise FileNotFoundError(f"No properties file found where expected: {str(file_path)}")
@@ -165,8 +220,13 @@ class CollectionProperties(BaseModel):
             p.load(f, "utf-8")
         return cls(**p.properties)
 
-    def to_properties_file(self, catalog_dir: str | Path | UPath) -> Self:
-        """Write fields to a java-style properties file."""
+    def to_properties_file(self, catalog_dir: str | Path | UPath):
+        """Write fields to a java-style properties file.
+
+        Parameters
+        ----------
+        catalog_dir: str | Path | UPath :
+        """
         # pylint: disable=protected-access
         parameters = self.model_dump(by_alias=True, exclude_none=True)
         properties = Properties(process_escapes_in_values=False)

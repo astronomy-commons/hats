@@ -104,7 +104,19 @@ class TableProperties(BaseModel):
     @field_validator("default_columns", "extra_columns", mode="before")
     @classmethod
     def space_delimited_list(cls, str_value: str) -> list[str]:
-        """Convert a space-delimited list string into a python list of strings."""
+        """Convert a space-delimited list string into a python list of strings.
+
+        Parameters
+        ----------
+        str_value: str :
+            a space-delimited list string
+
+        Returns
+        -------
+        list[str]
+            python list of strings
+
+        """
         if isinstance(str_value, str):
             # Split on a few kinds of delimiters (just to be safe), and remove duplicates
             return list(filter(None, re.split(";| |,|\n", str_value)))
@@ -116,14 +128,21 @@ class TableProperties(BaseModel):
     def space_delimited_int_list(cls, str_value: str | list[int]) -> list[int]:
         """Convert a space-delimited list string into a python list of integers.
 
-        Args:
-            str_value(str | list[int]): string representation of a list of integers, delimited by
-                space, comma, or semi-colon, or a list of integers.
+        Parameters
+        ----------
+        str_value : str | list[int]
+            string representation of a list of integers, delimited by
+            space, comma, or semi-colon, or a list of integers.
 
-        Returns:
-            sorted list of unique integers, if all inputs are integers, None if the input is empty
-        Raises:
-            ValueError: if any non-digit characters are encountered, or
+        Returns
+        -------
+        list[int]
+            a python list of integers
+
+        Raises
+        ------
+        ValueError
+            if any non-digit characters are encountered
         """
         if not str_value:
             return None
@@ -144,7 +163,18 @@ class TableProperties(BaseModel):
 
     @field_serializer("default_columns", "extra_columns", "skymap_alt_orders")
     def serialize_as_space_delimited_list(self, str_list: Iterable) -> str:
-        """Convert a python list of strings into a space-delimited string."""
+        """Convert a python list of strings into a space-delimited string.
+
+        Parameters
+        ----------
+        str_list: Iterable
+            a python list of strings
+
+        Returns
+        -------
+        str
+            a space-delimited string.
+        """
         if str_list is None or len(str_list) == 0:
             return None
         return " ".join([str(element) for element in str_list])
@@ -168,19 +198,56 @@ class TableProperties(BaseModel):
         return self
 
     def copy_and_update(self, **kwargs):
-        """Create a validated copy of these table properties, updating the fields provided in kwargs."""
+        """Create a validated copy of these table properties, updating the fields provided in kwargs.
+
+        Parameters
+        ----------
+        **kwargs :
+            values to update
+
+        Returns
+        -------
+        TableProperties
+            new instance of properties object
+        """
         new_properties = self.model_copy(update=kwargs)
         TableProperties.model_validate(new_properties)
         return new_properties
 
     def explicit_dict(self, by_alias=False, exclude_none=True):
-        """Create a dict, based on fields that have been explicitly set, and are not "extra" keys."""
+        """Create a dict, based on fields that have been explicitly set, and are not "extra" keys.
+
+        Parameters
+        ----------
+        by_alias :
+            (Default value = False)
+        exclude_none :
+            (Default value = True)
+
+        Returns
+        -------
+        dict
+            all keys that are attributes of this class and not "extra".
+        """
         explicit = self.model_dump(by_alias=by_alias, exclude_none=exclude_none)
         extra_keys = self.__pydantic_extra__.keys()
         return {key: val for key, val in explicit.items() if key not in extra_keys}
 
     def extra_dict(self, by_alias=False, exclude_none=True):
-        """Create a dict, based on fields that are "extra" keys."""
+        """Create a dict, based on fields that are "extra" keys.
+
+        Parameters
+        ----------
+        by_alias :
+             (Default value = False)
+        exclude_none :
+             (Default value = True)
+
+        Returns
+        -------
+        dict
+            all keys that are *not* attributes of this class, e.g. "extra".
+        """
         explicit = self.model_dump(by_alias=by_alias, exclude_none=exclude_none)
         extra_keys = self.__pydantic_extra__.keys()
         return {key: val for key, val in explicit.items() if key in extra_keys}
@@ -199,7 +266,19 @@ class TableProperties(BaseModel):
 
     @classmethod
     def read_from_dir(cls, catalog_dir: str | Path | UPath) -> Self:
-        """Read field values from a java-style properties file."""
+        """Read field values from a java-style properties file.
+
+        Parameters
+        ----------
+        catalog_dir: str | Path | UPath
+            path to a catalog directory.
+
+        Returns
+        -------
+        TableProperties
+            object created from the contents of a ``hats.properties`` file in
+            the given directory
+        """
         catalog_path = file_io.get_upath(catalog_dir)
         file_path = catalog_path / "hats.properties"
         if not file_io.does_file_or_directory_exist(file_path):
@@ -211,8 +290,14 @@ class TableProperties(BaseModel):
             p.load(f, "utf-8")
         return cls(**p.properties)
 
-    def to_properties_file(self, catalog_dir: str | Path | UPath) -> Self:
-        """Write fields to a java-style properties file."""
+    def to_properties_file(self, catalog_dir: str | Path | UPath):
+        """Write fields to a java-style properties file.
+
+        Parameters
+        ----------
+        catalog_dir: str | Path | UPath
+            directory to write the file
+        """
         # pylint: disable=protected-access
         parameters = self.model_dump(by_alias=True, exclude_none=True)
         properties = Properties(process_escapes_in_values=False)
@@ -233,12 +318,19 @@ class TableProperties(BaseModel):
     ) -> dict:
         """Constructs the provenance properties for a HATS catalog.
 
-        Args:
-            path (UPath): The path to the catalog directory.
-            builder (str | None): The name and version of the tool that created the catalog.
-            **kwargs: Additional properties to include/override in the dictionary.
+        Parameters
+        ----------
+        path: str | Path | UPath | None
+            The path to the catalog directory.
+        builder : str | None
+            The name and version of the tool that created the catalog.
+        **kwargs :
+            Additional properties to include/override in the dictionary.
+             (Default value = None)
 
-        Returns:
+        Returns
+        -------
+        dict
             A dictionary with properties for the HATS catalog.
         """
 

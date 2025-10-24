@@ -4,6 +4,7 @@ jupytext
 myst_parser
 nbconvert
 nbsphinx
+numpydoc
 sphinx
 sphinx-autoapi
 sphinx-copybutton

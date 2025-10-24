@@ -26,9 +26,11 @@ version = ".".join(release.split(".")[:2])
 
 extensions = [
     "sphinx.ext.mathjax",
-    "sphinx.ext.napoleon",
     "sphinx.ext.viewcode",
     "sphinx_design",
+    "numpydoc",
+    "sphinx.ext.autosummary",
+    "sphinx.ext.autodoc",
 ]
 
 extensions.append("autoapi.extension")
