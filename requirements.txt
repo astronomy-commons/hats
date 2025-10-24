@@ -1,1 +1,1 @@
-# empty
+git+https://github.com/lincc-frameworks/nested-pandas.git@main
