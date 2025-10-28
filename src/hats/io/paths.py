@@ -169,7 +169,9 @@ def pixel_catalog_file(
     pixel : HealpixPixel
         the healpix pixel to create path to
     query_params: dict | None :
-        (Default value = None) set of URL query parameters.
+        (Default value = None) Params to append to URL. Ex::
+
+            {'cols': ['ra', 'dec'], 'fltrs': ['r>=10', 'g<18']}
     npix_suffix: str :
         (Default value = ".parquet") extension for the parquet file (or `/` if a directory)
 

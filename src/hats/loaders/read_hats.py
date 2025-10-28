@@ -39,11 +39,11 @@ def read_hats(catalog_path: str | Path | UPath) -> CatalogCollection | Dataset:
     Returns
     -------
     CatalogCollection | Dataset
-
+        HATS catalog found at directory
 
     Examples
     --------
-    To read a catalog from a public S3 bucket, call it as follows
+    To read a catalog from a public S3 bucket, call it as follows::
 
         from upath import UPath
         catalog = hats.read_hats(UPath(..., anon=True))

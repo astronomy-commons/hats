@@ -18,6 +18,7 @@ def read_skymap(catalog, order):
     order :
         healpix order to read the skymap at. If None, the order of the default
         skymap will be used. We will try to load from alternative skymap orders,
+        where appropriate.
 
     Returns
     -------
@@ -73,7 +74,7 @@ def write_skymap(histogram: np.ndarray, catalog_dir: str | Path | UPath, orders:
 
     Parameters
     ----------
-    histogram : ( obj:`np.ndarray`)
+    histogram : np.ndarray
         one-dimensional numpy array of long integers where the
         value at each index corresponds to the number of objects found at the healpix pixel.
     catalog_dir : str | Path | UPath

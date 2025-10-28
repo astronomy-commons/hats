@@ -42,10 +42,10 @@ class PixelAlignment:
         The type of alignment describing how to handle nodes which exist in one tree
         but not the other. Options are:
 
-            - inner - only use pixels that appear in both catalogs
-            - left - use all pixels that appear in the left catalog and any overlapping from the right
-            - right - use all pixels that appear in the right catalog and any overlapping from the left
-            - outer - use all pixels from both catalogs
+        - inner - only use pixels that appear in both catalogs
+        - left - use all pixels that appear in the left catalog and any overlapping from the right
+        - right - use all pixels that appear in the right catalog and any overlapping from the left
+        - outer - use all pixels from both catalogs
     """
 
     PRIMARY_ORDER_COLUMN_NAME = "primary_Norder"
@@ -90,6 +90,7 @@ def align_trees(
         (Default value = PixelAlignmentType.INNER)
         The type of alignment describing how to handle nodes which exist in one tree
         but not the other. Options are:
+
         - inner - only use pixels that appear in both catalogs
         - left - use all pixels that appear in the left catalog and any overlapping from the right
         - right - use all pixels that appear in the right catalog and any overlapping from the left

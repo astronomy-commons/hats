@@ -247,7 +247,8 @@ def aggregate_column_statistics(
         if specified, only return statistics
         for the pixels indicated. Defaults to none, and returns all pixels.
     only_numeric_columns : bool
-        only include columns that are numeric (integer or
+        only include columns that are numeric (integer or floating point) in the
+        statistics. If True, the entire frame should be numeric.
     metadata_file: str | Path | UPath :
 
     Returns

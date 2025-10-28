@@ -455,7 +455,7 @@ def compute_healpix_vertices(depth, ipix, wcs, step=1):
     wcs : `astropy.wcs.WCS`
         A WCS projection
     step :
-         (Default value = 1)
+        (Default value = 1)
 
     Returns
     -------

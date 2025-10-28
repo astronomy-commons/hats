@@ -114,6 +114,7 @@ def find_files_matching_path(pointer: str | Path | UPath, *paths: str) -> list[U
         base File Pointer in which to find contents
     *paths: str
         any number of directory names optionally followed by a file name.
+        directory or file names may be replaced with `*` as a matcher.
 
     Returns
     -------

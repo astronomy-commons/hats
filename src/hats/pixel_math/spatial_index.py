@@ -23,7 +23,7 @@ def compute_spatial_index(
     dec_values : float | list[float]
         celestial coordinates, declination in degrees
     spatial_index_order: int :
-        (Default value = SPATIAL_INDEX_ORDER)
+        (Default value = SPATIAL_INDEX_ORDER) order to use for spatial index. defaults to 29.
 
     Returns
     -------
@@ -56,7 +56,7 @@ def spatial_index_to_healpix(
     target_order : int
         Defaults to `SPATIAL_INDEX_ORDER`. The order of the pixel to get from the healpix index.
     spatial_index_order: int :
-        (Default value = SPATIAL_INDEX_ORDER)
+        (Default value = SPATIAL_INDEX_ORDER) order to use for spatial index. defaults to 29.
 
     Returns
     -------
@@ -83,7 +83,7 @@ def healpix_to_spatial_index(
     pixel : int | list[int]
         pixel number in nested ordering of pixel to convert
     spatial_index_order: int :
-        (Default value = SPATIAL_INDEX_ORDER)
+        (Default value = SPATIAL_INDEX_ORDER) order to use for spatial index. defaults to 29.
 
     Returns
     -------

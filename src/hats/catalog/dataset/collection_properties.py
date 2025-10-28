@@ -204,8 +204,8 @@ class CollectionProperties(BaseModel):
 
         Parameters
         ----------
-        catalog_dir: str | Path | UPath :
-
+        catalog_dir: str | Path | UPath
+            base directory of catalog.
 
         Returns
         -------
@@ -225,7 +225,8 @@ class CollectionProperties(BaseModel):
 
         Parameters
         ----------
-        catalog_dir: str | Path | UPath :
+        catalog_dir: str | Path | UPath
+            base directory of catalog.
         """
         # pylint: disable=protected-access
         parameters = self.model_dump(by_alias=True, exclude_none=True)

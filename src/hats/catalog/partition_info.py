@@ -57,11 +57,9 @@ class PartitionInfo:
         Parameters
         ----------
         partition_info_file : str | Path | UPath | None
-            path to where the `partition_info.csv`
-            file will be written.
+            path to where the `partition_info.csv` file will be written.
         catalog_path : str | Path | UPath | None
-            base directory for a catalog where the `partition_info.csv`
-            file will be written.
+            base directory for a catalog where the `partition_info.csv` file will be written.
 
         Raises
         ------
@@ -128,7 +126,6 @@ class PartitionInfo:
         -------
         PartitionInfo
             A `PartitionInfo` object with the data from the file
-
         """
         return cls(cls._read_from_metadata_file(metadata_file))
 
@@ -173,7 +170,6 @@ class PartitionInfo:
         -------
         PartitionInfo
             A `PartitionInfo` object with the data from the file
-
         """
         return cls(cls._read_from_csv(partition_info_file))
 
@@ -211,7 +207,6 @@ class PartitionInfo:
         -------
         DataFrame
             Dataframe with order, directory, and pixel info.
-
         """
         partition_info_dict = {
             PartitionInfo.METADATA_ORDER_COLUMN_NAME: [],

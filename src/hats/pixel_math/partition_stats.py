@@ -33,7 +33,7 @@ def generate_histogram(
 
     Parameters
     ----------
-    data : obj:`pd.DataFrame`
+    data : pd.DataFrame
         tabular object data
     highest_order : int
         the highest healpix order (e.g. 0-10)
@@ -80,7 +80,7 @@ def generate_alignment(
 
     Parameters
     ----------
-    histogram ( :obj:`np.array`)
+    histogram : np.array
         one-dimensional numpy array of long integers where the
         value at each index corresponds to the number of objects found at the healpix pixel.
     highest_order : int
@@ -96,10 +96,13 @@ def generate_alignment(
     Returns
     -------
     tuple
-        The tuple contains three integers
-            - order of the destination pixel
-            - pixel number *at the above order*
-            - the number of objects in the pixel
+        one-dimensional numpy array of integer 3-tuples, where the value at each index corresponds
+        to the destination pixel at order less than or equal to the `highest_order`.
+        The tuple contains three integers:
+
+        - order of the destination pixel
+        - pixel number *at the above order*
+        - the number of objects in the pixel
 
     Raises
     ------

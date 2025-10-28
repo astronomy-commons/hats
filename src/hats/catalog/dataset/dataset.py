@@ -14,9 +14,7 @@ from hats.io.parquet_metadata import aggregate_column_statistics, per_pixel_stat
 
 # pylint: disable=too-few-public-methods
 class Dataset:
-    """A base HATS dataset that contains a properties file
-    and the data contained in parquet files
-    """
+    """A base HATS dataset that contains a properties file and the data contained in parquet files"""
 
     def __init__(
         self,

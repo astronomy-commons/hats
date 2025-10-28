@@ -115,7 +115,6 @@ class TableProperties(BaseModel):
         -------
         list[str]
             python list of strings
-
         """
         if isinstance(str_value, str):
             # Split on a few kinds of delimiters (just to be safe), and remove duplicates
@@ -239,9 +238,9 @@ class TableProperties(BaseModel):
         Parameters
         ----------
         by_alias :
-             (Default value = False)
+            (Default value = False)
         exclude_none :
-             (Default value = True)
+            (Default value = True)
 
         Returns
         -------
@@ -326,7 +325,7 @@ class TableProperties(BaseModel):
             The name and version of the tool that created the catalog.
         **kwargs :
             Additional properties to include/override in the dictionary.
-             (Default value = None)
+            (Default value = None)
 
         Returns
         -------
