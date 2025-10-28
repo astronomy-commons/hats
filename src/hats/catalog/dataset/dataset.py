@@ -27,11 +27,17 @@ class Dataset:
     ) -> None:
         """Initializes a Dataset
 
-        Args:
-            catalog_info: A TableProperties object with the catalog metadata
-            catalog_path: If the catalog is stored on disk, specify the location of the catalog
-                Does not load the catalog from this path, only store as metadata
-            schema (pa.Schema): The pyarrow schema for the catalog
+        Parameters
+        ----------
+        catalog_info: TableProperties
+            A TableProperties object with the catalog metadata
+        catalog_path: str | Path | UPath | None
+            If the catalog is stored on disk, specify the location of the catalog
+            Does not load the catalog from this path, only store as metadata
+        schema : pa.Schema:
+            The pyarrow schema for the catalog. May be modified e.g. based on loaded columns
+        original_schema : pa.Schema:
+            The original pyarrow schema for the catalog. May NOT be modified e.g. based on loaded columns
         """
         self.catalog_info = catalog_info
         self.catalog_name = self.catalog_info.catalog_name

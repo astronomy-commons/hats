@@ -94,7 +94,7 @@ def box_to_moc(ra: tuple[float, float], dec: tuple[float, float], max_depth: int
         Declination range, in degrees
     max_depth : int
         highest HEALPix order to use in MOC
-        
+
     Returns
     -------
     MOC

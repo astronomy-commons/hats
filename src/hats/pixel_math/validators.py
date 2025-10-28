@@ -119,7 +119,7 @@ def validate_box(ra: tuple[float, float], dec: tuple[float, float]):
 
     - Both ranges for ra or dec must have been provided.
     - Ranges must be defined by a pair of values, in degrees.
-    - Declination values must be unique, provided in ascending order, and belong to 
+    - Declination values must be unique, provided in ascending order, and belong to
       the [-90,90] degree range.
 
     Parameters

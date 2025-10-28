@@ -44,14 +44,22 @@ class HealpixDataset(Dataset):
     ) -> None:
         """Initializes a Catalog
 
-        Args:
-            catalog_info: TableProperties object with catalog metadata
-            pixels: Specifies the pixels contained in the catalog. Can be either a
-                list of HealpixPixel, `PartitionInfo object`, or a `PixelTree` object
-            catalog_path: If the catalog is stored on disk, specify the location of the catalog
-                Does not load the catalog from this path, only store as metadata
-            moc (mocpy.MOC): MOC object representing the coverage of the catalog
-            schema (pa.Schema): The pyarrow schema for the catalog
+        Parameters
+        ----------
+        catalog_info: TableProperties
+            A TableProperties object with the catalog metadata
+        pixels: PartitionInfo | PixelTree | list[HealpixPixel]
+            Specifies the pixels contained in the catalog. Can be either a
+            list of HealpixPixel, `PartitionInfo object`, or a `PixelTree` object
+        catalog_path: str | Path | UPath | None
+            If the catalog is stored on disk, specify the location of the catalog
+            Does not load the catalog from this path, only store as metadata
+        moc : mocpy.MOC
+            MOC object representing the coverage of the catalog
+        schema : pa.Schema:
+            The pyarrow schema for the catalog. May be modified e.g. based on loaded columns
+        original_schema : pa.Schema:
+            The original pyarrow schema for the catalog. May NOT be modified e.g. based on loaded columns
         """
         super().__init__(
             catalog_info, catalog_path=catalog_path, schema=schema, original_schema=original_schema
@@ -243,7 +251,7 @@ class HealpixDataset(Dataset):
         other_cat : Catalog
             The catalog to align to
         alignment_type : PixelAlignmentType
-            The type of alignment describing how to handle nodes which exist in one tree but not the other. 
+            The type of alignment describing how to handle nodes which exist in one tree but not the other.
             Mirrors the 'how' argument of a pandas/sql join. Options are:
 
             - "inner" - only use pixels that appear in both catalogs
