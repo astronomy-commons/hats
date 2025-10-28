@@ -23,11 +23,15 @@ class ValidatorsErrors(str, Enum):
 def validate_radius(radius_arcsec: float):
     """Validates that a cone search radius is positive
 
-    Args:
-        radius_arcsec (float): The cone radius, in arcseconds
+    Parameters
+    ----------
+    radius_arcsec : float
+        The cone radius, in arcseconds
 
-    Raises:
-        ValueError: if radius is non-positive
+    Raises
+    ------
+    ValueError
+        if radius is non-positive
     """
     if radius_arcsec <= 0:
         raise ValueError(ValidatorsErrors.INVALID_RADIUS.value)
@@ -36,11 +40,15 @@ def validate_radius(radius_arcsec: float):
 def validate_declination_values(dec: float | list[float]):
     """Validates that declination values are in the [-90,90] degree range
 
-    Args:
-        dec (float | List[float]): The declination values to be validated
+    Parameters
+    ----------
+    dec : float | List[float]
+        The declination values to be validated
 
-    Raises:
-        ValueError: if declination values are not in the [-90,90] degree range
+    Raises
+    ------
+    ValueError
+        if declination values are not in the [-90,90] degree range
     """
     dec_values = np.array(dec)
     lower_bound, upper_bound = -90.0, 90.0
@@ -52,12 +60,15 @@ def validate_polygon(vertices: list[tuple[float, float]]):
     """Checks if the polygon contain a minimum of three vertices, that they are
     unique and that the polygon does not fall on a great circle.
 
-    Args:
-        vertices (list[tuple[float,float]]): The list of vertice coordinates for
-            the polygon, (ra, dec), in degrees.
+    Parameters
+    ----------
+    vertices : list[tuple[float, float]]
+        The list of vertice coordinates for the polygon, (ra, dec), in degrees.
 
-    Raises:
-        ValueError: exception if the polygon is invalid.
+    Raises
+    ------
+    ValueError
+        exception if the polygon is invalid.
     """
     vertices = np.array(vertices)
     if vertices.shape[1] != 2:
@@ -74,8 +85,15 @@ def validate_polygon(vertices: list[tuple[float, float]]):
 def check_polygon_is_valid(vertices: np.ndarray):
     """Check if the polygon has no degenerate corners and it is convex.
 
-    Args:
-        vertices (np.ndarray): The polygon vertices, in cartesian coordinates
+    Parameters
+    ----------
+    vertices : np.ndarray
+        The polygon vertices, in cartesian coordinates
+
+    Raises
+    ------
+    ValueError
+        exception if the polygon is invalid.
     """
     vertices_xyz = hp.ang2vec(*vertices.T)
 
@@ -101,12 +119,20 @@ def validate_box(ra: tuple[float, float], dec: tuple[float, float]):
 
     - Both ranges for ra or dec must have been provided.
     - Ranges must be defined by a pair of values, in degrees.
-    - Declination values must be unique, provided in ascending order, and
-    belong to the [-90,90] degree range.
+    - Declination values must be unique, provided in ascending order, and belong to 
+      the [-90,90] degree range.
 
-    Args:
-        ra (Tuple[float, float]): Right ascension range, in degrees
-        dec (Tuple[float, float]): Declination range, in degrees
+    Parameters
+    ----------
+    ra : tuple[float, float]
+        Right ascension range, in degrees
+    dec : tuple[float, float]
+        Declination range, in degrees
+
+    Raises
+    ------
+    ValueError
+        exception if the box is invalid.
     """
     invalid_range = False
     if ra is None or len(ra) != 2:

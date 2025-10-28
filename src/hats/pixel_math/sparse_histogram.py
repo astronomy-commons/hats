@@ -28,7 +28,9 @@ class SparseHistogram:
     def to_array(self):
         """Convert the sparse array to a dense numpy array.
 
-        Returns:
+        Returns
+        -------
+        np.ndarray
             dense 1-d numpy array.
         """
         dense = np.zeros(hp.order2npix(self.order), dtype=np.int64)
@@ -40,11 +42,22 @@ class SparseHistogram:
 
         NB: this saves as a sparse array, and so will likely have lower space requirements
         than saving the corresponding dense 1-d numpy array.
+
+        Parameters
+        ----------
+        file_name :
+            intended file to save to
         """
         np.savez(file_name, indexes=self.indexes, counts=self.counts, order=self.order)
 
     def to_dense_file(self, file_name):
-        """Persist the DENSE array to disk as a numpy array."""
+        """Persist the DENSE array to disk as a numpy array.
+
+        Parameters
+        ----------
+        file_name :
+            intended file to save to
+        """
         with open(file_name, "wb+") as file_handle:
             file_handle.write(self.to_array().data)
 
@@ -52,7 +65,14 @@ class SparseHistogram:
     def from_file(cls, file_name):
         """Read sparse histogram from a file.
 
-        Returns:
+        Parameters
+        ----------
+        file_name :
+            intended file to save read from
+
+        Returns
+        -------
+        SparseHistogram
             new sparse histogram
         """
         npzfile = np.load(file_name)
@@ -69,8 +89,10 @@ class HistogramAggregator:
     def add(self, other):
         """Add in another sparse histogram, updating this wrapper's array.
 
-        Args:
-            other (SparseHistogram): the wrapper containing the addend
+        Parameters
+        ----------
+        other : SparseHistogram
+            the wrapper containing the addend
         """
         if not isinstance(other, SparseHistogram):
             raise ValueError("Both addends should be SparseHistogram.")

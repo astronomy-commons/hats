@@ -6,11 +6,18 @@ import cdshealpix
 def get_margin(order, pixel, delta_order):
     """Get all the pixels at order order+delta_order bordering pixel pixel.
 
-    Args:
-        order (int): the healpix order of pixel.
-        pix (int): the healpix pixel to find margin pixels of.
-        delta_order (int): the change in order that we wish to find the margins for.
-    Returns:
+    Parameters
+    ----------
+    order : int
+        the healpix order of pixel.
+    pixel : int
+        the healpix pixel to find margin pixels of.
+    delta_order :
+        number of orders away
+
+    Returns
+    -------
+    list[int]
         one-dimensional numpy array of integers, filled with the healpix pixels
         at order `order+delta_order` that border pixel.
     """

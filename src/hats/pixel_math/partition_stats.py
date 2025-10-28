@@ -9,9 +9,14 @@ import hats.pixel_math.healpix_shim as hp
 def empty_histogram(highest_order):
     """Use numpy to create an histogram array with the right shape, filled with zeros.
 
-    Args:
-        highest_order (int): the highest healpix order (e.g. 0-10)
-    Returns:
+    Parameters
+    ----------
+    highest_order : int
+        the highest healpix order (e.g. 0-10)
+
+    Returns
+    -------
+    np.ndarray
         one-dimensional numpy array of long integers, where the length is equal to
         the number of pixels in a healpix map of target order, and all values are set to 0.
     """
@@ -26,16 +31,26 @@ def generate_histogram(
 ):
     """Generate a histogram of counts for objects found in `data`
 
-    Args:
-        data (:obj:`pd.DataFrame`): tabular object data
-        highest_order (int):  the highest healpix order (e.g. 0-10)
-        ra_column (str): where in the input to find the celestial coordinate, right ascension
-        dec_column (str): where in the input to find the celestial coordinate, declination
-    Returns:
+    Parameters
+    ----------
+    data : obj:`pd.DataFrame`
+        tabular object data
+    highest_order : int
+        the highest healpix order (e.g. 0-10)
+    ra_column : str
+        where in the input to find the celestial coordinate, right ascension (Default value = "ra")
+    dec_column :
+        (Default value = "dec")
+
+    Returns
+    -------
+    np.ndarray
         one-dimensional numpy array of long integers where the value at each index corresponds
-        to the number of objects found at the healpix pixel.
-    Raises:
-        ValueError: if the `ra_column` or `dec_column` cannot be found in the input file.
+
+    Raises
+    ------
+    ValueError
+        if the `ra_column` or `dec_column` cannot be found in the input data.
     """
     histogram_result = empty_histogram(highest_order)
 
@@ -63,26 +78,34 @@ def generate_alignment(
     at order 10 to their destination pixel. This may be used as an input into later partitioning
     map reduce steps.
 
-    Args:
-        histogram (:obj:`np.array`): one-dimensional numpy array of long integers where the
-            value at each index corresponds to the number of objects found at the healpix pixel.
-        highest_order (int):  the highest healpix order (e.g. 5-10)
-        lowest_order (int): the lowest healpix order (e.g. 1-5). specifying a lowest order
-            constrains the partitioning to prevent spatially large pixels.
-        threshold (int): the maximum number of objects allowed in a single pixel
-        drop_empty_siblings (bool): if 3 of 4 pixels are empty, keep only the non-empty pixel
-    Returns:
-        one-dimensional numpy array of integer 3-tuples, where the value at each index corresponds
-        to the destination pixel at order less than or equal to the `highest_order`.
+    Parameters
+    ----------
+    histogram ( :obj:`np.array`)
+        one-dimensional numpy array of long integers where the
+        value at each index corresponds to the number of objects found at the healpix pixel.
+    highest_order : int
+        the highest healpix order (e.g. 5-10) (Default value = 10)
+    lowest_order : int
+        the lowest healpix order (e.g. 1-5). specifying a lowest order
+        constrains the partitioning to prevent spatially large pixels. (Default value = 0)
+    threshold : int
+        the maximum number of objects allowed in a single pixel (Default value = 1_000_000)
+    drop_empty_siblings :
+        (Default value = False)
 
-        The tuple contains three integers:
+    Returns
+    -------
+    tuple
+        The tuple contains three integers
+            - order of the destination pixel
+            - pixel number *at the above order*
+            - the number of objects in the pixel
 
-        - order of the destination pixel
-        - pixel number *at the above order*
-        - the number of objects in the pixel
-    Raises:
-        ValueError: if the histogram is the wrong size, or some initial histogram bins
-            exceed threshold.
+    Raises
+    ------
+    ValueError
+        if the histogram is the wrong size, or some initial histogram bins
+        exceed threshold.
     """
     if len(histogram) != hp.order2npix(highest_order):
         raise ValueError("histogram is not the right size")

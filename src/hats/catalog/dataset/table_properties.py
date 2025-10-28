@@ -84,12 +84,12 @@ class TableProperties(BaseModel):
 
     npix_suffix: str = Field(default=".parquet", alias="hats_npix_suffix")
     """Suffix of the Npix partitions.
-    In the standard HATS directory structure, this is '.parquet' because there is a single file
-    in each Npix partition and it is named like 'Npix=313.parquet'.
+    In the standard HATS directory structure, this is ``'.parquet'`` because there is a single file
+    in each Npix partition and it is named like ``'Npix=313.parquet'``.
     Other valid directory structures include those with the same single file per partition but
-    which use a different suffix (e.g., `npix_suffix` = '.parq' or '.snappy.parquet'),
+    which use a different suffix (e.g., ``'npix_suffix' = '.parq'`` or ``'.snappy.parquet'``),
     and also those in which the Npix partitions are actually directories containing 1+ files
-    underneath (and then `npix_suffix` = '/').
+    underneath (and then ``'npix_suffix' = '/'``).
     """
 
     skymap_order: Optional[int] = Field(default=None, alias="hats_skymap_order")

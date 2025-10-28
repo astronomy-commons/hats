@@ -63,14 +63,10 @@ class HealpixDataset(Dataset):
     def get_healpix_pixels(self) -> list[HealpixPixel]:
         """Get healpix pixel objects for all pixels contained in the catalog.
 
-        Parameters
-        ----------
-
         Returns
         -------
         list[HealpixPixel]
             List of HealpixPixel
-
         """
         return self.partition_info.get_healpix_pixels()
 
@@ -161,12 +157,10 @@ class HealpixDataset(Dataset):
         radius_arcsec : float
             Radius of the cone, in arcseconds
 
-
         Returns
         -------
         HealpixDataset
             A new catalog with only the pixels that overlap with the specified cone
-
         """
         return self.filter_by_moc(cone_to_moc(ra, dec, radius_arcsec, self.get_max_coverage_order()))
 
@@ -249,33 +243,18 @@ class HealpixDataset(Dataset):
         other_cat : Catalog
             The catalog to align to
         alignment_type : PixelAlignmentType
-            The type of alignment describing how to handle nodes which
-            exist in one tree but not the other. Mirrors the 'how' argument of a pandas/sql join.
-            Options are:
-            - "inner" - only use pixels that appear in both catalogs
-            - "left" - use all pixels that appear in the left catalog and any overlapping from the right
-            - "right" - use all pixels that appear in the right catalog and any overlapping from the left
-            - "outer" - use all pixels from both catalogs
-            Returns (PixelAlignment):
-        alignment_type : PixelAlignmentType
-            The type of alignment describing how to handle nodes which
-            exist in one tree but not the other. Mirrors the 'how' argument of a pandas/sql join.
-            Options are:
-            - "inner" - only use pixels that appear in both catalogs
-            - "left" - use all pixels that appear in the left catalog and any overlapping from the right
-            - "right" - use all pixels that appear in the right catalog and any overlapping from the left
-            - "outer" - use all pixels from both catalogs
-            Returns (PixelAlignment):
-            A `PixelAlignment` object with the alignment from the two catalogs
-        other_cat: Self :
+            The type of alignment describing how to handle nodes which exist in one tree but not the other. 
+            Mirrors the 'how' argument of a pandas/sql join. Options are:
 
-        alignment_type: PixelAlignmentType :
-             (Default value = PixelAlignmentType.INNER)
+            - "inner" - only use pixels that appear in both catalogs
+            - "left" - use all pixels that appear in the left catalog and any overlapping from the right
+            - "right" - use all pixels that appear in the right catalog and any overlapping from the left
+            - "outer" - use all pixels from both catalogs
 
         Returns
         -------
         PixelAlignment
-            alignment to other catalog
+            A `PixelAlignment` object with the alignment from the two catalogs
         """
         return align_with_mocs(
             self.pixel_tree, other_cat.pixel_tree, self.moc, other_cat.moc, alignment_type=alignment_type
@@ -324,7 +303,7 @@ class HealpixDataset(Dataset):
             if specified, only return statistics for the column
             names provided. Defaults to None, and returns all non-hats columns.
         include_pixels: list[HealpixPixel] | None
-             (Default value = None)
+            (Default value = None)
 
         Returns
         -------
@@ -406,9 +385,6 @@ class HealpixDataset(Dataset):
         - there is a value for the ``hats_col_healpix`` property, and that string
           exists as a column name in the pyarrow schema
         - there is a ``_healpix_29`` column in the pyarrow schema
-
-        Parameters
-        ----------
 
         Returns
         -------

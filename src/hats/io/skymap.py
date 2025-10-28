@@ -73,7 +73,7 @@ def write_skymap(histogram: np.ndarray, catalog_dir: str | Path | UPath, orders:
 
     Parameters
     ----------
-    histogram : ( obj:`np.ndarray`): 
+    histogram : ( obj:`np.ndarray`)
         one-dimensional numpy array of long integers where the
         value at each index corresponds to the number of objects found at the healpix pixel.
     catalog_dir : str | Path | UPath

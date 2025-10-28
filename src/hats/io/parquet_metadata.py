@@ -139,7 +139,7 @@ def read_row_group_fragments(metadata_file: str):
         path to `_metadata` file.
 
     Yields
-    -------
+    ------
     RowGroupFragment
         metadata for individual row groups
     """

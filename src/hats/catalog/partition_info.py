@@ -27,28 +27,20 @@ class PartitionInfo:
     def get_healpix_pixels(self) -> list[HealpixPixel]:
         """Get healpix pixel objects for all pixels represented as partitions.
 
-        Parameters
-        ----------
-
         Returns
         -------
         list[HealpixPixel]
             List of HealpixPixel
-
         """
         return self.pixel_list
 
     def get_highest_order(self) -> int:
         """Get the highest healpix order for the dataset.
 
-        Parameters
-        ----------
-
         Returns
         -------
         int
             int representing highest order.
-
         """
         max_pixel = np.max(self.pixel_list)
         return max_pixel.order
@@ -214,9 +206,6 @@ class PartitionInfo:
 
     def as_dataframe(self):
         """Construct a pandas dataframe for the partition info pixels.
-
-        Parameters
-        ----------
 
         Returns
         -------

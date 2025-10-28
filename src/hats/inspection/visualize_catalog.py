@@ -153,7 +153,7 @@ def plot_moc(
     **kwargs,
 ) -> tuple[Figure, WCSAxes]:
     """Plots a moc
-    
+
     By default, a new matplotlib figure and axis will be created, and the projection will be a Molleweide
     projection across the whole sky.
 
@@ -187,7 +187,7 @@ def plot_moc(
         ax is specified (Default: None)
     **kwargs :
         Additional kwargs to pass to `mocpy.MOC.fill`
-       
+
     Returns
     -------
     Tuple[Figure, WCSAxes]
@@ -505,13 +505,13 @@ def plot_healpix_map(
     **kwargs,
 ):
     """Plot a map of HEALPix pixels to values as a colormap across a projection of the sky
-    
+
     Plots the given healpix pixels on a spherical projection defined by a WCS. Colors each pixel based on the
-    corresponding value in a map. The map can be across all healpix pixels at a given order, or 
+    corresponding value in a map. The map can be across all healpix pixels at a given order, or
     specify a subset of healpix pixels with the `ipix` and `depth` parameters.
-    
+
     By default, a new matplotlib figure and axis will be created, and the projection will be a Molleweide
-    projection across the whole sky. Additional kwargs will be passed to the creation of a matplotlib 
+    projection across the whole sky. Additional kwargs will be passed to the creation of a matplotlib
     ``PathCollection`` object, which is the artist that draws the tiles.
 
     Parameters
@@ -540,7 +540,7 @@ def plot_healpix_map(
     cbar : bool
         If True, includes a color bar in the plot (Default: True)
     fov : Quantity or Quantity | tuple[Quantity, Quantity]
-        The Field of View of the WCS. Must be an astropy Quantity with an angular unit, 
+        The Field of View of the WCS. Must be an astropy Quantity with an angular unit,
         or a tuple of quantities for different longitude and latitude FOVs (Default covers the full sky)
     center : SkyCoord | None
         The center of the projection in the WCS (Default: SkyCoord(0, 0))
@@ -608,7 +608,7 @@ def initialize_wcs_axes(
         The projection to use in the WCS. Available projections listed at
         https://docs.astropy.org/en/stable/wcs/supported_projections.html
     fov : Quantity | tuple[Quantity, Quantity]
-        The Field of View of the WCS. Must be an astropy Quantity with an angular unit, 
+        The Field of View of the WCS. Must be an astropy Quantity with an angular unit,
         or a tuple of quantities for different longitude and latitude FOVs (Default covers the full sky)
     center : SkyCoord | None
         The center of the projection in the WCS (Default: SkyCoord(0, 0))
@@ -630,7 +630,7 @@ def initialize_wcs_axes(
         current figure, one will be created. (Default: None)
     **kwargs :
         additional kwargs to pass to figure initialization
-        
+
     Returns
     -------
     Tuple[Figure, WCSAxes]
@@ -685,8 +685,7 @@ def initialize_wcs_axes(
 
 
 def _plot_healpix_value_map(ipix, depth, values, ax, wcs, cmap="viridis", norm=None, cbar=True, **kwargs):
-    """Perform the plotting of a healpix pixel map.
-    """
+    """Perform the plotting of a healpix pixel map."""
 
     # create dict mapping depth to ipix and values
     depth_ipix_d = {}

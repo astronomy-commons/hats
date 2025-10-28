@@ -16,14 +16,24 @@ def compute_spatial_index(
 ) -> np.ndarray:
     """Compute the healpix index field.
 
-    Args:
-        ra_values (float|list[float]): celestial coordinates, right ascension in degrees
-        dec_values (float|list[float]): celestial coordinates, declination in degrees
-        spatial_index_order (int): order to use for spatial index. defaults to 29.
-    Returns:
-        one-dimensional numpy array of int64s with healpix NESTED pixel numbers at order 29
-    Raises:
-        ValueError: if the length of the input lists don't match.
+    Parameters
+    ----------
+    ra_values : float | list[float]
+        celestial coordinates, right ascension in degrees
+    dec_values : float | list[float]
+        celestial coordinates, declination in degrees
+    spatial_index_order: int :
+        (Default value = SPATIAL_INDEX_ORDER)
+
+    Returns
+    -------
+    np.ndarray
+        HEALPix pixel indicies at specified order, for all coordinates provided.
+
+    Raises
+    ------
+    ValueError
+        if the length of the input lists don't match.
     """
     if pd.api.types.is_list_like(ra_values) or pd.api.types.is_list_like(dec_values):
         if not (pd.api.types.is_list_like(ra_values) and pd.api.types.is_list_like(dec_values)):
@@ -39,12 +49,18 @@ def spatial_index_to_healpix(
 ) -> np.ndarray:
     """Convert healpix index values to the healpix pixel at the specified order
 
-    Args:
-        ids (List[int64]): list of well-formatted _healpix_29 values
-        target_order (int64): Defaults to `SPATIAL_INDEX_ORDER`.
-            The order of the pixel to get from the healpix index.
-        spatial_index_order (int): order to use for spatial index. defaults to 29.
-    Returns:
+    Parameters
+    ----------
+    ids : list[int]
+        list of well-formatted _healpix_29 values
+    target_order : int
+        Defaults to `SPATIAL_INDEX_ORDER`. The order of the pixel to get from the healpix index.
+    spatial_index_order: int :
+        (Default value = SPATIAL_INDEX_ORDER)
+
+    Returns
+    -------
+    np.ndarray
         numpy array of target_order pixels from the healpix index
     """
     delta_order = spatial_index_order - target_order
@@ -60,11 +76,18 @@ def healpix_to_spatial_index(
 
     Useful for operations such as filtering by _healpix_29.
 
-    Args:
-        order (int64 | List[int64]): order of pixel to convert
-        pixel (int64 | List[int64]): pixel number in nested ordering of pixel to convert
-        spatial_index_order (int): order to use for spatial index. defaults to 29.
-    Returns:
+    Parameters
+    ----------
+    order : int | list[int]
+        order of pixel to convert
+    pixel : int | list[int]
+        pixel number in nested ordering of pixel to convert
+    spatial_index_order: int :
+        (Default value = SPATIAL_INDEX_ORDER)
+
+    Returns
+    -------
+    np.int64 | np.ndarray
         healpix index or numpy array of healpix indices
     """
     order = np.int64(order)

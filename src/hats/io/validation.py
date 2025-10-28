@@ -266,8 +266,7 @@ def _is_valid_catalog_strict(pointer, handle_error, verbose):
 
 
 def _is_catalog_info_valid(pointer: str | Path | UPath) -> bool:
-    """Checks if properties file is valid for a given base catalog pointer
-    """
+    """Checks if properties file is valid for a given base catalog pointer"""
     try:
         TableProperties.read_from_dir(pointer)
     except (FileNotFoundError, ValueError, NotImplementedError):
@@ -276,8 +275,7 @@ def _is_catalog_info_valid(pointer: str | Path | UPath) -> bool:
 
 
 def is_collection_info_valid(pointer: str | Path | UPath) -> bool:
-    """Checks if collection.properties file is valid for a given base catalog pointer
-    """
+    """Checks if collection.properties file is valid for a given base catalog pointer"""
     try:
         CollectionProperties.read_from_dir(pointer)
     except (FileNotFoundError, ValueError, NotImplementedError):
@@ -286,24 +284,21 @@ def is_collection_info_valid(pointer: str | Path | UPath) -> bool:
 
 
 def _is_partition_info_valid(pointer: UPath) -> bool:
-    """Checks if partition_info is valid for a given base catalog pointer
-    """
+    """Checks if partition_info is valid for a given base catalog pointer"""
     partition_info_pointer = get_partition_info_pointer(pointer)
     partition_info_exists = is_regular_file(partition_info_pointer)
     return partition_info_exists
 
 
 def _is_metadata_valid(pointer: UPath) -> bool:
-    """Checks if _metadata is valid for a given base catalog pointer
-    """
+    """Checks if _metadata is valid for a given base catalog pointer"""
     metadata_file = get_parquet_metadata_pointer(pointer)
     metadata_file_exists = is_regular_file(metadata_file)
     return metadata_file_exists
 
 
 def _is_common_metadata_valid(pointer: UPath) -> bool:
-    """Checks if _common_metadata is valid for a given base catalog pointer
-    """
+    """Checks if _common_metadata is valid for a given base catalog pointer"""
     metadata_file = get_common_metadata_pointer(pointer)
     metadata_file_exists = is_regular_file(metadata_file)
     return metadata_file_exists
