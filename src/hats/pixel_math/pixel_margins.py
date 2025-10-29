@@ -12,7 +12,7 @@ def get_margin(order, pixel, delta_order):
         the healpix order of pixel.
     pixel : int
         the healpix pixel to find margin pixels of.
-    delta_order :
+    delta_order : int
         the change in order that we wish to find the margins for.
 
     Returns

@@ -38,12 +38,15 @@ def is_valid_catalog(
     strict : bool
         should we perform additional checking that every optional
         file exists, and contains valid, consistent information.
+        (Default value = False)
     fail_fast : bool
         if performing strict checks, should we return at the first
         failure, or continue and find all problems?
+        (Default value = False)
     verbose : bool
         if performing strict checks, should we print out counts,
         progress, and approximate sky coverage?
+        (Default value = True)
 
     Returns
     -------
@@ -87,12 +90,15 @@ def is_valid_collection(
     strict : bool
         should we perform additional checking that every optional
         file exists, and contains valid, consistent information.
+        (Default value = False)
     fail_fast : bool
         if performing strict checks, should we return at the first
         failure, or continue and find all problems?
+        (Default value = False)
     verbose : bool
         if performing strict checks, should we print out counts,
         progress, and approximate sky coverage?
+        (Default value = True)
 
     Returns
     -------

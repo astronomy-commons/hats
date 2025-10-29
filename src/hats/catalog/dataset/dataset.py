@@ -32,9 +32,9 @@ class Dataset:
         catalog_path: str | Path | UPath | None
             If the catalog is stored on disk, specify the location of the catalog
             Does not load the catalog from this path, only store as metadata
-        schema : pa.Schema:
+        schema : pa.Schema
             The pyarrow schema for the catalog. May be modified e.g. based on loaded columns
-        original_schema : pa.Schema:
+        original_schema : pa.Schema
             The original pyarrow schema for the catalog. May NOT be modified e.g. based on loaded columns
         """
         self.catalog_info = catalog_info
@@ -59,9 +59,9 @@ class Dataset:
         exclude_hats_columns : bool
             exclude HATS spatial and partitioning fields
             from the statistics. Defaults to True.
-        exclude_columns : List[str]
+        exclude_columns : list[str]
             additional columns to exclude from the statistics.
-        include_columns : List[str]
+        include_columns : list[str]
             if specified, only return statistics for the column
             names provided. Defaults to None, and returns all non-hats columns.
 
@@ -95,21 +95,19 @@ class Dataset:
         ----------
         exclude_hats_columns : bool
             exclude HATS spatial and partitioning fields from the statistics. Defaults to True.
-        exclude_columns : List[str]
+        exclude_columns : list[str]
             additional columns to exclude from the statistics.
-        include_columns : List[str]
+        include_columns : list[str]
             if specified, only return statistics for the column
             names provided. Defaults to None, and returns all non-hats columns.
-        include_stats : List[str]
+        include_stats : list[str]
             if specified, only return the kinds of values from list
             (min_value, max_value, null_count, row_count). Defaults to None, and returns all values.
         multi_index : bool
             should the returned frame be created with a multi-index, first on
             pixel, then on column name? Default is False, and instead indexes on pixel, with
-        multi_index : bool
-            should the returned frame be created with a multi-index, first on
-            pixel, then on column name? Default is False, and instead indexes on pixel, with
             separate columns per-data-column and stat value combination.
+            (Default value = False)
 
         Returns
         -------

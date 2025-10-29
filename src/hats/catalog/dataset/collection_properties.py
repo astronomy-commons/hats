@@ -143,7 +143,7 @@ class CollectionProperties(BaseModel):
         Parameters
         ----------
         str_dict: dict[str, str]
-            a python list of strings
+            a python dict of strings
 
         Returns
         -------

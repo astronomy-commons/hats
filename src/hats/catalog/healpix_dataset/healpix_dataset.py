@@ -56,9 +56,9 @@ class HealpixDataset(Dataset):
             Does not load the catalog from this path, only store as metadata
         moc : mocpy.MOC
             MOC object representing the coverage of the catalog
-        schema : pa.Schema:
+        schema : pa.Schema
             The pyarrow schema for the catalog. May be modified e.g. based on loaded columns
-        original_schema : pa.Schema:
+        original_schema : pa.Schema
             The original pyarrow schema for the catalog. May NOT be modified e.g. based on loaded columns
         """
         super().__init__(
@@ -122,6 +122,7 @@ class HealpixDataset(Dataset):
         ----------
         default_order : int
             The order to return if the dataset has no pixels.
+            (Default value = 3)
 
         Returns
         -------
@@ -142,7 +143,7 @@ class HealpixDataset(Dataset):
 
         Parameters
         ----------
-        pixels : List[HealpixPixels]
+        pixels : list[HealpixPixel]
             the pixels to include
 
         Returns
@@ -273,7 +274,7 @@ class HealpixDataset(Dataset):
 
         Parameters
         ----------
-        **kwargs :
+        **kwargs
             Additional args to pass to `hats.inspection.visualize_catalog.plot_healpix_map`
         """
         return plot_pixels(self, **kwargs)
@@ -283,7 +284,7 @@ class HealpixDataset(Dataset):
 
         Parameters
         ----------
-        **kwargs :
+        **kwargs
             Additional args to pass to `hats.inspection.visualize_catalog.plot_moc`
         """
         default_title = f"Coverage MOC of {self.catalog_name}"
@@ -349,20 +350,20 @@ class HealpixDataset(Dataset):
         exclude_hats_columns : bool
             exclude HATS spatial and partitioning fields
             from the statistics. Defaults to True.
-        exclude_columns :  list[str] | None
+        exclude_columns : list[str] | None
             additional columns to exclude from the statistics.
-        include_columns :  list[str] | None
+        include_columns : list[str] | None
             if specified, only return statistics for the column
             names provided. Defaults to None, and returns all non-hats columns.
-        include_pixels : list[HealpixPixel] | None
-            if specified, only return statistics
-            for the pixels indicated. Defaults to none, and returns all pixels.
         include_stats : list[str] | None
             if specified, only return the kinds of values from list
             (min_value, max_value, null_count, row_count). Defaults to None, and returns all values.
         multi_index : bool
             should the returned frame be created with a multi-index, first on
             pixel, then on column name? (Default value = False)
+        include_pixels : list[HealpixPixel] | None
+            if specified, only return statistics
+            for the pixels indicated. Defaults to none, and returns all pixels.
 
         Returns
         -------

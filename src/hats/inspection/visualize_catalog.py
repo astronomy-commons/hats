@@ -42,15 +42,15 @@ def plot_density(catalog: Catalog, *, plot_title: str | None = None, order=None,
 
     Parameters
     ----------
-    catalog: Catalog :
+    catalog: Catalog
         on-disk catalog object
     plot_title : str | None
         Optional title for the plot
     order : int
         Optionally reduce the display healpix order, and aggregate smaller tiles. (Default value = None)
-    unit :
-        (Default value = None) unit to show for the angle for angular density.
-    **kwargs :
+    unit : astropy.units.Unit
+        Unit to show for the angle for angular density. (Default value = None)
+    **kwargs
         Additional args to pass to `plot_healpix_map`
     """
     if catalog is None or not catalog.on_disk:
@@ -83,9 +83,9 @@ def plot_pixels(catalog: HealpixDataset, plot_title: str | None = None, **kwargs
     ----------
     plot_title : str | None
         Optional title for the plot
-    catalog: HealpixDataset :
+    catalog: HealpixDataset
         on-disk or in-memory catalog, with healpix pixels.
-    **kwargs :
+    **kwargs
         Additional args to pass to `plot_healpix_map`
     """
     pixels = catalog.get_healpix_pixels()
@@ -116,7 +116,7 @@ def plot_pixel_list(
         https://docs.astropy.org/en/stable/wcs/supported_projections.html (Default value = "MOL")
     color_by_order : bool
         Whether to color the pixels by their order. True by default.
-    **kwargs :
+    **kwargs
         Additional args to pass to `plot_healpix_map`
     """
     orders = np.array([p.order for p in pixels])
@@ -164,8 +164,9 @@ def plot_moc(
     projection : str
         The projection to use in the WCS. Available projections listed at
         https://docs.astropy.org/en/stable/wcs/supported_projections.html
+        (Default value = "MOL")
     title : str
-        The title of the plot
+        The title of the plot (Default value = "")
     fov : Quantity | tuple[Quantity, Quantity] = None
         The Field of View of the WCS. Must be an astropy Quantity with an angular unit,
         or a tuple of quantities for different longitude and latitude FOVs (Default covers the full sky)
@@ -185,7 +186,7 @@ def plot_moc(
     fig : Figure | None
         The matplotlib figure to add the axes to. If None, one will be created, unless
         ax is specified (Default: None)
-    **kwargs :
+    **kwargs
         Additional kwargs to pass to `mocpy.MOC.fill`
 
     Returns
@@ -231,7 +232,7 @@ def get_fov_moc_from_wcs(wcs: WCS) -> MOC | None:
 
     Returns
     -------
-    MOC
+    MOC | None
         The moc which defines the area of the sky that would be visible in a WCSAxes with the given WCS
     """
     # Get the MOC delimiting the FOV polygon
@@ -377,7 +378,7 @@ def cull_from_pixel_map(depth_ipix_d: dict[int, tuple[np.ndarray, np.ndarray]], 
         (the ipix array of pixel numbers in NESTED ordering, and the values of the pixels)
     wcs : astropy.WCS
         The wcs object with the plot's projection
-    max_split_depth :
+    max_split_depth : int
         the max depth to split backfacing cells to (Default value = 7)
 
     Returns
@@ -454,8 +455,8 @@ def compute_healpix_vertices(depth, ipix, wcs, step=1):
         The HEALPix cell index given as a `np.uint64` numpy array.
     wcs : `astropy.wcs.WCS`
         A WCS projection
-    step :
-        (Default value = 1)
+    step : int
+        The number of vertices returned per HEALPix side (Default value = 1)
 
     Returns
     -------

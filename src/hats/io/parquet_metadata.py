@@ -35,7 +35,7 @@ def write_parquet_metadata(
 
     Parameters
     ----------
-    catalog_path : str
+    catalog_path : str | Path | UPath
         base path for the catalog
     order_by_healpix : bool
         use False if the dataset is not to be reordered by
@@ -45,7 +45,7 @@ def write_parquet_metadata(
         defaults to `catalog_path` if unspecified
     create_thumbnail : bool
         if True, create a data thumbnail parquet file for
-        the dataset. Defaults to True.
+        the dataset. Defaults to False.
     thumbnail_threshold : int
         maximum number of rows in the data thumbnail,
         which is otherwise one row/partition. Defaults to 1_000_000.
@@ -238,23 +238,23 @@ def aggregate_column_statistics(
     exclude_hats_columns : bool
         exclude HATS spatial and partitioning fields
         from the statistics. Defaults to True.
-    exclude_columns : List[str]
+    exclude_columns : list[str]
         additional columns to exclude from the statistics.
-    include_columns : List[str]
+    include_columns : list[str]
         if specified, only return statistics for the column
         names provided. Defaults to None, and returns all non-hats columns.
-    include_pixels : list[HealpixPixel]
-        if specified, only return statistics
-        for the pixels indicated. Defaults to none, and returns all pixels.
     only_numeric_columns : bool
         only include columns that are numeric (integer or floating point) in the
         statistics. If True, the entire frame should be numeric.
-    metadata_file: str | Path | UPath :
+        (Default value = False)
+    include_pixels : list[HealpixPixel]
+        if specified, only return statistics
+        for the pixels indicated. Defaults to none, and returns all pixels.
 
     Returns
     -------
-    Dataframe
-        dataframe with global summary statistics
+    pd.Dataframe
+        Pandas dataframe with global summary statistics
     """
     total_metadata = file_io.read_parquet_metadata(metadata_file)
     num_row_groups = total_metadata.num_row_groups
@@ -359,18 +359,16 @@ def per_pixel_statistics(
     exclude_hats_columns : bool
         exclude HATS spatial and partitioning fields
         from the statistics. Defaults to True.
-    exclude_columns : List[str]
+    exclude_columns : list[str]
         additional columns to exclude from the statistics.
-    include_columns : List[str]
+    include_columns : list[str]
         if specified, only return statistics for the column
         names provided. Defaults to None, and returns all non-hats columns.
     only_numeric_columns : bool
         only include columns that are numeric (integer or
         floating point) in the statistics. If True, the entire frame should be numeric.
-    include_pixels : list[HealpixPixel]
-        if specified, only return statistics
-        for the pixels indicated. Defaults to none, and returns all pixels.
-    include_stats : List[str]
+        (Default value = False)
+    include_stats : list[str]
         if specified, only return the kinds of values from list
         (min_value, max_value, null_count, row_count, disk_bytes, memory_bytes).
         Defaults to None, and returns all values.
@@ -378,14 +376,18 @@ def per_pixel_statistics(
         should the returned frame be created with a multi-index, first on
         pixel, then on column name? Default is False, and instead indexes on pixel, with
         separate columns per-data-column and stat value combination.
+        (Default value = False)
+    include_pixels : list[HealpixPixel]
+        if specified, only return statistics
+        for the pixels indicated. Defaults to none, and returns all pixels.
     per_row_group : bool
         should the returned data be even more fine-grained and provide
-        per row group (within each pixel) level statistics? Default is currently False,
+        per row group (within each pixel) level statistics? Default is currently False.
 
     Returns
     -------
-    Dataframe
-        dataframe with granular per-pixel statistics
+    pd.Dataframe
+        Pandas dataframe with granular per-pixel statistics
     """
     total_metadata = file_io.read_parquet_metadata(metadata_file)
     num_row_groups = total_metadata.num_row_groups

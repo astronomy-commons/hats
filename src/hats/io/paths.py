@@ -168,11 +168,11 @@ def pixel_catalog_file(
         base directory of the catalog (includes catalog name)
     pixel : HealpixPixel
         the healpix pixel to create path to
-    query_params: dict | None :
+    query_params: dict | None
         (Default value = None) Params to append to URL. Ex::
 
             {'cols': ['ra', 'dec'], 'fltrs': ['r>=10', 'g<18']}
-    npix_suffix: str :
+    npix_suffix: str
         (Default value = ".parquet") extension for the parquet file (or `/` if a directory)
 
     Returns
@@ -249,7 +249,7 @@ def get_data_thumbnail_pointer(catalog_base_dir: str | Path | UPath) -> UPath:
 
     Parameters
     ----------
-        catalog_base_dir: str | Path | UPath
+    catalog_base_dir: str | Path | UPath
         base directory of the catalog (includes catalog name)
 
     Returns

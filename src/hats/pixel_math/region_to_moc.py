@@ -37,7 +37,7 @@ def pixel_list_to_moc(pixels: list[HealpixPixel]):
 
     Parameters
     ----------
-    pixels : List[HealpixPixels]
+    pixels : list[HealpixPixels]
         the pixels to include
 
     Returns

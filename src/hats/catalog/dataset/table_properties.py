@@ -108,7 +108,7 @@ class TableProperties(BaseModel):
 
         Parameters
         ----------
-        str_value: str :
+        str_value: str
             a space-delimited list string
 
         Returns
@@ -131,7 +131,7 @@ class TableProperties(BaseModel):
         ----------
         str_value : str | list[int]
             string representation of a list of integers, delimited by
-            space, comma, or semi-colon, or a list of integers.
+            space, comma, or semicolon, or a list of integers.
 
         Returns
         -------
@@ -201,7 +201,7 @@ class TableProperties(BaseModel):
 
         Parameters
         ----------
-        **kwargs :
+        **kwargs
             values to update
 
         Returns
@@ -218,9 +218,9 @@ class TableProperties(BaseModel):
 
         Parameters
         ----------
-        by_alias :
+        by_alias : bool
             (Default value = False)
-        exclude_none :
+        exclude_none : bool
             (Default value = True)
 
         Returns
@@ -237,9 +237,9 @@ class TableProperties(BaseModel):
 
         Parameters
         ----------
-        by_alias :
+        by_alias : bool
             (Default value = False)
-        exclude_none :
+        exclude_none : bool
             (Default value = True)
 
         Returns
@@ -323,9 +323,8 @@ class TableProperties(BaseModel):
             The path to the catalog directory.
         builder : str | None
             The name and version of the tool that created the catalog.
-        **kwargs :
+        **kwargs
             Additional properties to include/override in the dictionary.
-            (Default value = None)
 
         Returns
         -------

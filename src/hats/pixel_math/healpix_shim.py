@@ -109,12 +109,12 @@ def mindist2avgsize(mindist: np.ndarray | float) -> np.ndarray | float:
 
     Parameters
     ----------
-    mindist : np.ndarray of float
+    mindist : np.ndarray of float | float
         The minimum distance between pixels
 
     Returns
     -------
-    np.ndarray of float
+    np.ndarray of float | float
         The average size of a healpix pixel for the given minimum distance
         between pixels.
     """
@@ -126,12 +126,12 @@ def avgsize2order(avg_size_arcmin: np.ndarray | float) -> np.ndarray | int:
 
     Parameters
     ----------
-    avg_size_arcmin : np.ndarray of float
+    avg_size_arcmin : np.ndarray of float | float
         The average size of a healpix pixel in arcminutes
 
     Returns
     -------
-    np.ndarray of int
+    np.ndarray of int | int
         The largest healpix order for which the average size is larger than avg_size_arcmin
     """
     avg_size_arcmin = np.asarray(avg_size_arcmin)
@@ -169,12 +169,12 @@ def order2mindist(order: np.ndarray | int) -> np.ndarray | float:
 
     Parameters
     ----------
-    order : np.ndarray of int or a single scalar int
+    order : np.ndarray of int | int
         The healpix order
 
     Returns
     -------
-    np.ndarray of float or a single scalar float
+    np.ndarray of float | float
         The minimum distance between pixels in arcminutes
     """
     pixel_avgsize = order2resol(order, arcmin=True)

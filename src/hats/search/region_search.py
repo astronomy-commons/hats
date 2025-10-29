@@ -86,7 +86,6 @@ def cone_filter(data_frame: npd.NestedFrame, ra, dec, radius_arcsec, metadata: T
     -------
     NestedFrame
         A new DataFrame with the rows from `data_frame` filtered to only the points inside the cone
-
     """
     ra_rad = np.radians(data_frame[metadata.ra_column].to_numpy())
     dec_rad = np.radians(data_frame[metadata.dec_column].to_numpy())
@@ -119,7 +118,6 @@ def polygon_filter(data_frame: npd.NestedFrame, polygon, metadata: TableProperti
     -------
     NestedFrame
         A new DataFrame with the rows from `dataframe` filtered to only the pixels inside the polygon.
-
     """
     ra_values = np.radians(data_frame[metadata.ra_column].to_numpy())
     dec_values = np.radians(data_frame[metadata.dec_column].to_numpy())
@@ -144,7 +142,6 @@ def get_cartesian_polygon(vertices: list[tuple[float, float]]):
     -------
     sphgeom.ConvexPolygon
         The convex polygon object.
-
     """
     from lsst.sphgeom import ConvexPolygon, UnitVector3d  # pylint: disable=import-error
 

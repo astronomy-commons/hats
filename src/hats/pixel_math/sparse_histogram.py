@@ -45,7 +45,7 @@ class SparseHistogram:
 
         Parameters
         ----------
-        file_name :
+        file_name : path-like
             intended file to save to
         """
         np.savez(file_name, indexes=self.indexes, counts=self.counts, order=self.order)
@@ -55,7 +55,7 @@ class SparseHistogram:
 
         Parameters
         ----------
-        file_name :
+        file_name : path-like
             intended file to save to
         """
         with open(file_name, "wb+") as file_handle:
@@ -67,7 +67,7 @@ class SparseHistogram:
 
         Parameters
         ----------
-        file_name :
+        file_name : path-like
             intended file to save read from
 
         Returns

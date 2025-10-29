@@ -205,8 +205,8 @@ class PartitionInfo:
 
         Returns
         -------
-        DataFrame
-            Dataframe with order, directory, and pixel info.
+        pd.DataFrame
+            Pandas Dataframe with order, directory, and pixel info.
         """
         partition_info_dict = {
             PartitionInfo.METADATA_ORDER_COLUMN_NAME: [],

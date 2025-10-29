@@ -29,7 +29,7 @@ def make_directory(file_pointer: str | Path | UPath, exist_ok: bool = False):
     ----------
     file_pointer: str | Path | UPath
         location in file system to make directory
-    exist_ok: bool :
+    exist_ok: bool
         (Default value = False)
         If false will raise error if directory exists. If true existing
         directories will be ignored and not modified
@@ -52,9 +52,9 @@ def remove_directory(file_pointer: str | Path | UPath, ignore_errors=False):
 
     Parameters
     ----------
-    file_pointer: str | Path | UPath :
+    file_pointer: str | Path | UPath
         directory in file system to remove
-    ignore_errors :
+    ignore_errors : bool
         (Default value = False)
         if True errors resulting from failed removals will be ignored
     """
@@ -115,7 +115,7 @@ def load_csv_to_pandas(file_pointer: str | Path | UPath, **kwargs) -> pd.DataFra
     ----------
     file_pointer: str | Path | UPath
         location of csv file to load
-    **kwargs :
+    **kwargs
         arguments to pass to pandas ``read_csv`` loading method
 
     Returns
@@ -138,11 +138,11 @@ def load_csv_to_pandas_generator(
     ----------
     file_pointer: str | Path | UPath
         location of csv file to load
-    chunksize :
+    chunksize : int
         (Default value = 10_000) number of rows to load per chunk
-    compression :
+    compression : str
         (Default value = None) for compressed CSVs, the manner of compression. e.g. 'gz', 'bzip'.
-    **kwargs :
+    **kwargs
         arguments to pass to pandas ``read_csv`` loading method
 
     Yields
@@ -165,7 +165,7 @@ def write_dataframe_to_csv(dataframe: pd.DataFrame, file_pointer: str | Path | U
         DataFrame to write
     file_pointer: str | Path | UPath
         location of file to write to
-    **kwargs :
+    **kwargs
         args to pass to pandas ``to_csv`` method
     """
     output = dataframe.to_csv(**kwargs)
@@ -202,7 +202,7 @@ def read_parquet_metadata(file_pointer: str | Path | UPath, **kwargs) -> pq.File
     ----------
     file_pointer: str | Path | UPath
         location of file to read metadata from
-    **kwargs :
+    **kwargs
         additional arguments to be passed to pyarrow.parquet.read_metadata
 
     Returns
@@ -226,7 +226,7 @@ def read_parquet_file(file_pointer: str | Path | UPath, **kwargs) -> pq.ParquetF
     ----------
     file_pointer: str | Path | UPath
         location of parquet file
-    **kwargs :
+    **kwargs
         additional arguments to be passed to pyarrow.parquet.ParquetFile
 
     Returns
@@ -260,7 +260,7 @@ def read_parquet_dataset(
     ----------
     source: str | Path | UPath | list[str | Path | UPath]
         directory, path, or list of paths to read data from
-    **kwargs :
+    **kwargs
         additional arguments passed to ``pyarrow.dataset.dataset``
 
     Returns
@@ -294,13 +294,13 @@ def write_parquet_metadata(
 
     Parameters
     ----------
-    schema :
-        schema to be written
+    schema : pa.Schema
+        pyarrow schema to be written
     file_pointer: str | Path | UPath
         location of file to be written to
     metadata_collector: list | None
         (Default value = None) where to collect metadata information
-    **kwargs :
+    **kwargs
         additional arguments to be passed to pyarrow.parquet.write_metadata
     """
     file_pointer = get_upath(file_pointer)
@@ -372,7 +372,7 @@ def read_parquet_file_to_pandas(file_pointer: str | Path | UPath, **kwargs) -> n
     ----------
     file_pointer: str | Path | UPath
         File Pointer to a parquet file or a directory containing parquet files
-    **kwargs :
+    **kwargs
         Additional arguments to pass to pandas read_parquet method
 
     Returns

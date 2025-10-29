@@ -21,9 +21,8 @@ class PixelTree:
 
     Attributes
     ----------
-    pixels:
-        Nested dictionary of pixel nodes stored in the tree. Indexed by HEALPix
-        order then pixel number
+    pixels : np.ndarray
+        An array of [order, pixel] in NESTED numbering scheme for each interval in the array.
     """
 
     def __init__(self, tree: np.ndarray, order: int) -> None:
@@ -31,7 +30,7 @@ class PixelTree:
 
         Parameters
         ----------
-        tree : np.ndarray)
+        tree : np.ndarray
             sorted array of intervals that represent each pixel in the tree
         order : int
             HEALPix order of the pixel numbers in the intervals
@@ -96,7 +95,7 @@ class PixelTree:
 
         Returns
         -------
-        List[HealpixPixel]
+        list[HealpixPixel]
             A list of the HEALPix pixels in the tree
         """
         return [HealpixPixel(p[0], p[1]) for p in self.pixels]

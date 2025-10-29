@@ -13,9 +13,9 @@ def read_skymap(catalog, order):
 
     Parameters
     ----------
-    catalog :
+    catalog : Catalog
         Catalog object corresponding to an on-disk catalog.
-    order :
+    order : int
         healpix order to read the skymap at. If None, the order of the default
         skymap will be used. We will try to load from alternative skymap orders,
         where appropriate.
@@ -79,7 +79,7 @@ def write_skymap(histogram: np.ndarray, catalog_dir: str | Path | UPath, orders:
         value at each index corresponds to the number of objects found at the healpix pixel.
     catalog_dir : str | Path | UPath
         base directory of the catalog in which to write the skymap file(s)
-    order : list | int | None
+    orders : list | int | None
         list of orders to write additional skymap files. if provided and not empty,
         we will write a `skymap.K.fits` for each integer K in the list. if empty or None,
         we will not write additional files.

@@ -58,7 +58,7 @@ def append_paths_to_pointer(pointer: str | Path | UPath, *paths: str) -> UPath:
     ----------
     pointer : str | Path | UPath
         `FilePointer` object to add path to
-    *paths: str :
+    *paths: str
         any number of directory names optionally followed by a file name to append to the
         pointer
 

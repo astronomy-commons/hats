@@ -42,7 +42,7 @@ def validate_declination_values(dec: float | list[float]):
 
     Parameters
     ----------
-    dec : float | List[float]
+    dec : float | list[float]
         The declination values to be validated
 
     Raises

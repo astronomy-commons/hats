@@ -19,7 +19,7 @@ class IndexCatalog(Dataset):
 
         Parameters
         ----------
-        ids :
+        ids
             primary catalog for the ids
 
         Returns

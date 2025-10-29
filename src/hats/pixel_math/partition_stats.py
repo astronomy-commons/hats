@@ -38,9 +38,9 @@ def generate_histogram(
     highest_order : int
         the highest healpix order (e.g. 0-10)
     ra_column : str
-        where in the input to find the celestial coordinate, right ascension (Default value = "ra")
-    dec_column :
-        (Default value = "dec")
+        where in the input to find the celestial coordinate right ascension (Default value = "ra")
+    dec_column : str
+        where in the input to find the celestial coordinate declination (Default value = "dec")
 
     Returns
     -------
@@ -90,8 +90,8 @@ def generate_alignment(
         constrains the partitioning to prevent spatially large pixels. (Default value = 0)
     threshold : int
         the maximum number of objects allowed in a single pixel (Default value = 1_000_000)
-    drop_empty_siblings :
-        (Default value = False)
+    drop_empty_siblings : bool
+        if 3 of 4 pixels are empty, keep only the non-empty pixel (Default value = False)
 
     Returns
     -------

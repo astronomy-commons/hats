@@ -22,13 +22,13 @@ def compute_spatial_index(
         celestial coordinates, right ascension in degrees
     dec_values : float | list[float]
         celestial coordinates, declination in degrees
-    spatial_index_order: int :
-        (Default value = SPATIAL_INDEX_ORDER) order to use for spatial index. defaults to 29.
+    spatial_index_order: int
+        (Default value = SPATIAL_INDEX_ORDER = 29) order to use for spatial index
 
     Returns
     -------
     np.ndarray
-        HEALPix pixel indicies at specified order, for all coordinates provided.
+        HEALPix pixel indices at specified order, for all coordinates provided.
 
     Raises
     ------
@@ -55,8 +55,8 @@ def spatial_index_to_healpix(
         list of well-formatted _healpix_29 values
     target_order : int
         Defaults to `SPATIAL_INDEX_ORDER`. The order of the pixel to get from the healpix index.
-    spatial_index_order: int :
-        (Default value = SPATIAL_INDEX_ORDER) order to use for spatial index. defaults to 29.
+    spatial_index_order: int
+        (Default value = SPATIAL_INDEX_ORDER = 29) order to use for spatial index
 
     Returns
     -------
@@ -82,8 +82,8 @@ def healpix_to_spatial_index(
         order of pixel to convert
     pixel : int | list[int]
         pixel number in nested ordering of pixel to convert
-    spatial_index_order: int :
-        (Default value = SPATIAL_INDEX_ORDER) order to use for spatial index. defaults to 29.
+    spatial_index_order: int
+        (Default value = SPATIAL_INDEX_ORDER = 29) order to use for spatial index
 
     Returns
     -------

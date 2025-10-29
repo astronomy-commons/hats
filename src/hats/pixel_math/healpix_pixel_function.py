@@ -12,12 +12,12 @@ def get_pixel_argsort(pixels: list[HealpixPixel]):
 
     Parameters
     ----------
-    pixels : List[HealpixPixel]
+    pixels : list[HealpixPixel]
         array to sort
 
     Returns
     -------
-    List[int]
+    list[int]
         array of indices that sort the pixels in breadth-first order.
     """
     if pixels is None or len(pixels) == 0:
@@ -40,12 +40,12 @@ def sort_pixels(pixels: list[HealpixPixel]):
 
     Parameters
     ----------
-    pixels : List[HealpixPixel]
+    pixels : list[HealpixPixel]
         array to sort
 
     Returns
     -------
-    List[HealpixPixel]
+    list[HealpixPixel]
         pixels sorted in breadth-first order
     """
     if pixels is None or len(pixels) == 0:
