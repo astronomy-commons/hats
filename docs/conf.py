@@ -26,9 +26,11 @@ version = ".".join(release.split(".")[:2])
 
 extensions = [
     "sphinx.ext.mathjax",
-    "sphinx.ext.napoleon",
     "sphinx.ext.viewcode",
     "sphinx_design",
+    "numpydoc",
+    "sphinx.ext.autosummary",
+    "sphinx.ext.autodoc",
 ]
 
 extensions.append("autoapi.extension")
@@ -60,6 +62,17 @@ autoapi_dirs = ["../src"]
 autoapi_ignore = ["*/__main__.py", "*/_version.py"]
 autoapi_add_toc_tree_entry = False
 autoapi_member_order = "bysource"
+# Additional configuration to skip private members
+autoapi_python_class_content = "class"
+autoapi_generate_api_docs = True
+autoapi_options = [
+    "members",
+    "undoc-members",
+    "show-inheritance",
+    "show-module-summary",
+    "special-members",
+    "imported-members",
+]
 
 html_theme = "sphinx_book_theme"
 html_theme_options = {
@@ -69,3 +82,20 @@ html_theme_options = {
 
 html_static_path = ["_static"]
 html_css_files = ["custom.css"]
+
+
+def skip_private_members(app, what, name, obj, skip, options):
+    """Skip private members during autoapi generation."""
+    # Get just the member name (including the module path if present)
+    # and skip if any component is private (starts with a single underscore).
+    member_name = name.split(".")[-1] if "." in name else name
+    if member_name.startswith("_") and not member_name.startswith("__"):
+        return True  # Force skip private members
+
+    # For non-private members, use the default behavior
+    return skip
+
+
+def setup(app):
+    """Set up the Sphinx app with custom configurations."""
+    app.connect("autoapi-skip-member", skip_private_members)

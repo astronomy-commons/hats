@@ -31,17 +31,22 @@ DATASET_TYPE_TO_CLASS = {
 def read_hats(catalog_path: str | Path | UPath) -> CatalogCollection | Dataset:
     """Reads a HATS Catalog from a HATS directory
 
-    Args:
-        catalog_path (str): path to the root directory of the catalog
+    Parameters
+    ----------
+    catalog_path : str | Path | UPath
+        path to the root directory of the catalog
 
-    Returns:
-        The initialized catalog object
+    Returns
+    -------
+    CatalogCollection | Dataset
+        HATS catalog found at directory
 
-    Examples:
-        To read a catalog from a public S3 bucket, call it as follows::
+    Examples
+    --------
+    To read a catalog from a public S3 bucket, call it as follows::
 
-            from upath import UPath
-            catalog = hats.read_hats(UPath(..., anon=True))
+        from upath import UPath
+        catalog = hats.read_hats(UPath(..., anon=True))
     """
     path = file_io.get_upath(catalog_path)
     if (path / "hats.properties").exists() or (path / "properties").exists():

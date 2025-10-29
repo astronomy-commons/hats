@@ -19,17 +19,21 @@ class PixelTree:
     There are a number of methods in this class which allow for quickly navigating through the
     tree and performing operations to filter the pixels in the catalog.
 
-    Attributes:
-        pixels: Nested dictionary of pixel nodes stored in the tree. Indexed by HEALPix
-            order then pixel number
+    Attributes
+    ----------
+    pixels : np.ndarray
+        An array of [order, pixel] in NESTED numbering scheme for each interval in the array.
     """
 
     def __init__(self, tree: np.ndarray, order: int) -> None:
         """Initialises a tree object from the nodes in the tree
 
-        Args:
-            tree (np.ndarray): sorted array of intervals that represent each pixel in the tree
-            order (int): HEALPix order of the pixel numbers in the intervals
+        Parameters
+        ----------
+        tree : np.ndarray
+            sorted array of intervals that represent each pixel in the tree
+        order : int
+            HEALPix order of the pixel numbers in the intervals
         """
         self.tree_order = order
         self.tree = tree.astype(np.int64)
@@ -42,7 +46,9 @@ class PixelTree:
     def __len__(self):
         """Gets the number of nodes in the tree
 
-        Returns:
+        Returns
+        -------
+        int
             The number of nodes in the tree
         """
         return len(self.tree)
@@ -50,11 +56,14 @@ class PixelTree:
     def contains(self, pixel: HealpixPixel | tuple[int, int]) -> bool:
         """Check if tree contains a node at a given order and pixel
 
-        Args:
-            pixel: HEALPix pixel to check. Either of type `HealpixPixel`
-                or a tuple of (order, pixel)
+        Parameters
+        ----------
+        pixel : HealpixPixel | tuple[int, int]
+            HEALPix pixel to check. Either of type `HealpixPixel` or a tuple of (order, pixel)
 
-        Returns:
+        Returns
+        -------
+        bool
             True if the tree contains the pixel, False if not
         """
         (order, pixel) = get_healpix_tuple(pixel)
@@ -74,7 +83,9 @@ class PixelTree:
     def get_max_depth(self) -> int:
         """Get the max depth (or highest healpix order) represented in the list of pixels.
 
-        Returns:
+        Returns
+        -------
+        int
             max depth (or highest healpix order) of the pixels in the tree
         """
         return np.max(self.pixels.T[0])
@@ -82,7 +93,9 @@ class PixelTree:
     def get_healpix_pixels(self) -> list[HealpixPixel]:
         """Creates a list of HealpixPixels in the tree
 
-        Returns (List[HealpixPixel]):
+        Returns
+        -------
+        list[HealpixPixel]
             A list of the HEALPix pixels in the tree
         """
         return [HealpixPixel(p[0], p[1]) for p in self.pixels]
@@ -101,12 +114,17 @@ class PixelTree:
     ) -> PixelTree:
         """Build a tree from a list of constituent healpix pixels
 
-        Args:
-            healpix_pixels: list of healpix pixels
-            tree_order (int): (Default = None) order to generate the tree at. If None, will use the highest
-                order from input pixels
+        Parameters
+        ----------
+        healpix_pixels : Sequence[HealpixPixel | tuple[int, int]]
+            list of healpix pixels
+        tree_order : int
+            (Default = None) order to generate the tree at. If None, will use the highest
+            order from input pixels
 
-        Returns:
+        Returns
+        -------
+        PixelTree
             The pixel tree with the leaf pixels specified in the list
         """
         if len(healpix_pixels) == 0:

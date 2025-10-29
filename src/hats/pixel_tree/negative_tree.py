@@ -6,10 +6,14 @@ from hats.pixel_tree.pixel_tree import PixelTree
 def compute_negative_tree_pixels(tree: PixelTree) -> list[HealpixPixel]:
     """Computes a 'negative pixel tree' consisting of the pixels needed to cover the full sky not in the tree
 
-    Args:
-        tree (PixelTree): the input tree to compute the negative of
+    Parameters
+    ----------
+    tree : PixelTree
+        the input tree to compute the negative of
 
-    Returns (List[HealpixPixel]):
+    Returns
+    -------
+    list[HealpixPixel]
         A list of HEALPix pixels needed to cover the part of the sky not covered by the tree, using the least
         number of pixels possible.
     """

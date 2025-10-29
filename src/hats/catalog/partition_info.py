@@ -27,7 +27,9 @@ class PartitionInfo:
     def get_healpix_pixels(self) -> list[HealpixPixel]:
         """Get healpix pixel objects for all pixels represented as partitions.
 
-        Returns:
+        Returns
+        -------
+        list[HealpixPixel]
             List of HealpixPixel
         """
         return self.pixel_list
@@ -35,7 +37,9 @@ class PartitionInfo:
     def get_highest_order(self) -> int:
         """Get the highest healpix order for the dataset.
 
-        Returns:
+        Returns
+        -------
+        int
             int representing highest order.
         """
         max_pixel = np.max(self.pixel_list)
@@ -50,14 +54,17 @@ class PartitionInfo:
 
         If no paths are provided, the catalog base directory from the `read_from_dir` call is used.
 
-        Args:
-            partition_info_file: path to where the `partition_info.csv`
-                file will be written.
-            catalog_path: base directory for a catalog where the `partition_info.csv`
-                file will be written.
+        Parameters
+        ----------
+        partition_info_file : str | Path | UPath | None
+            path to where the `partition_info.csv` file will be written.
+        catalog_path : str | Path | UPath | None
+            base directory for a catalog where the `partition_info.csv` file will be written.
 
-        Raises:
-            ValueError: if no path is provided, and could not be inferred.
+        Raises
+        ------
+        ValueError
+            if no path is provided, and could not be inferred.
         """
         if partition_info_file is None:
             if catalog_path is not None:
@@ -78,14 +85,20 @@ class PartitionInfo:
         therefore a warning is issued to the user. In internal testing with large catalogs,
         the first approach takes less than a second, while the second can take 10-20 seconds.
 
-        Args:
-            catalog_base_dir: path to the root directory of the catalog
+        Parameters
+        ----------
+        catalog_base_dir : str | Path | UPath | None
+            path to the root directory of the catalog
 
-        Returns:
+        Returns
+        -------
+        PartitionInfo
             A `PartitionInfo` object with the data from the file
 
-        Raises:
-            FileNotFoundError: if neither desired file is found in the catalog_base_dir
+        Raises
+        ------
+        FileNotFoundError
+            if neither desired file is found in the catalog_base_dir
         """
         metadata_file = paths.get_parquet_metadata_pointer(catalog_base_dir)
         partition_info_file = paths.get_partition_info_pointer(catalog_base_dir)
@@ -104,10 +117,14 @@ class PartitionInfo:
     def read_from_file(cls, metadata_file: str | Path | UPath) -> PartitionInfo:
         """Read partition info from a `_metadata` file to create an object
 
-        Args:
-            metadata_file (UPath): path to the `_metadata` file
+        Parameters
+        ----------
+        metadata_file : str | Path | UPath
+            path to the `_metadata` file
 
-        Returns:
+        Returns
+        -------
+        PartitionInfo
             A `PartitionInfo` object with the data from the file
         """
         return cls(cls._read_from_metadata_file(metadata_file))
@@ -116,10 +133,14 @@ class PartitionInfo:
     def _read_from_metadata_file(cls, metadata_file: str | Path | UPath) -> list[HealpixPixel]:
         """Read partition info list from a `_metadata` file.
 
-        Args:
-            metadata_file (UPath): path to the `_metadata` file
+        Parameters
+        ----------
+        metadata_file : str | Path | UPath
+            path to the `_metadata` file
 
-        Returns:
+        Returns
+        -------
+        list[HealpixPixel]
             The list of `HealpixPixel` extracted from the data in the metadata file
         """
         total_metadata = file_io.read_parquet_metadata(metadata_file)
@@ -140,10 +161,14 @@ class PartitionInfo:
     def read_from_csv(cls, partition_info_file: str | Path | UPath) -> PartitionInfo:
         """Read partition info from a `partition_info.csv` file to create an object
 
-        Args:
-            partition_info_file (UPath): path to the `partition_info.csv` file
+        Parameters
+        ----------
+        partition_info_file : str | Path | UPath
+            path to the `partition_info.csv` file
 
-        Returns:
+        Returns
+        -------
+        PartitionInfo
             A `PartitionInfo` object with the data from the file
         """
         return cls(cls._read_from_csv(partition_info_file))
@@ -152,10 +177,14 @@ class PartitionInfo:
     def _read_from_csv(cls, partition_info_file: str | Path | UPath) -> PartitionInfo:
         """Read partition info from a `partition_info.csv` file to create an object
 
-        Args:
-            partition_info_file (UPath): path to the `partition_info.csv` file
+        Parameters
+        ----------
+        partition_info_file : str | Path | UPath
+            path to the `partition_info.csv` file
 
-        Returns:
+        Returns
+        -------
+        PartitionInfo
             A `PartitionInfo` object with the data from the file
         """
         if not file_io.does_file_or_directory_exist(partition_info_file):
@@ -174,8 +203,10 @@ class PartitionInfo:
     def as_dataframe(self):
         """Construct a pandas dataframe for the partition info pixels.
 
-        Returns:
-            Dataframe with order, directory, and pixel info.
+        Returns
+        -------
+        pd.DataFrame
+            Pandas Dataframe with order, directory, and pixel info.
         """
         partition_info_dict = {
             PartitionInfo.METADATA_ORDER_COLUMN_NAME: [],
@@ -190,9 +221,14 @@ class PartitionInfo:
     def from_healpix(cls, healpix_pixels: list[HealpixPixel]) -> PartitionInfo:
         """Create a partition info object from a list of constituent healpix pixels.
 
-        Args:
-            healpix_pixels: list of healpix pixels
-        Returns:
+        Parameters
+        ----------
+        healpix_pixels: list[HealpixPixel]
+            a list of constituent healpix pixels
+
+        Returns
+        -------
+        PartitionInfo
             A `PartitionInfo` object with the same healpix pixels
         """
         return cls(healpix_pixels)

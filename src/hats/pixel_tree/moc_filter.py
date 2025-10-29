@@ -5,17 +5,19 @@ from numba import njit
 from hats.pixel_tree.pixel_tree import PixelTree
 
 
-def filter_by_moc(
-    tree: PixelTree,
-    moc: MOC,
-) -> PixelTree:
+def filter_by_moc(tree: PixelTree, moc: MOC) -> PixelTree:
     """Filters a pixel tree to only include the pixels that overlap with the pixels in the moc
 
-    Args:
-        tree (PixelTree): The tree to perform the filtering on
-        moc (mocpy.MOC): The moc to use to filter
+    Parameters
+    ----------
+    tree: PixelTree
+        The tree to perform the filtering on
+    moc: MOC
+        The moc to use to filter
 
-    Returns:
+    Returns
+    -------
+    PixelTree
         A new PixelTree object with only the pixels from the input tree that overlap with the moc.
     """
     if len(tree) == 0:
@@ -28,21 +30,23 @@ def filter_by_moc(
 
 
 @njit
-def perform_filter_by_moc(
-    tree: np.ndarray,
-    moc: np.ndarray,
-) -> np.ndarray:  # pragma: no cover
+def perform_filter_by_moc(tree: np.ndarray, moc: np.ndarray) -> np.ndarray:  # pragma: no cover
     """Performs filtering with lists of pixel intervals
 
     Input interval lists must be at the same order.
 
-    Args:
-        tree (np.ndarray): Array of pixel intervals to be filtered
-        moc (np.ndarray): Array of pixel intervals to be used to filter
+    Parameters
+    ----------
+    tree: np.ndarray
+        Array of pixel intervals to be filtered
+    moc: np.ndarray
+        Array of pixel intervals to be used to filter
 
-    Returns:
-        A boolean array of dimension tree.shape[0] which masks which pixels in tree overlap with the pixels in
-        moc
+    Returns
+    -------
+    ndarray
+        A boolean array of dimension tree.shape[0] which masks which pixels in tree
+        overlap with the pixels in moc
     """
     output = np.full(tree.shape[0], fill_value=False, dtype=np.bool_)
     tree_index = 0

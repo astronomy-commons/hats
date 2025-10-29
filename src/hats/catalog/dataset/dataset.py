@@ -14,8 +14,7 @@ from hats.io.parquet_metadata import aggregate_column_statistics, per_pixel_stat
 
 # pylint: disable=too-few-public-methods
 class Dataset:
-    """A base HATS dataset that contains a properties file
-    and the data contained in parquet files"""
+    """A base HATS dataset that contains a properties file and the data contained in parquet files"""
 
     def __init__(
         self,
@@ -26,11 +25,17 @@ class Dataset:
     ) -> None:
         """Initializes a Dataset
 
-        Args:
-            catalog_info: A TableProperties object with the catalog metadata
-            catalog_path: If the catalog is stored on disk, specify the location of the catalog
-                Does not load the catalog from this path, only store as metadata
-            schema (pa.Schema): The pyarrow schema for the catalog
+        Parameters
+        ----------
+        catalog_info: TableProperties
+            A TableProperties object with the catalog metadata
+        catalog_path: str | Path | UPath | None
+            If the catalog is stored on disk, specify the location of the catalog
+            Does not load the catalog from this path, only store as metadata
+        schema : pa.Schema
+            The pyarrow schema for the catalog. May be modified e.g. based on loaded columns
+        original_schema : pa.Schema
+            The original pyarrow schema for the catalog. May NOT be modified e.g. based on loaded columns
         """
         self.catalog_info = catalog_info
         self.catalog_name = self.catalog_info.catalog_name
@@ -49,12 +54,21 @@ class Dataset:
     ):
         """Read footer statistics in parquet metadata, and report on global min/max values.
 
-        Args:
-            exclude_hats_columns (bool): exclude HATS spatial and partitioning fields
-                from the statistics. Defaults to True.
-            exclude_columns (List[str]): additional columns to exclude from the statistics.
-            include_columns (List[str]): if specified, only return statistics for the column
-                names provided. Defaults to None, and returns all non-hats columns.
+        Parameters
+        ----------
+        exclude_hats_columns : bool
+            exclude HATS spatial and partitioning fields
+            from the statistics. Defaults to True.
+        exclude_columns : list[str]
+            additional columns to exclude from the statistics.
+        include_columns : list[str]
+            if specified, only return statistics for the column
+            names provided. Defaults to None, and returns all non-hats columns.
+
+        Returns
+        -------
+        Dataframe
+            aggregated statistics.
         """
         if not self.on_disk:
             warnings.warn("Calling aggregate_column_statistics on an in-memory catalog. No results.")
@@ -77,17 +91,28 @@ class Dataset:
         """Read footer statistics in parquet metadata, and report on statistics about
         each pixel partition.
 
-        Args:
-            exclude_hats_columns (bool): exclude HATS spatial and partitioning fields
-                from the statistics. Defaults to True.
-            exclude_columns (List[str]): additional columns to exclude from the statistics.
-            include_columns (List[str]): if specified, only return statistics for the column
-                names provided. Defaults to None, and returns all non-hats columns.
-            include_stats (List[str]): if specified, only return the kinds of values from list
-                (min_value, max_value, null_count, row_count). Defaults to None, and returns all values.
-            multi_index (bool): should the returned frame be created with a multi-index, first on
-                pixel, then on column name? Default is False, and instead indexes on pixel, with
+        Parameters
+        ----------
+        exclude_hats_columns : bool
+            exclude HATS spatial and partitioning fields from the statistics. Defaults to True.
+        exclude_columns : list[str]
+            additional columns to exclude from the statistics.
+        include_columns : list[str]
+            if specified, only return statistics for the column
+            names provided. Defaults to None, and returns all non-hats columns.
+        include_stats : list[str]
+            if specified, only return the kinds of values from list
+            (min_value, max_value, null_count, row_count). Defaults to None, and returns all values.
+        multi_index : bool
+            should the returned frame be created with a multi-index, first on
+            pixel, then on column name? Default is False, and instead indexes on pixel, with
             separate columns per-data-column and stat value combination.
+            (Default value = False)
+
+        Returns
+        -------
+        Dataframe
+            all statistics.
         """
         if not self.on_disk:
             warnings.warn("Calling per_pixel_statistics on an in-memory catalog. No results.")

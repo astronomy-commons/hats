@@ -15,14 +15,12 @@ class HealpixPixel:
     """
 
     order: int
+    """HEALPix order"""
     pixel: int
+    """HEALPix pixel number in NESTED ordering scheme"""
 
     def __post_init__(self) -> None:
-        """Initialize a HEALPix pixel
-        Args:
-            order: HEALPix order
-            pixel: HEALPix pixel number in NESTED ordering scheme
-        """
+        """Initialize a HEALPix pixel"""
         if self.order > SPATIAL_INDEX_ORDER:
             raise ValueError(f"HEALPix order cannot be greater than {SPATIAL_INDEX_ORDER}")
 
@@ -42,18 +40,23 @@ class HealpixPixel:
     def convert_to_lower_order(self, delta_order: int) -> HealpixPixel:
         """Returns the HEALPix pixel that contains the pixel at a lower order
 
-        Args:
-            delta_order: the difference in order to be subtracted from the current order to generate
-                the pixel at a lower order. Must be non-negative
+        Parameters
+        ----------
+        delta_order : int
+            the difference in order to be subtracted from the current order to generate
+            the pixel at a lower order. Must be non-negative
 
-        Returns:
+        Returns
+        -------
+        HealpixPixel
             A new `HealpixPixel` at the current order - `delta_order` which contains the current
             pixel
 
-        Raises:
-            ValueError: If delta_order is greater than the current order, a pixel cannot be
-                generated at a negative order. Or if delta_order is negative
-
+        Raises
+        ------
+        ValueError
+            If delta_order is greater than the current order, a pixel cannot be
+            generated at a negative order. Or if delta_order is negative
         """
         new_pixel = get_lower_order_pixel(self.order, self.pixel, delta_order)
         new_order = self.order - delta_order
@@ -62,17 +65,23 @@ class HealpixPixel:
     def convert_to_higher_order(self, delta_order: int) -> list[HealpixPixel]:
         """Returns a list of HEALPix pixels making up the current pixel at a higher order
 
-        Args:
-            delta_order: the difference in order to be added to the current order to generate the
-                pixels at a higher order. Must be non-negative
+        Parameters
+        ----------
+        delta_order : int
+            the difference in order to be added to the current order to generate the
+            pixels at a higher order. Must be non-negative
 
-        Returns:
+        Returns
+        -------
+        list[HealpixPixel]
             A new `HealpixPixel` at the current order - `delta_order` which contains the current
             pixel
 
-        Raises:
-            ValueError: If delta_order + current order is greater than the maximum HEALPix order,
-                pixels cannot be  generated. Or if delta_order is negative
+        Raises
+        ------
+        ValueError
+            If delta_order + current order is greater than the maximum HEALPix order,
+            pixels cannot be  generated. Or if delta_order is negative
         """
         new_pixels = get_higher_order_pixels(self.order, self.pixel, delta_order)
         new_order = self.order + delta_order
@@ -101,12 +110,18 @@ INVALID_PIXEL = HealpixPixel(-1, -1)
 def get_lower_order_pixel(order: int, pixel: int, delta_order: int) -> int:
     """Returns the pixel number at a lower order
 
-    Args:
-        order (int): the order of the pixel
-        pixel (int): the pixel number of the pixel in NESTED ordering
-        delta_order (int): the change in order to the new lower order
+    Parameters
+    ----------
+    order : int
+        the order of the pixel
+    pixel : int
+        the pixel number of the pixel in NESTED ordering
+    delta_order : int
+        the change in order to the new lower order
 
-    Returns:
+    Returns
+    -------
+    int
         The pixel number at order (order - delta_order) for the pixel that contains the given pixel
     """
     if order - delta_order < 0:
@@ -120,12 +135,18 @@ def get_lower_order_pixel(order: int, pixel: int, delta_order: int) -> int:
 def get_higher_order_pixels(order: int, pixel: int, delta_order: int) -> np.ndarray:
     """Returns the pixel numbers at a higher order
 
-    Args:
-        order (int): the order of the pixel
-        pixel (int): the pixel number of the pixel in NESTED ordering
-        delta_order (int): the change in order to the new higher order
+    Parameters
+    ----------
+    order : int
+        the order of the pixel
+    pixel : int
+        the pixel number of the pixel in NESTED ordering
+    delta_order : int
+        the change in order to the new higher order
 
-    Returns:
+    Returns
+    -------
+    np.ndarray
         The list of pixel numbers at order (order + delta_order) for the pixels contained by the given pixel
     """
     if order == -1:

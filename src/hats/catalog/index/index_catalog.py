@@ -17,9 +17,14 @@ class IndexCatalog(Dataset):
     def loc_partitions(self, ids) -> list[HealpixPixel]:
         """Find the set of partitions in the primary catalog for the ids provided.
 
-        Args:
-            ids: the values of the indexing column (e.g. 87,543)
-        Returns:
+        Parameters
+        ----------
+        ids
+            primary catalog for the ids
+
+        Returns
+        -------
+        list[HealpixPixel]
             partitions of leaf parquet files in the primary catalog
             that may contain rows for the id values
         """

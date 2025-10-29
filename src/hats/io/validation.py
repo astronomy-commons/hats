@@ -31,23 +31,32 @@ def is_valid_catalog(
 ) -> bool:
     """Checks if a catalog is valid for a given base catalog pointer
 
-    Args:
-        pointer (UPath): pointer to base catalog directory
-        strict (bool): should we perform additional checking that every optional
-            file exists, and contains valid, consistent information.
-        fail_fast (bool): if performing strict checks, should we return at the first
-            failure, or continue and find all problems?
-        verbose (bool): if performing strict checks, should we print out counts,
-            progress, and approximate sky coverage?
+    Parameters
+    ----------
+    pointer : str | Path | UPath
+        pointer to base catalog directory
+    strict : bool
+        should we perform additional checking that every optional
+        file exists, and contains valid, consistent information.
+        (Default value = False)
+    fail_fast : bool
+        if performing strict checks, should we return at the first
+        failure, or continue and find all problems?
+        (Default value = False)
+    verbose : bool
+        if performing strict checks, should we print out counts,
+        progress, and approximate sky coverage?
+        (Default value = True)
 
-    Returns:
-        True if both the properties and partition_info files are
-        valid, False otherwise
+    Returns
+    -------
+    bool
+        True if both the properties and partition_info files are valid, False otherwise
     """
     pointer = get_upath(pointer)
     if not strict:
-        return is_catalog_info_valid(pointer) and (
-            is_partition_info_valid(pointer) or is_metadata_valid(pointer)
+        return _is_catalog_info_valid(pointer) and (
+            _is_partition_info_valid(pointer) or _is_metadata_valid(pointer)
         )
 
     def handle_error(msg):
@@ -74,16 +83,26 @@ def is_valid_collection(
 ) -> bool:
     """Checks if a COLLECTION is valid for a given base catalog pointer
 
-    Args:
-        pointer (UPath): pointer to base catalog collection directory
-        strict (bool): should we perform additional checking that every optional
-            file exists, and contains valid, consistent information.
-        fail_fast (bool): if performing strict checks, should we return at the first
-            failure, or continue and find all problems?
-        verbose (bool): if performing strict checks, should we print out counts,
-            progress, and approximate sky coverage?
+    Parameters
+    ----------
+    pointer : str | Path | UPath
+        pointer to base catalog collection directory
+    strict : bool
+        should we perform additional checking that every optional
+        file exists, and contains valid, consistent information.
+        (Default value = False)
+    fail_fast : bool
+        if performing strict checks, should we return at the first
+        failure, or continue and find all problems?
+        (Default value = False)
+    verbose : bool
+        if performing strict checks, should we print out counts,
+        progress, and approximate sky coverage?
+        (Default value = True)
 
-    Returns:
+    Returns
+    -------
+    bool
         True if the collection properties are valid, and all sub-catalogs pass
         validation.
     """
@@ -176,15 +195,15 @@ def _is_valid_catalog_strict(pointer, handle_error, verbose):
         print(f"Validating catalog at path {pointer} ... ")
 
     is_valid = True
-    if not is_catalog_info_valid(pointer):
+    if not _is_catalog_info_valid(pointer):
         handle_error("properties file does not exist or is invalid.")
         is_valid = False
 
-    if not is_metadata_valid(pointer):
+    if not _is_metadata_valid(pointer):
         handle_error("_metadata file does not exist.")
         is_valid = False
 
-    if not is_common_metadata_valid(pointer):
+    if not _is_common_metadata_valid(pointer):
         handle_error("_common_metadata file does not exist.")
         is_valid = False
 
@@ -198,7 +217,7 @@ def _is_valid_catalog_strict(pointer, handle_error, verbose):
     metadata_file = get_parquet_metadata_pointer(pointer)
 
     if isinstance(catalog, HealpixDataset):
-        if not is_partition_info_valid(pointer):
+        if not _is_partition_info_valid(pointer):
             handle_error("partition_info.csv file does not exist.")
             return (False, catalog)
 
@@ -252,16 +271,8 @@ def _is_valid_catalog_strict(pointer, handle_error, verbose):
     return (is_valid, catalog)
 
 
-def is_catalog_info_valid(pointer: str | Path | UPath) -> bool:
-    """Checks if properties file is valid for a given base catalog pointer
-
-    Args:
-        pointer (UPath): pointer to base catalog directory
-
-    Returns:
-        True if the properties file exists, and it is correctly formatted,
-        False otherwise
-    """
+def _is_catalog_info_valid(pointer: str | Path | UPath) -> bool:
+    """Checks if properties file is valid for a given base catalog pointer"""
     try:
         TableProperties.read_from_dir(pointer)
     except (FileNotFoundError, ValueError, NotImplementedError):
@@ -270,15 +281,7 @@ def is_catalog_info_valid(pointer: str | Path | UPath) -> bool:
 
 
 def is_collection_info_valid(pointer: str | Path | UPath) -> bool:
-    """Checks if collection.properties file is valid for a given base catalog pointer
-
-    Args:
-        pointer (UPath): pointer to base catalog collection directory
-
-    Returns:
-        True if the properties file exists, and it is correctly formatted,
-        False otherwise
-    """
+    """Checks if collection.properties file is valid for a given base catalog pointer"""
     try:
         CollectionProperties.read_from_dir(pointer)
     except (FileNotFoundError, ValueError, NotImplementedError):
@@ -286,43 +289,22 @@ def is_collection_info_valid(pointer: str | Path | UPath) -> bool:
     return True
 
 
-def is_partition_info_valid(pointer: UPath) -> bool:
-    """Checks if partition_info is valid for a given base catalog pointer
-
-    Args:
-        pointer (UPath): pointer to base catalog directory
-
-    Returns:
-        True if the partition_info file exists, False otherwise
-    """
+def _is_partition_info_valid(pointer: UPath) -> bool:
+    """Checks if partition_info is valid for a given base catalog pointer"""
     partition_info_pointer = get_partition_info_pointer(pointer)
     partition_info_exists = is_regular_file(partition_info_pointer)
     return partition_info_exists
 
 
-def is_metadata_valid(pointer: UPath) -> bool:
-    """Checks if _metadata is valid for a given base catalog pointer
-
-    Args:
-        pointer (UPath): pointer to base catalog directory
-
-    Returns:
-        True if the _metadata file exists, False otherwise
-    """
+def _is_metadata_valid(pointer: UPath) -> bool:
+    """Checks if _metadata is valid for a given base catalog pointer"""
     metadata_file = get_parquet_metadata_pointer(pointer)
     metadata_file_exists = is_regular_file(metadata_file)
     return metadata_file_exists
 
 
-def is_common_metadata_valid(pointer: UPath) -> bool:
-    """Checks if _common_metadata is valid for a given base catalog pointer
-
-    Args:
-        pointer (UPath): pointer to base catalog directory
-
-    Returns:
-        True if the _common_metadata file exists, False otherwise
-    """
+def _is_common_metadata_valid(pointer: UPath) -> bool:
+    """Checks if _common_metadata is valid for a given base catalog pointer"""
     metadata_file = get_common_metadata_pointer(pointer)
     metadata_file_exists = is_regular_file(metadata_file)
     return metadata_file_exists
