@@ -199,13 +199,30 @@ def test_alignment_even_sky(drop_empty_siblings):
 
 def test_incremental_alignment():
     """Create alignment for existing catalog, considering new incoming data"""
-    existing_pixels = [(0, 11)]
-    increment_histogram = hist.empty_histogram(1)
-    increment_histogram[42:47] = [42, 29, 30, 21, 11]
+    existing_pixels = [(1, 44)]
+
+    increment_histogram = hist.empty_histogram(2)
+    # Increment counts for the children pix of (1,44):
+    increment_histogram[176:180] = [42, 30, 21, 12]
+    # Counts for some points out of (1,44):
+    increment_histogram[180:182] = [5, 8]
+
     result = hist.generate_incremental_alignment(
-        increment_histogram, existing_pixels=existing_pixels, highest_order=1, lowest_order=0
+        increment_histogram, existing_pixels=existing_pixels, highest_order=2, lowest_order=0
     )
-    expected = np.full(48, None)
-    expected[40:44] = [(0, 10, 42 + 29)] * 4
-    expected[44:48] = [(0, 11, 30 + 21 + 11)] * 4
+
+    expected = np.full(hp.order2npix(2), None)
+    # We expect the existing pixel (1, 44) to have the new counts
+    expected[176:180] = [(1, 44, 42 + 30 + 21 + 12)] * 4
+    # The data that falls out of (1,44) will be assigned a pixel at order 1.
+    # since, even though lowest_order=0, pixel (0,11) would overlap with (1,44).
+    expected[180:184] = [(1, 45, 5 + 8)] * 4
     npt.assert_array_equal(result, expected)
+
+
+def test_incremental_alignment_highest_order_invalid():
+    with pytest.raises(ValueError, match="existing catalog maximum order"):
+        # existing catalog max_order=1 while highest_order=0
+        hist.generate_incremental_alignment(
+            hist.empty_histogram(0), existing_pixels=[(1, 45)], highest_order=0
+        )

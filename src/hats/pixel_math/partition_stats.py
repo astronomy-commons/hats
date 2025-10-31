@@ -113,6 +113,16 @@ def generate_alignment(
         if the histogram is the wrong size, or some initial histogram bins
         exceed threshold.
     """
+    _validate_alignment_arguments(histogram, highest_order, lowest_order, threshold)
+
+    nested_sums = _get_nested_sums(histogram, highest_order, lowest_order)
+
+    if drop_empty_siblings:
+        return _get_alignment_dropping_siblings(nested_sums, highest_order, lowest_order, threshold)
+    return _get_alignment(nested_sums, highest_order, lowest_order, threshold)
+
+
+def _validate_alignment_arguments(histogram, highest_order, lowest_order, threshold):
     if len(histogram) != hp.order2npix(highest_order):
         raise ValueError("histogram is not the right size")
     if lowest_order > highest_order:
@@ -120,12 +130,6 @@ def generate_alignment(
     max_bin = np.amax(histogram)
     if max_bin > threshold:
         raise ValueError(f"single pixel count {max_bin} exceeds threshold {threshold}")
-
-    nested_sums = _get_nested_sums(histogram, highest_order, lowest_order)
-
-    if drop_empty_siblings:
-        return _get_alignment_dropping_siblings(nested_sums, highest_order, lowest_order, threshold)
-    return _get_alignment(nested_sums, highest_order, lowest_order, threshold)
 
 
 def _get_nested_sums(histogram, highest_order, lowest_order):
@@ -282,13 +286,7 @@ def generate_incremental_alignment(
             - pixel number *at the above order*
             - the number of objects in the pixel
     """
-    if len(histogram) != hp.order2npix(highest_order):
-        raise ValueError("histogram is not the right size")
-    if lowest_order > highest_order:
-        raise ValueError("lowest_order should be less than highest_order")
-    max_bin = np.amax(histogram)
-    if max_bin > threshold:
-        raise ValueError(f"single pixel count {max_bin} exceeds threshold {threshold}")
+    _validate_alignment_arguments(histogram, highest_order, lowest_order, threshold)
 
     nested_sums = _get_nested_sums(histogram, highest_order, lowest_order)
 
