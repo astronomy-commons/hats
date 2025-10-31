@@ -71,158 +71,6 @@ def generate_histogram(
     return histogram_result
 
 
-def generate_incremental_alignment(
-    histogram: np.ndarray,
-    existing_pixels: Sequence[tuple[int, int]],
-    highest_order: int = 10,
-    lowest_order: int = 0,
-    threshold: int = 1_000_000,
-):
-    """Generate alignment for an incremental catalog.
-
-    We will keep the existing pixels and add new pixels for the points in the
-    histogram that fall out of the existing coverage. Those pixels will be the
-    largest (non-overlapping) possible that obey to the defined pixel `threshold`.
-
-    Unlike `generate_alignment` there is no global guarantee that the number of
-    points per pixel remains under the previous `pixel_threshold`.
-
-    Parameters
-    ----------
-    histogram : np.ndarray
-        one-dimensional numpy array of long integers where the
-        value at each index corresponds to the number of objects
-        found at the healpix pixel.
-    existing_pixels : Sequence[tuple[int,int]]
-        the list of pixels in the existing catalog that we want to keep
-    highest_order : int
-        the highest healpix order (e.g. 5-10) (Default value = 10)
-    lowest_order : int
-        the lowest healpix order (e.g. 1-5). specifying a lowest order
-        constrains the partitioning to prevent spatially large pixels. (Default value = 0)
-    threshold : int
-        the maximum number of objects allowed in a single pixel (Default value = 1_000_000)
-
-    Returns
-    -------
-    tuple
-        one-dimensional numpy array of integer 3-tuples, where the value at each index corresponds
-        to the destination pixel at order less than or equal to the mapping order.
-        The tuple contains three integers:
-            - order of the destination pixel
-            - pixel number *at the above order*
-            - the number of objects in the pixel
-    """
-    if len(histogram) != hp.order2npix(highest_order):
-        raise ValueError("histogram is not the right size")
-    if lowest_order > highest_order:
-        raise ValueError("lowest_order should be less than highest_order")
-    max_bin = np.amax(histogram)
-    if max_bin > threshold:
-        raise ValueError(f"single pixel count {max_bin} exceeds threshold {threshold}")
-
-    nested_sums = []
-    for i in range(0, highest_order):
-        nested_sums.append(empty_histogram(i))
-    nested_sums.append(histogram)
-
-    # work backward - from highest order, fill in the sums of lower order pixels
-    for read_order in range(highest_order, lowest_order, -1):
-        parent_order = read_order - 1
-        for index in range(0, len(nested_sums[read_order])):
-            parent_pixel = index >> 2
-            nested_sums[parent_order][parent_pixel] += nested_sums[read_order][index]
-
-    tree = PixelTree.from_healpix(existing_pixels)
-    if tree.tree_order > highest_order:
-        raise ValueError("`highest_order` must be >= than existing catalog maximum order")
-
-    # Mask that has information about whether each pixel overlaps
-    # with existing catalog pixels
-    nested_mask = _get_nested_mask(tree, lowest_order, highest_order)
-
-    return _get_alignment_incremental_dropping_siblings(
-        nested_mask, tree, nested_sums, highest_order, lowest_order, threshold
-    )
-
-
-def _get_nested_mask(tree, lowest_order, highest_order):
-    nested_masks = {}
-    for order in range(lowest_order, highest_order + 1):
-        nested_masks[order] = _get_tree_contains_mask(tree, order)
-    return nested_masks
-
-
-def _get_tree_contains_mask(tree, order):
-    mask = np.full(hp.order2npix(order), False, dtype=bool)
-    if tree.tree_order > order:
-        aligned_tree = tree.tree >> (2 * (tree.tree_order - order))
-    else:
-        aligned_tree = tree.tree << (2 * (order - tree.tree_order))
-    for interval in aligned_tree:
-        start = interval[0]
-        end = interval[1]
-        if end - start > 0:
-            mask[start:end] = True
-        else:
-            mask[start] = True
-    return mask
-
-
-def _get_alignment_incremental_dropping_siblings(
-    nested_mask, tree, nested_sums, highest_order, lowest_order, threshold
-):
-    order_map = np.array(
-        [highest_order if count > 0 else -1 for count in nested_sums[highest_order]], dtype=np.int32
-    )
-    aligned_tree = tree.tree << (2 * (highest_order - tree.tree_order))
-    _assign_existing_pixels(nested_sums[highest_order], aligned_tree, tree.pixels, order_map)
-
-    for pixel_order in range(highest_order - 1, lowest_order - 1, -1):
-        for quad_start_index in range(0, hp.order2npix(pixel_order)):
-            quad_sum = nested_sums[pixel_order][quad_start_index]
-            quad_max = max(nested_sums[pixel_order + 1][quad_start_index * 4 : quad_start_index * 4 + 4])
-
-            if (
-                quad_sum != quad_max
-                and quad_sum <= threshold
-                and not nested_mask[pixel_order][quad_start_index]
-            ):
-                ## Condition where we want to collapse pixels to the lower order (larger area)
-                explosion_factor = 4 ** (highest_order - pixel_order)
-                exploded_pixels = [
-                    *range(
-                        quad_start_index * explosion_factor,
-                        (quad_start_index + 1) * explosion_factor,
-                    )
-                ]
-                order_map[exploded_pixels] = pixel_order
-
-    # Construct our results.
-    nested_alignment = [
-        (
-            (intended_order, pixel_high_index >> 2 * (highest_order - intended_order))
-            if intended_order >= 0
-            else None
-        )
-        for pixel_high_index, intended_order in enumerate(order_map)
-    ]
-    nested_alignment = [
-        (tup[0], tup[1], nested_sums[tup[0]][tup[1]]) if tup else None for tup in nested_alignment
-    ]
-
-    return np.array(nested_alignment, dtype="object")
-
-
-def _assign_existing_pixels(histogram, tree, pixels, existing_order_map):
-    for interval, pixel in zip(tree, pixels):
-        start = interval[0]
-        end = interval[1]
-        total_sum = np.sum(histogram[start:end])
-        if total_sum > 0:
-            existing_order_map[start:end] = pixel[0]
-
-
 def generate_alignment(
     histogram, highest_order=10, lowest_order=0, threshold=1_000_000, drop_empty_siblings=False
 ):
@@ -273,21 +121,29 @@ def generate_alignment(
     if max_bin > threshold:
         raise ValueError(f"single pixel count {max_bin} exceeds threshold {threshold}")
 
+    nested_sums = _get_nested_sums(histogram, highest_order, lowest_order)
+
+    if drop_empty_siblings:
+        return _get_alignment_dropping_siblings(nested_sums, highest_order, lowest_order, threshold)
+    return _get_alignment(nested_sums, highest_order, lowest_order, threshold)
+
+
+def _get_nested_sums(histogram, highest_order, lowest_order):
+    """Computes the total counts per pixel, for all orders
+    between `lowest_order` and `highest_order`"""
     nested_sums = []
     for i in range(0, highest_order):
         nested_sums.append(empty_histogram(i))
     nested_sums.append(histogram)
 
-    # work backward - from highest order, fill in the sums of lower order pixels
+    # work backward - from the highest order, fill in the sums of lower order pixels
     for read_order in range(highest_order, lowest_order, -1):
         parent_order = read_order - 1
         for index in range(0, len(nested_sums[read_order])):
             parent_pixel = index >> 2
             nested_sums[parent_order][parent_pixel] += nested_sums[read_order][index]
 
-    if drop_empty_siblings:
-        return _get_alignment_dropping_siblings(nested_sums, highest_order, lowest_order, threshold)
-    return _get_alignment(nested_sums, highest_order, lowest_order, threshold)
+    return nested_sums
 
 
 def _get_alignment(nested_sums, highest_order, lowest_order, threshold):
@@ -382,3 +238,153 @@ def _get_alignment_dropping_siblings(nested_sums, highest_order, lowest_order, t
     ]
 
     return np.array(nested_alignment, dtype="object")
+
+
+def generate_incremental_alignment(
+    histogram: np.ndarray,
+    existing_pixels: Sequence[tuple[int, int]],
+    highest_order: int = 10,
+    lowest_order: int = 0,
+    threshold: int = 1_000_000,
+):
+    """Generate alignment for an incremental catalog.
+
+    We will keep the existing pixels and add new pixels for the points in the
+    histogram that fall out of the existing coverage. Those pixels will be the
+    largest (non-overlapping) possible that obey to the defined pixel `threshold`.
+
+    Unlike `generate_alignment` there is no global guarantee that the number of
+    points per pixel remains under the previous `pixel_threshold`.
+
+    Parameters
+    ----------
+    histogram : np.ndarray
+        one-dimensional numpy array of long integers where the
+        value at each index corresponds to the number of objects
+        found at the healpix pixel.
+    existing_pixels : Sequence[tuple[int,int]]
+        the list of pixels in the existing catalog that we want to keep
+    highest_order : int
+        the highest healpix order (e.g. 5-10) (Default value = 10)
+    lowest_order : int
+        the lowest healpix order (e.g. 1-5). specifying a lowest order
+        constrains the partitioning to prevent spatially large pixels. (Default value = 0)
+    threshold : int
+        the maximum number of objects allowed in a single pixel (Default value = 1_000_000)
+
+    Returns
+    -------
+    tuple
+        one-dimensional numpy array of integer 3-tuples, where the value at each index corresponds
+        to the destination pixel at order less than or equal to the mapping order.
+        The tuple contains three integers:
+            - order of the destination pixel
+            - pixel number *at the above order*
+            - the number of objects in the pixel
+    """
+    if len(histogram) != hp.order2npix(highest_order):
+        raise ValueError("histogram is not the right size")
+    if lowest_order > highest_order:
+        raise ValueError("lowest_order should be less than highest_order")
+    max_bin = np.amax(histogram)
+    if max_bin > threshold:
+        raise ValueError(f"single pixel count {max_bin} exceeds threshold {threshold}")
+
+    nested_sums = _get_nested_sums(histogram, highest_order, lowest_order)
+
+    tree = PixelTree.from_healpix(existing_pixels)
+    if tree.tree_order > highest_order:
+        raise ValueError("`highest_order` must be >= than existing catalog maximum order")
+
+    nested_mask = _get_nested_mask(tree, lowest_order, highest_order)
+
+    return _get_alignment_incremental_dropping_siblings(
+        tree, nested_sums, nested_mask, highest_order, lowest_order, threshold
+    )
+
+
+def _get_nested_mask(tree, lowest_order, highest_order):
+    """Generate tree masks for orders between `lowest_order` and `highest_order`"""
+    nested_masks = {}
+    for order in range(lowest_order, highest_order + 1):
+        nested_masks[order] = _get_tree_mask_at_order(tree, order)
+    return nested_masks
+
+
+def _get_tree_mask_at_order(tree, order):
+    """Generate boolean mask indicating whether each pixel at order
+    `order` is in the `tree` or not."""
+    mask = np.full(hp.order2npix(order), False, dtype=bool)
+    if tree.tree_order > order:
+        aligned_tree = tree.tree >> (2 * (tree.tree_order - order))
+    else:
+        aligned_tree = tree.tree << (2 * (order - tree.tree_order))
+    for start, end in aligned_tree:
+        if end - start > 0:
+            mask[start:end] = True
+        else:
+            mask[start] = True
+    return mask
+
+
+def _get_alignment_incremental_dropping_siblings(
+    tree, nested_sums, nested_mask, highest_order, lowest_order, threshold
+):
+    """Method to aggregate pixels up to the threshold that collapses completely empty pixels away.
+
+    Checks from higher order (smaller areas) out to lower order (large areas). In this way, we are able to
+    keep spatially isolated areas in pixels of higher order.
+
+    Similar to `get_alignment_dropping_siblings` but with a main difference: we only aggregate the pixels
+    that do not already exist in the `nested_mask`."""
+    # Create the order map but assigning existing pixels
+    order_map = _get_order_map_with_existing_pixels(nested_sums[highest_order], highest_order, tree)
+
+    for pixel_order in range(highest_order - 1, lowest_order - 1, -1):
+        for quad_start_index in range(0, hp.order2npix(pixel_order)):
+            quad_sum = nested_sums[pixel_order][quad_start_index]
+            quad_max = max(nested_sums[pixel_order + 1][quad_start_index * 4 : quad_start_index * 4 + 4])
+
+            if (
+                quad_sum != quad_max
+                and quad_sum <= threshold
+                and not nested_mask[pixel_order][quad_start_index]
+            ):
+                ## Condition where we want to collapse pixels to the lower order (larger area)
+                explosion_factor = 4 ** (highest_order - pixel_order)
+                exploded_pixels = [
+                    *range(
+                        quad_start_index * explosion_factor,
+                        (quad_start_index + 1) * explosion_factor,
+                    )
+                ]
+                order_map[exploded_pixels] = pixel_order
+
+    # Construct our results.
+    nested_alignment = [
+        (
+            (intended_order, pixel_high_index >> 2 * (highest_order - intended_order))
+            if intended_order >= 0
+            else None
+        )
+        for pixel_high_index, intended_order in enumerate(order_map)
+    ]
+    nested_alignment = [
+        (tup[0], tup[1], nested_sums[tup[0]][tup[1]]) if tup else None for tup in nested_alignment
+    ]
+
+    return np.array(nested_alignment, dtype="object")
+
+
+def _get_order_map_with_existing_pixels(histogram, highest_order, tree):
+    """Create order map at the histogram `highest_order` and assign the existing `tree` pixels"""
+    order_map = np.array([highest_order if count > 0 else -1 for count in histogram], dtype=np.int32)
+    # Align tree to the `highest_order` (that of the histogram) first
+    aligned_tree = tree.tree << (2 * (highest_order - tree.tree_order))
+    # For each interval in the aligned tree, compute the total counts
+    # from the histogram and assign the original pixel order in the map
+    for (start, end), pixel in zip(aligned_tree, tree.pixels):
+        total_sum = np.sum(histogram[start:end])
+        if total_sum > 0:
+            order_map[start:end] = pixel[0]
+    return order_map
