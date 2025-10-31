@@ -195,3 +195,23 @@ def test_alignment_even_sky(drop_empty_siblings):
     # everything maps to order 7 (would be 5, but lowest of 7 is enforced)
     for mapping in result:
         assert mapping[0] == 7
+
+
+def test_incremental_alignment():
+    """Create alignment for existing catalog, considering new incoming data"""
+    existing_pixels = [(0, 11)]
+
+    # Create increment count histogram
+    # Pixels [42,44[ are out of coverage
+    # Pixels [44,46] are in coverage
+    increment_histogram = hist.empty_histogram(1)
+    increment_histogram[42:47] = [42, 29, 30, 21, 11]
+
+    result = hist.generate_incremental_alignment(
+        increment_histogram, existing_pixels=existing_pixels, highest_order=1, lowest_order=0
+    )
+
+    expected = np.full(48, None)
+    expected[40:44] = [(0, 10, 42 + 29)] * 4
+    expected[44:48] = [(0, 11, 30 + 21 + 11)] * 4
+    npt.assert_array_equal(result, expected)
