@@ -43,7 +43,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "asv==0.6.5", # Used to compute performance benchmarks
-    "virtualenv==20.30", # Temporary fix to airspeed-velocity/asv#1484
+    "virtualenv==20.35.4", # Temporary fix to airspeed-velocity/asv#1484
     "black", # Used for static linting of files
     "jupyter", # Clears output from Jupyter notebooks
     "pre-commit", # Used to run checks before finalizing a git commit
