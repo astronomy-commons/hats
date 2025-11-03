@@ -2,6 +2,7 @@
 
 import shutil
 
+import astropy.units as u
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -10,7 +11,13 @@ from pandas.api.types import is_numeric_dtype
 from pyarrow.parquet import ParquetFile
 
 from hats.io import file_io, paths
-from hats.io.parquet_metadata import aggregate_column_statistics, per_pixel_statistics, write_parquet_metadata
+from hats.io.parquet_metadata import (
+    aggregate_column_statistics,
+    pa_schema_to_vo_schema,
+    per_pixel_statistics,
+    write_parquet_metadata,
+    write_voparquet_in_common_metadata,
+)
 from hats.pixel_math.healpix_pixel import HealpixPixel
 from hats.pixel_math.spatial_index import SPATIAL_INDEX_COLUMN
 
@@ -432,3 +439,63 @@ def test_per_pixel_statistics_with_rowgroups_empty_result(small_sky_source_dir):
         partition_info_file, include_pixels=[HealpixPixel(1, 4)], multi_index=True
     )
     assert len(result_frame) == 0
+
+
+def test_pa_schema_to_vo_schema_small(small_sky_nested_dir):
+    return_value = pa_schema_to_vo_schema(
+        small_sky_nested_dir,
+        field_units={
+            "ra": "deg",
+            "dec": u.deg,
+            "lc.source_ra": "deg",
+            "lc.source_dec": u.deg,
+            "lc.object_ra": "deg",
+            "lc.object_dec": u.deg,
+            "does_not_exist": "deg**2",
+        },
+        field_ucds={
+            "ra": "pos.eq.ra",
+            "dec": "pos.eq.dec",
+            "lc.source_ra": "pos.eq.ra",
+            "lc.source_dec": "pos.eq.dec",
+            "lc.object_ra": "pos.eq.ra",
+            "lc.object_dec": "pos.eq.dec",
+            "does_not_exist": "pos.eq.dec",
+        },
+        field_descriptions={
+            "ra": "Object ICRS Right Ascension",
+            "dec": "Object ICRS Declination",
+            "lc.source_ra": "Object ICRS Right Ascension",
+            "lc.source_dec": "Object ICRS Declination",
+            "lc.object_ra": "Object ICRS Right Ascension",
+            "lc.object_dec": "Object ICRS Declination",
+            "lc": "Properties of transient-object detections on the single-epoch difference images",
+            "lc.band": "Band used to take this observation",
+            "does_not_exist": "Band used to take this observation",
+        },
+        field_utypes={
+            "ra": "stc:AstroCoords.Position2D.Value2.C1",
+            "dec": "stc:AstroCoords.Position2D.Value2.C2",
+            "does_not_exist": "stc:AstroCoords.Position2D.Value2.C2",
+        },
+    )
+    assert return_value
+
+
+def test_pa_schema_to_vo_schema_large():
+    attrs = pd.read_csv("/home/delucchi/Downloads/object_table_attrs.csv")
+    print(len(attrs))
+    field_ucds = {row["Column Name"]: row["UCD"] for _, row in attrs.iterrows() if pd.notna(row["UCD"])}
+    print(len(field_ucds))
+    field_descriptions = {
+        row["Column Name"]: row["Description"] for _, row in attrs.iterrows() if pd.notna(row["Description"])
+    }
+    print(len(field_descriptions))
+    field_units = {row["Column Name"]: row["Unit"] for _, row in attrs.iterrows() if pd.notna(row["Unit"])}
+    print(len(field_units))
+    write_voparquet_in_common_metadata(
+        "/home/delucchi/git/smoke/lsdb/benchmarks/data/object_collection/object_lc",
+        field_units=field_units,
+        field_ucds=field_ucds,
+        field_descriptions=field_descriptions,
+    )

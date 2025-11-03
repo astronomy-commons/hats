@@ -2,14 +2,18 @@
 
 from __future__ import annotations
 
+import io
 import random
 from pathlib import Path
 
+import nested_pandas as npd
 import numpy as np
 import pandas as pd
 import pyarrow as pa
 import pyarrow.dataset as pds
 import pyarrow.parquet as pq
+from astropy.io.votable.tree import FieldRef, Group, Param, VOTableFile
+from astropy.table import Table
 from upath import UPath
 
 from hats.io import file_io, paths
@@ -489,3 +493,191 @@ def per_pixel_statistics(
             {stat_name: int for stat_name in int_col_names}
         )
     return frame
+
+
+def pick_metadata_schema_file(catalog_base_dir: str | Path | UPath) -> UPath | None:
+    """Determines the appropriate file to read for parquet metadata
+    stored in the _common_metadata or _metadata files.
+
+    Parameters
+    ----------
+    catalog_base_dir : str | Path | UPath
+        base path for the catalog
+
+    Returns
+    -------
+    UPath | None
+        path to a parquet file containing metadata schema.
+    """
+    common_metadata_file = paths.get_common_metadata_pointer(catalog_base_dir)
+    common_metadata_exists = file_io.does_file_or_directory_exist(common_metadata_file)
+    metadata_file = paths.get_parquet_metadata_pointer(catalog_base_dir)
+    metadata_exists = file_io.does_file_or_directory_exist(metadata_file)
+    if not (common_metadata_exists or metadata_exists):
+        return None
+    return common_metadata_file if common_metadata_exists else metadata_file
+
+
+# pylint: disable=protected-access
+def pa_schema_to_vo_schema(
+    catalog_base_dir: str | Path | UPath,
+    *,
+    field_units: dict | None = None,
+    field_ucds: dict | None = None,
+    field_descriptions: dict | None = None,
+    field_utypes: dict | None = None,
+):
+    """Create VOTableFile metadata, based on the names and types of fields in the parquet files.
+
+    Add ancillary attributes to fields where they are provided in the optional dictionaries.
+
+    Note on field names with nested columns: to include ancillary attributes (units, ucds, etc)
+    for a nested sub-column, use dot notation (e.g. ``"lightcurve.band"``). You can add ancillary
+    attributes for the entire nested column group using the nested column name (e.g. ``"lightcurve"``).
+
+    Parameters
+    ----------
+    catalog_base_dir : str | Path | UPath
+        base path for the catalog
+    field_units: dict | None
+        dictionary mapping column names to astropy units (or string representation of units)
+    field_ucds: dict | None
+        dictionary mapping column names to UCDs (Uniform Content Descriptors)
+    field_descriptions: dict | None
+        dictionary mapping column names to free-text descriptions
+    field_utypes: dict | None
+        dictionary mapping column names to utypes
+
+    Returns
+    -------
+    VOTableFile
+        VO object containing all relevant metadata (but no data)
+    """
+    schema_file = pick_metadata_schema_file(catalog_base_dir=catalog_base_dir)
+    if not schema_file:
+        return None
+
+    field_units = field_units or {}
+    field_ucds = field_ucds or {}
+    field_descriptions = field_descriptions or {}
+    field_utypes = field_utypes or {}
+
+    ## Try to find VO metadata in the file:
+    # metadata = file_io.read_parquet_metadata(schema_file)
+    nested_schema = npd.read_parquet(schema_file)
+
+    df_types = nested_schema.to_pandas().dtypes
+    names = []
+    data_types = []
+    for col in nested_schema.base_columns:
+        names.append(col)
+        type_str = str(df_types[col]).split("[", maxsplit=1)[0]
+        data_types.append(type_str)
+
+    for col in nested_schema.nested_columns:
+        for key, val in nested_schema[col].dtype.column_dtypes.items():
+            names.append(f"{col}.{key}")
+            data_types.append(str(val))
+    data_types = ["U" if t == "string" else t for t in data_types]
+
+    # Might have extra descriptions for nested columns.
+    named_descriptions = {key: field_descriptions[key] for key in field_descriptions if key in names}
+    named_units = {key: field_units[key] for key in field_units if key in names}
+    if len(named_units) != len(field_units):
+        dropped_keys = set(field_units.keys()) - set(named_units.keys())
+        print(f"warning - dropping some units: ({len(dropped_keys)})")
+        print(dropped_keys)
+    if len(named_descriptions) != len(field_descriptions):
+        dropped_keys = set(field_descriptions.keys()) - set(named_descriptions.keys())
+        print(f"warning - dropping some descriptions: ({len(dropped_keys)})")
+        print(dropped_keys)
+
+    t = Table(names=names, dtype=data_types, units=named_units, descriptions=named_descriptions)
+
+    votablefile = VOTableFile()
+    votablefile = votablefile.from_table(t)
+
+    ## TODO - add info to root resource, e.g. obsregime.
+
+    ## Add groups for nested columns
+    vo_table = votablefile.get_first_table()
+    for col in nested_schema.nested_columns:
+        new_group = Group(vo_table, name=col, config=vo_table._config, pos=vo_table._pos)
+        if col in field_descriptions:
+            new_group.description = field_descriptions[col]
+        else:
+            new_group.description = "multi-column nested format"
+        vo_table.groups.append(new_group)
+
+        new_param = Param(vo_table, name="is_nested_column", datatype="boolean", value="t")
+        new_group.entries.append(new_param)
+
+        for key in nested_schema[col].columns:
+            new_field = FieldRef(vo_table, ref=f"{col}.{key}")
+            new_group.entries.append(new_field)
+
+    ## Go back and add UCD/utypes to fields
+    for field in vo_table.iter_fields_and_params():
+        field_name = field.name
+        if field_name in field_ucds:
+            field.ucd = field_ucds[field_name]
+        if field_name in field_utypes:
+            field.utype = field_utypes[field_name]
+    return votablefile
+
+
+def write_voparquet_in_common_metadata(
+    catalog_base_dir: str | Path | UPath,
+    *,
+    field_units: dict = None,
+    field_ucds: dict = None,
+    field_descriptions: dict = None,
+    field_utypes: dict = None,
+):
+    """Create VOTableFile metadata, based on the names and types of fields in the parquet files,
+    and write to a ``catalog_base_dir/dataset/_common_metadata`` parquet file.
+
+    Add ancillary attributes to fields where they are provided in the optional dictionaries.
+
+    Note on field names with nested columns: to include ancillary attributes (units, ucds, etc)
+    for a nested sub-column, use dot notation (e.g. ``"lightcurve.band"``). You can add ancillary
+    attributes for the entire nested column group using the nested column name (e.g. ``"lightcurve"``).
+
+    Parameters
+    ----------
+    catalog_base_dir : str | Path | UPath
+        base path for the catalog
+    field_units: dict | None
+        dictionary mapping column names to astropy units (or string representation of units)
+    field_ucds: dict | None
+        dictionary mapping column names to UCDs (Uniform Content Descriptors)
+    field_descriptions: dict | None
+        dictionary mapping column names to free-text descriptions
+    field_utypes: dict | None
+        dictionary mapping column names to utypes
+    """
+    votablefile = pa_schema_to_vo_schema(
+        catalog_base_dir=catalog_base_dir,
+        field_units=field_units,
+        field_ucds=field_ucds,
+        field_descriptions=field_descriptions,
+        field_utypes=field_utypes,
+    )
+
+    xml_bstr = io.BytesIO()
+    votablefile.to_xml(xml_bstr)
+    xml_str = xml_bstr.getvalue().decode("utf-8")
+
+    common_metadata_file_pointer = paths.get_common_metadata_pointer(catalog_base_dir)
+
+    pa_schema = file_io.read_parquet_metadata(common_metadata_file_pointer).schema.to_arrow_schema()
+
+    original_metadata = pa_schema.metadata or {}
+    updated_metadata = original_metadata | {
+        b"IVOA.VOTable-Parquet.version": b"1.0",
+        b"IVOA.VOTable-Parquet.content": xml_str,
+    }
+
+    pa_schema = pa_schema.with_metadata(updated_metadata)
+
+    file_io.write_parquet_metadata(pa_schema, common_metadata_file_pointer)
