@@ -10,7 +10,6 @@ import nested_pandas as npd
 import numpy as np
 import pandas as pd
 import pyarrow as pa
-import pyarrow.dataset as pds
 import pyarrow.parquet as pq
 from astropy.io.votable.tree import FieldRef, Group, Param, VOTableFile
 from astropy.table import Table
@@ -132,29 +131,6 @@ def write_parquet_metadata(
             pq.write_table(data_thumbnail, f_out)
 
     return total_rows
-
-
-def read_row_group_fragments(metadata_file: str):
-    """Generator for metadata fragment row groups in a parquet metadata file.
-
-    Parameters
-    ----------
-    metadata_file : str
-        path to `_metadata` file.
-
-    Yields
-    ------
-    RowGroupFragment
-        metadata for individual row groups
-    """
-    metadata_file = get_upath(metadata_file)
-    if not file_io.is_regular_file(metadata_file):
-        metadata_file = paths.get_parquet_metadata_pointer(metadata_file)
-
-    dataset = pds.parquet_dataset(metadata_file, filesystem=metadata_file.fs)
-
-    for frag in dataset.get_fragments():
-        yield from frag.row_groups
 
 
 def _nonemin(value1, value2):
@@ -522,6 +498,7 @@ def pick_metadata_schema_file(catalog_base_dir: str | Path | UPath) -> UPath | N
 def pa_schema_to_vo_schema(
     catalog_base_dir: str | Path | UPath,
     *,
+    verbose: bool = False,
     field_units: dict | None = None,
     field_ucds: dict | None = None,
     field_descriptions: dict | None = None,
@@ -539,6 +516,8 @@ def pa_schema_to_vo_schema(
     ----------
     catalog_base_dir : str | Path | UPath
         base path for the catalog
+    verbose: bool
+        Should we print out additional debugging statements about the vo metadata?
     field_units: dict | None
         dictionary mapping column names to astropy units (or string representation of units)
     field_ucds: dict | None
@@ -580,17 +559,20 @@ def pa_schema_to_vo_schema(
             data_types.append(str(val))
     data_types = ["U" if t == "string" else t for t in data_types]
 
-    # Might have extra descriptions for nested columns.
+    # Might have extra content for nested columns.
     named_descriptions = {key: field_descriptions[key] for key in field_descriptions if key in names}
     named_units = {key: field_units[key] for key in field_units if key in names}
-    if len(named_units) != len(field_units):
-        dropped_keys = set(field_units.keys()) - set(named_units.keys())
-        print(f"warning - dropping some units: ({len(dropped_keys)})")
-        print(dropped_keys)
-    if len(named_descriptions) != len(field_descriptions):
-        dropped_keys = set(field_descriptions.keys()) - set(named_descriptions.keys())
-        print(f"warning - dropping some descriptions: ({len(dropped_keys)})")
-        print(dropped_keys)
+    if verbose:
+        dropped_keys_units = set(field_units.keys()) - set(named_units.keys())
+        dropped_keys_desc = set(field_descriptions.keys()) - set(named_descriptions.keys())
+        if dropped_keys_units or dropped_keys_desc:
+            print("================== Extra Fields ==================")
+        if dropped_keys_units:
+            print(f"warning - dropping some units ({len(dropped_keys_units)}):")
+            print(dropped_keys_units)
+        if dropped_keys_desc:
+            print(f"warning - dropping some descriptions ({len(dropped_keys_desc)}):")
+            print(dropped_keys_desc)
 
     t = Table(names=names, dtype=data_types, units=named_units, descriptions=named_descriptions)
 
@@ -629,10 +611,11 @@ def pa_schema_to_vo_schema(
 def write_voparquet_in_common_metadata(
     catalog_base_dir: str | Path | UPath,
     *,
-    field_units: dict = None,
-    field_ucds: dict = None,
-    field_descriptions: dict = None,
-    field_utypes: dict = None,
+    verbose: bool = False,
+    field_units: dict | None = None,
+    field_ucds: dict | None = None,
+    field_descriptions: dict | None = None,
+    field_utypes: dict | None = None,
 ):
     """Create VOTableFile metadata, based on the names and types of fields in the parquet files,
     and write to a ``catalog_base_dir/dataset/_common_metadata`` parquet file.
@@ -647,6 +630,8 @@ def write_voparquet_in_common_metadata(
     ----------
     catalog_base_dir : str | Path | UPath
         base path for the catalog
+    verbose: bool
+        Should we print out additional debugging statements about the vo metadata?
     field_units: dict | None
         dictionary mapping column names to astropy units (or string representation of units)
     field_ucds: dict | None
@@ -657,6 +642,7 @@ def write_voparquet_in_common_metadata(
         dictionary mapping column names to utypes
     """
     votablefile = pa_schema_to_vo_schema(
+        verbose=verbose,
         catalog_base_dir=catalog_base_dir,
         field_units=field_units,
         field_ucds=field_ucds,
@@ -667,6 +653,9 @@ def write_voparquet_in_common_metadata(
     xml_bstr = io.BytesIO()
     votablefile.to_xml(xml_bstr)
     xml_str = xml_bstr.getvalue().decode("utf-8")
+    if verbose:
+        print("================== Table XML ==================")
+        print(xml_str)
 
     common_metadata_file_pointer = paths.get_common_metadata_pointer(catalog_base_dir)
 
