@@ -1,16 +1,9 @@
 from unittest.mock import MagicMock
 
 import astropy.units as u
-import matplotlib as mpl
-import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 from astropy.coordinates import Angle, SkyCoord
-from astropy.visualization.wcsaxes.frame import EllipticalFrame, RectangularFrame
-from matplotlib import colors
-from matplotlib.colors import LogNorm, Normalize
-from matplotlib.path import Path
-from matplotlib.pyplot import get_cmap
 from mocpy import MOC, WCS
 from mocpy.moc.plot import fill
 from mocpy.moc.plot.culling_backfacing_cells import from_moc
@@ -19,19 +12,16 @@ from mocpy.moc.plot.utils import build_plotting_moc
 import hats.pixel_math.healpix_shim as hp
 from hats import read_hats
 from hats.inspection import plot_density, plot_pixels
-from hats.inspection.visualize_catalog import (
+from hats.inspection._plotting import (
+    _compute_healpix_vertices,
+    _cull_from_pixel_map,
+    _cull_to_fov,
+    _get_fov_moc_from_wcs,
     _merge_too_small_pixels,
-    compute_healpix_vertices,
-    cull_from_pixel_map,
-    cull_to_fov,
-    get_fov_moc_from_wcs,
-    plot_healpix_map,
-    plot_moc,
 )
+from hats.inspection.visualize_catalog import plot_healpix_map, plot_moc
 
 # pylint: disable=no-member
-
-mpl.use("Agg")
 
 DEFAULT_CMAP_NAME = "viridis"
 DEFAULT_FOV = (320 * u.deg, 160 * u.deg)
@@ -44,10 +34,15 @@ DEFAULT_PROJECTION = "MOL"
 @pytest.fixture(autouse=True)
 def reset_matplotlib():
     yield
+    plt = pytest.importorskip("matplotlib.pyplot")
+    import matplotlib as mpl
+
+    mpl.use("Agg")
     plt.close("all")
 
 
 def test_healpix_vertices():
+    plt = pytest.importorskip("matplotlib.pyplot")
     depth = 3
     ipix = np.array([10, 11])
     fig = plt.figure()
@@ -59,13 +54,16 @@ def test_healpix_vertices():
         rotation=DEFAULT_ROTATION,
         projection=DEFAULT_PROJECTION,
     ).w
-    paths, codes = compute_healpix_vertices(depth, ipix, wcs)
+    paths, codes = _compute_healpix_vertices(depth, ipix, wcs)
     mocpy_paths, mocpy_codes = fill.compute_healpix_vertices(depth, ipix, wcs)
     np.testing.assert_array_equal(paths, mocpy_paths)
     np.testing.assert_array_equal(codes, mocpy_codes)
 
 
 def test_healpix_vertices_step():
+    plt = pytest.importorskip("matplotlib.pyplot")
+    from matplotlib.path import Path
+
     depth = 1
     ipix = np.array([10, 11])
     fig = plt.figure()
@@ -78,7 +76,7 @@ def test_healpix_vertices_step():
         rotation=DEFAULT_ROTATION,
         projection=DEFAULT_PROJECTION,
     ).w
-    paths, codes = compute_healpix_vertices(depth, ipix, wcs, step=step)
+    paths, codes = _compute_healpix_vertices(depth, ipix, wcs, step=step)
     # checks the codes match the expected matplotlib path codes
     np.testing.assert_array_equal(
         codes, np.tile(np.array([Path.MOVETO] + [Path.LINETO] * (step * 4 - 1) + [Path.CLOSEPOLY]), len(ipix))
@@ -93,6 +91,12 @@ def test_healpix_vertices_step():
 
 
 def test_plot_healpix_pixels():
+    pytest.importorskip("matplotlib.pyplot")
+
+    from astropy.visualization.wcsaxes.frame import EllipticalFrame
+    from matplotlib.colors import Normalize
+    from matplotlib.pyplot import get_cmap
+
     order = 3
     length = 10
     ipix = np.arange(length)
@@ -119,7 +123,7 @@ def test_plot_healpix_pixels():
         projection=DEFAULT_PROJECTION,
     ).w
     for path, ipix in zip(paths, ipix):
-        verts, codes = compute_healpix_vertices(order, np.array([ipix]), wcs)
+        verts, codes = _compute_healpix_vertices(order, np.array([ipix]), wcs)
         np.testing.assert_array_equal(path.vertices, verts)
         np.testing.assert_array_equal(path.codes, codes)
     np.testing.assert_array_equal(col.get_array(), pix_map)
@@ -127,6 +131,8 @@ def test_plot_healpix_pixels():
 
 
 def test_plot_healpix_pixels_different_order():
+    pytest.importorskip("matplotlib.pyplot")
+
     order = 6
     length = 1000
     ipix = np.arange(length)
@@ -146,7 +152,7 @@ def test_plot_healpix_pixels_different_order():
         projection=DEFAULT_PROJECTION,
     ).w
 
-    all_verts, all_codes = compute_healpix_vertices(order, ipix, wcs)
+    all_verts, all_codes = _compute_healpix_vertices(order, ipix, wcs)
     for i, (path, ipix) in enumerate(zip(paths, ipix)):
         verts, codes = all_verts[i * 5 : (i + 1) * 5], all_codes[i * 5 : (i + 1) * 5]
         np.testing.assert_array_equal(path.vertices, verts)
@@ -155,6 +161,8 @@ def test_plot_healpix_pixels_different_order():
 
 
 def test_order_0_pixel_plots_with_step():
+    pytest.importorskip("matplotlib.pyplot")
+
     map_value = 0.5
     order_0_pix = 4
     ipix = np.array([order_0_pix])
@@ -174,7 +182,7 @@ def test_order_0_pixel_plots_with_step():
         rotation=DEFAULT_ROTATION,
         projection=DEFAULT_PROJECTION,
     ).w
-    all_verts, all_codes = compute_healpix_vertices(0, ipix, wcs, step=2**3)
+    all_verts, all_codes = _compute_healpix_vertices(0, ipix, wcs, step=2**3)
     # assert the number of vertices == number of pixels * 4 sides per pixel * steps per side + 1 for the
     # close polygon
     assert len(all_verts) == len(ipix) * 4 * (2**3) + 1
@@ -184,6 +192,8 @@ def test_order_0_pixel_plots_with_step():
 
 
 def test_edge_pixels_split_to_order_7():
+    pytest.importorskip("matplotlib.pyplot")
+
     map_value = 0.5
     order_0_pix = 2
     ipix = np.array([order_0_pix])
@@ -224,13 +234,15 @@ def test_edge_pixels_split_to_order_7():
     pixels = np.concatenate([np.array(x) for _, x in non_edge_pixels.items()])
     for path, iter_ord, pix in zip(paths, ords, pixels):
         step = 1 if iter_ord >= 3 else 2 ** (3 - iter_ord)
-        verts, codes = compute_healpix_vertices(iter_ord, np.array([pix]), wcs, step=step)
+        verts, codes = _compute_healpix_vertices(iter_ord, np.array([pix]), wcs, step=step)
         np.testing.assert_array_equal(path.vertices, verts)
         np.testing.assert_array_equal(path.codes, codes)
     np.testing.assert_array_equal(col.get_array(), np.full(length, fill_value=map_value))
 
 
 def test_cull_from_pixel_map():
+    plt = pytest.importorskip("matplotlib.pyplot")
+
     order = 3
     ipix = np.arange(12 * 4**order)
     pix_map = np.arange(12 * 4**order)
@@ -244,7 +256,7 @@ def test_cull_from_pixel_map():
         rotation=DEFAULT_ROTATION,
         projection=DEFAULT_PROJECTION,
     ).w
-    culled_dict = cull_from_pixel_map(map_dict, wcs)
+    culled_dict = _cull_from_pixel_map(map_dict, wcs)
     mocpy_culled = from_moc({str(order): ipix}, wcs)
     for iter_ord, (pixels, m) in culled_dict.items():
         np.testing.assert_array_equal(pixels, mocpy_culled[str(iter_ord)])
@@ -253,6 +265,8 @@ def test_cull_from_pixel_map():
 
 
 def test_fov_moc():
+    plt = pytest.importorskip("matplotlib.pyplot")
+
     fig = plt.figure(figsize=(10, 5))
     fov = (20 * u.deg, 10 * u.deg)
     center = SkyCoord(10, 10, unit="deg", frame="icrs")
@@ -264,7 +278,7 @@ def test_fov_moc():
         rotation=DEFAULT_ROTATION,
         projection=DEFAULT_PROJECTION,
     ).w
-    fov_moc = get_fov_moc_from_wcs(wcs)
+    fov_moc = _get_fov_moc_from_wcs(wcs)
     fov_hp_order = hp.avgsize2order((fov[0]).value * 3600)
     assert fov_moc.max_order >= fov_hp_order
     ras_in = np.linspace(center.ra - (fov[0] / 2), center.ra + (fov[0] / 2))
@@ -276,6 +290,8 @@ def test_fov_moc():
 
 
 def test_fov_moc_small():
+    plt = pytest.importorskip("matplotlib.pyplot")
+
     fig = plt.figure(figsize=(10, 5))
     fov = (20 * u.arcsec, 10 * u.arcsec)
     center = SkyCoord(10, 10, unit="deg", frame="icrs")
@@ -287,7 +303,7 @@ def test_fov_moc_small():
         rotation=DEFAULT_ROTATION,
         projection=DEFAULT_PROJECTION,
     ).w
-    fov_moc = get_fov_moc_from_wcs(wcs)
+    fov_moc = _get_fov_moc_from_wcs(wcs)
     fov_hp_order = hp.avgsize2order((fov[0]).value)
     assert fov_moc.max_order >= fov_hp_order
     ras_in = np.linspace(center.ra - (fov[0] / 2), center.ra + (fov[0] / 2))
@@ -299,6 +315,8 @@ def test_fov_moc_small():
 
 
 def test_cull_to_fov():
+    plt = pytest.importorskip("matplotlib.pyplot")
+
     order = 4
     ipix = np.arange(12 * 4**order)
     pix_map = np.arange(12 * 4**order)
@@ -312,7 +330,7 @@ def test_cull_to_fov():
         rotation=DEFAULT_ROTATION,
         projection=DEFAULT_PROJECTION,
     ).w
-    culled_dict = cull_to_fov(map_dict, wcs)
+    culled_dict = _cull_to_fov(map_dict, wcs)
     moc = MOC.from_healpix_cells(ipix, np.full(ipix.shape, fill_value=order), max_depth=order)
     mocpy_culled = build_plotting_moc(moc, wcs)
     for iter_ord, (pixels, m) in culled_dict.items():
@@ -341,6 +359,8 @@ def test_cull_to_fov():
 
 
 def test_cull_to_fov_subsamples_high_order():
+    plt = pytest.importorskip("matplotlib.pyplot")
+
     order = 10
     ipix = np.arange(12 * 4**order)
     pix_map = np.arange(12 * 4**order)
@@ -355,7 +375,7 @@ def test_cull_to_fov_subsamples_high_order():
         projection=DEFAULT_PROJECTION,
     ).w
     with pytest.warns(match="smaller"):
-        culled_dict = cull_to_fov(map_dict, wcs)
+        culled_dict = _cull_to_fov(map_dict, wcs)
     # Get the WCS cdelt giving the deg.px^(-1) resolution.
     cdelt = wcs.wcs.cdelt
     # Convert in rad.px^(-1)
@@ -373,6 +393,8 @@ def test_cull_to_fov_subsamples_high_order():
 
 
 def test_cull_to_fov_subsamples_multiple_orders():
+    plt = pytest.importorskip("matplotlib.pyplot")
+
     depth = np.array([0, 5, 8, 10])
     ipix = np.array([10, 5, 4, 2])
     pix_map = np.array([1, 2, 3, 4])
@@ -387,7 +409,7 @@ def test_cull_to_fov_subsamples_multiple_orders():
         projection=DEFAULT_PROJECTION,
     ).w
     with pytest.warns(match="smaller"):
-        culled_dict = cull_to_fov(map_dict, wcs)
+        culled_dict = _cull_to_fov(map_dict, wcs)
     # Get the WCS cdelt giving the deg.px^(-1) resolution.
     cdelt = wcs.wcs.cdelt
     # Convert in rad.px^(-1)
@@ -409,6 +431,8 @@ def test_cull_to_fov_subsamples_multiple_orders():
 
 
 def test_plot_healpix_map():
+    pytest.importorskip("matplotlib.pyplot")
+
     order = 1
     ipix = np.arange(12 * 4**order)
     pix_map = np.arange(12 * 4**order)
@@ -425,13 +449,13 @@ def test_plot_healpix_map():
         projection=DEFAULT_PROJECTION,
     ).w
     map_dict = {order: (ipix, pix_map)}
-    culled_dict = cull_from_pixel_map(map_dict, wcs)
+    culled_dict = _cull_from_pixel_map(map_dict, wcs)
     all_vals = []
     start_i = 0
     for iter_ord, (pixels, pix_map) in culled_dict.items():
         step = 1 if iter_ord >= 3 else 2 ** (3 - iter_ord)
         vert_len = step * 4 + 1
-        all_verts, all_codes = compute_healpix_vertices(iter_ord, pixels, wcs, step=step)
+        all_verts, all_codes = _compute_healpix_vertices(iter_ord, pixels, wcs, step=step)
         for i, _ in enumerate(pixels):
             verts, codes = (
                 all_verts[i * vert_len : (i + 1) * vert_len],
@@ -447,6 +471,10 @@ def test_plot_healpix_map():
 
 
 def test_plot_wcs_params():
+    pytest.importorskip("matplotlib.pyplot")
+
+    from astropy.visualization.wcsaxes.frame import RectangularFrame
+
     order = 3
     length = 10
     ipix = np.arange(length)
@@ -473,7 +501,7 @@ def test_plot_wcs_params():
         projection="AIT",
     ).w
     for path, ipix in zip(paths, np.arange(len(pix_map))):
-        verts, codes = compute_healpix_vertices(order, np.array([ipix]), wcs)
+        verts, codes = _compute_healpix_vertices(order, np.array([ipix]), wcs)
         np.testing.assert_array_equal(path.vertices, verts)
         np.testing.assert_array_equal(path.codes, codes)
     np.testing.assert_array_equal(col.get_array(), pix_map)
@@ -482,6 +510,10 @@ def test_plot_wcs_params():
 
 
 def test_plot_wcs_params_frame():
+    pytest.importorskip("matplotlib.pyplot")
+
+    from astropy.visualization.wcsaxes.frame import EllipticalFrame
+
     order = 3
     length = 10
     ipix = np.arange(length)
@@ -509,7 +541,7 @@ def test_plot_wcs_params_frame():
         projection="AIT",
     ).w
     for path, ipix in zip(paths, np.arange(len(pix_map))):
-        verts, codes = compute_healpix_vertices(order, np.array([ipix]), wcs)
+        verts, codes = _compute_healpix_vertices(order, np.array([ipix]), wcs)
         np.testing.assert_array_equal(path.vertices, verts)
         np.testing.assert_array_equal(path.codes, codes)
     np.testing.assert_array_equal(col.get_array(), pix_map)
@@ -518,6 +550,10 @@ def test_plot_wcs_params_frame():
 
 
 def test_plot_fov_culling():
+    pytest.importorskip("matplotlib.pyplot")
+
+    from astropy.visualization.wcsaxes.frame import RectangularFrame
+
     order = 3
     length = 10
     ipix = np.arange(length)
@@ -543,11 +579,11 @@ def test_plot_fov_culling():
         projection="AIT",
     ).w
     map_dict = {order: (ipix, pix_map)}
-    culled_dict = cull_to_fov(map_dict, wcs)
+    culled_dict = _cull_to_fov(map_dict, wcs)
     all_vals = []
     start_i = 0
     for iter_ord, (pixels, pix_map) in culled_dict.items():
-        all_verts, all_codes = compute_healpix_vertices(iter_ord, pixels, wcs)
+        all_verts, all_codes = _compute_healpix_vertices(iter_ord, pixels, wcs)
         for i, _ in enumerate(pixels):
             verts, codes = all_verts[i * 5 : (i + 1) * 5], all_codes[i * 5 : (i + 1) * 5]
             path = paths[start_i + i]
@@ -562,6 +598,8 @@ def test_plot_fov_culling():
 
 
 def test_plot_wcs():
+    plt = pytest.importorskip("matplotlib.pyplot")
+
     order = 3
     length = 10
     ipix = np.arange(length)
@@ -583,7 +621,7 @@ def test_plot_wcs():
     paths = col.get_paths()
     assert len(paths) == length
     for path, ipix in zip(paths, np.arange(len(pix_map))):
-        verts, codes = compute_healpix_vertices(order, np.array([ipix]), wcs)
+        verts, codes = _compute_healpix_vertices(order, np.array([ipix]), wcs)
         np.testing.assert_array_equal(path.vertices, verts)
         np.testing.assert_array_equal(path.codes, codes)
     np.testing.assert_array_equal(col.get_array(), pix_map)
@@ -591,6 +629,10 @@ def test_plot_wcs():
 
 
 def test_plot_wcs_and_ax():
+    plt = pytest.importorskip("matplotlib.pyplot")
+
+    from astropy.visualization.wcsaxes.frame import EllipticalFrame
+
     order = 3
     length = 10
     ipix = np.arange(length)
@@ -615,7 +657,7 @@ def test_plot_wcs_and_ax():
     paths = col.get_paths()
     assert len(paths) == length
     for path, ipix in zip(paths, np.arange(len(pix_map))):
-        verts, codes = compute_healpix_vertices(order, np.array([ipix]), wcs)
+        verts, codes = _compute_healpix_vertices(order, np.array([ipix]), wcs)
         np.testing.assert_array_equal(path.vertices, verts)
         np.testing.assert_array_equal(path.codes, codes)
     np.testing.assert_array_equal(col.get_array(), pix_map)
@@ -623,6 +665,10 @@ def test_plot_wcs_and_ax():
 
 
 def test_plot_ax_no_wcs():
+    plt = pytest.importorskip("matplotlib.pyplot")
+
+    from astropy.visualization.wcsaxes.frame import EllipticalFrame
+
     order = 3
     length = 10
     ipix = np.arange(length)
@@ -647,7 +693,7 @@ def test_plot_ax_no_wcs():
     paths = col.get_paths()
     assert len(paths) == length
     for path, ipix in zip(paths, np.arange(len(pix_map))):
-        verts, codes = compute_healpix_vertices(order, np.array([ipix]), wcs)
+        verts, codes = _compute_healpix_vertices(order, np.array([ipix]), wcs)
         np.testing.assert_array_equal(path.vertices, verts)
         np.testing.assert_array_equal(path.codes, codes)
     np.testing.assert_array_equal(col.get_array(), pix_map)
@@ -655,6 +701,10 @@ def test_plot_ax_no_wcs():
 
 
 def test_plot_cmaps():
+    pytest.importorskip("matplotlib.pyplot")
+
+    from matplotlib.pyplot import get_cmap
+
     order = 3
     length = 10
     cmap_name = "plasma"
@@ -678,7 +728,7 @@ def test_plot_cmaps():
         projection=DEFAULT_PROJECTION,
     ).w
     for path, ipix in zip(paths, np.arange(len(pix_map))):
-        verts, codes = compute_healpix_vertices(order, np.array([ipix]), wcs)
+        verts, codes = _compute_healpix_vertices(order, np.array([ipix]), wcs)
         np.testing.assert_array_equal(path.vertices, verts)
         np.testing.assert_array_equal(path.codes, codes)
     np.testing.assert_array_equal(col.get_array(), pix_map)
@@ -695,13 +745,16 @@ def test_plot_cmaps():
     assert col.colorbar.cmap == get_cmap(cmap_name)
     assert len(paths) == length
     for path, ipix in zip(paths, np.arange(len(pix_map))):
-        verts, codes = compute_healpix_vertices(order, np.array([ipix]), wcs)
+        verts, codes = _compute_healpix_vertices(order, np.array([ipix]), wcs)
         np.testing.assert_array_equal(path.vertices, verts)
         np.testing.assert_array_equal(path.codes, codes)
     np.testing.assert_array_equal(col.get_array(), pix_map)
 
 
 def test_plot_norm():
+    pytest.importorskip("matplotlib.pyplot")
+    from matplotlib.colors import LogNorm
+
     order = 3
     length = 10
     norm = LogNorm()
@@ -725,13 +778,15 @@ def test_plot_norm():
         projection=DEFAULT_PROJECTION,
     ).w
     for path, ipix in zip(paths, np.arange(len(pix_map))):
-        verts, codes = compute_healpix_vertices(order, np.array([ipix]), wcs)
+        verts, codes = _compute_healpix_vertices(order, np.array([ipix]), wcs)
         np.testing.assert_array_equal(path.vertices, verts)
         np.testing.assert_array_equal(path.codes, codes)
     np.testing.assert_array_equal(col.get_array(), pix_map)
 
 
 def test_plot_no_cbar():
+    pytest.importorskip("matplotlib.pyplot")
+
     order = 3
     length = 10
     ipix = np.arange(length)
@@ -752,13 +807,15 @@ def test_plot_no_cbar():
         projection=DEFAULT_PROJECTION,
     ).w
     for path, ipix in zip(paths, np.arange(len(pix_map))):
-        verts, codes = compute_healpix_vertices(order, np.array([ipix]), wcs)
+        verts, codes = _compute_healpix_vertices(order, np.array([ipix]), wcs)
         np.testing.assert_array_equal(path.vertices, verts)
         np.testing.assert_array_equal(path.codes, codes)
     np.testing.assert_array_equal(col.get_array(), pix_map)
 
 
 def test_plot_kwargs():
+    pytest.importorskip("matplotlib.pyplot")
+
     order = 3
     length = 10
     label = "test"
@@ -780,13 +837,15 @@ def test_plot_kwargs():
         projection=DEFAULT_PROJECTION,
     ).w
     for path, ipix in zip(paths, np.arange(len(pix_map))):
-        verts, codes = compute_healpix_vertices(order, np.array([ipix]), wcs)
+        verts, codes = _compute_healpix_vertices(order, np.array([ipix]), wcs)
         np.testing.assert_array_equal(path.vertices, verts)
         np.testing.assert_array_equal(path.codes, codes)
     np.testing.assert_array_equal(col.get_array(), pix_map)
 
 
 def test_plot_existing_fig():
+    plt = pytest.importorskip("matplotlib.pyplot")
+
     order = 3
     length = 10
     ipix = np.arange(length)
@@ -811,13 +870,15 @@ def test_plot_existing_fig():
         projection=DEFAULT_PROJECTION,
     ).w
     for path, ipix in zip(paths, np.arange(len(pix_map))):
-        verts, codes = compute_healpix_vertices(order, np.array([ipix]), wcs)
+        verts, codes = _compute_healpix_vertices(order, np.array([ipix]), wcs)
         np.testing.assert_array_equal(path.vertices, verts)
         np.testing.assert_array_equal(path.codes, codes)
     np.testing.assert_array_equal(col.get_array(), pix_map)
 
 
 def test_plot_existing_wcsaxes():
+    plt = pytest.importorskip("matplotlib.pyplot")
+
     order = 3
     length = 10
     ipix = np.arange(length)
@@ -843,13 +904,15 @@ def test_plot_existing_wcsaxes():
     paths = col.get_paths()
     assert len(paths) == length
     for path, ipix in zip(paths, np.arange(len(pix_map))):
-        verts, codes = compute_healpix_vertices(order, np.array([ipix]), wcs)
+        verts, codes = _compute_healpix_vertices(order, np.array([ipix]), wcs)
         np.testing.assert_array_equal(path.vertices, verts)
         np.testing.assert_array_equal(path.codes, codes)
     np.testing.assert_array_equal(col.get_array(), pix_map)
 
 
 def test_plot_existing_wrong_axes():
+    plt = pytest.importorskip("matplotlib.pyplot")
+
     order = 3
     length = 10
     ipix = np.arange(length)
@@ -877,7 +940,7 @@ def test_plot_existing_wrong_axes():
     ).w
     assert len(paths) == length
     for path, ipix in zip(paths, np.arange(len(pix_map))):
-        verts, codes = compute_healpix_vertices(order, np.array([ipix]), wcs)
+        verts, codes = _compute_healpix_vertices(order, np.array([ipix]), wcs)
         np.testing.assert_array_equal(path.vertices, verts)
         np.testing.assert_array_equal(path.codes, codes)
     np.testing.assert_array_equal(col.get_array(), pix_map)
@@ -887,6 +950,8 @@ def test_plot_existing_wrong_axes():
 def test_catalog_plot_density(small_sky_dir):
     """Test plotting pixel-density for on-disk catalog.
     Confirm plotting at lower order doesn't have a warning, and creates fewer plot paths."""
+    pytest.importorskip("matplotlib.pyplot")
+
     small_sky_source_catalog = read_hats(small_sky_dir)
     with pytest.warns(match="smaller"):
         _, ax = plot_density(small_sky_source_catalog)
@@ -901,6 +966,8 @@ def test_catalog_plot_density(small_sky_dir):
 
 
 def test_catalog_plot_density_errors(small_sky_source_dir):
+    pytest.importorskip("matplotlib.pyplot")
+
     small_sky_source_catalog = read_hats(small_sky_source_dir)
     with pytest.raises(ValueError, match="order should be less"):
         plot_density(small_sky_source_catalog, order=13)
@@ -932,6 +999,8 @@ def test_plot_pixels_empty_region_or_no_remaining():
 
 
 def test_catalog_plot(small_sky_order1_catalog):
+    pytest.importorskip("matplotlib.pyplot")
+
     fig, ax = plot_pixels(small_sky_order1_catalog)
     pixels = sorted(small_sky_order1_catalog.get_healpix_pixels())
     col = ax.collections[0]
@@ -947,7 +1016,7 @@ def test_catalog_plot(small_sky_order1_catalog):
     ).w
     for p, path in zip(pixels, paths):
         step = 2 ** (3 - p.order)
-        verts, codes = compute_healpix_vertices(p.order, np.array([p.pixel]), wcs, step=step)
+        verts, codes = _compute_healpix_vertices(p.order, np.array([p.pixel]), wcs, step=step)
         np.testing.assert_array_equal(path.vertices, verts)
         np.testing.assert_array_equal(path.codes, codes)
     np.testing.assert_array_equal(col.get_array(), np.array([p.order for p in pixels]))
@@ -955,6 +1024,9 @@ def test_catalog_plot(small_sky_order1_catalog):
 
 
 def test_catalog_plot_no_color_by_order(small_sky_order1_catalog):
+    pytest.importorskip("matplotlib.pyplot")
+    from matplotlib import colors
+
     fc = "white"
     ec = "black"
     fig, ax = plot_pixels(small_sky_order1_catalog, color_by_order=False, facecolor=fc, edgecolor=ec)
@@ -972,7 +1044,7 @@ def test_catalog_plot_no_color_by_order(small_sky_order1_catalog):
     ).w
     for p, path in zip(pixels, paths):
         step = 2 ** (3 - p.order)
-        verts, codes = compute_healpix_vertices(p.order, np.array([p.pixel]), wcs, step=step)
+        verts, codes = _compute_healpix_vertices(p.order, np.array([p.pixel]), wcs, step=step)
         np.testing.assert_array_equal(path.vertices, verts)
         np.testing.assert_array_equal(path.codes, codes)
     assert col.get_array() is None
@@ -982,6 +1054,8 @@ def test_catalog_plot_no_color_by_order(small_sky_order1_catalog):
 
 
 def test_plot_moc(small_sky_order1_catalog):
+    pytest.importorskip("matplotlib.pyplot")
+
     small_sky_order1_catalog.moc.fill = MagicMock()
     _, ax = plot_moc(small_sky_order1_catalog.moc)
     small_sky_order1_catalog.moc.fill.assert_called_once()
@@ -991,6 +1065,8 @@ def test_plot_moc(small_sky_order1_catalog):
 
 
 def test_plot_moc_catalog(small_sky_order1_catalog):
+    pytest.importorskip("matplotlib.pyplot")
+
     small_sky_order1_catalog.moc.fill = MagicMock()
     _, ax = small_sky_order1_catalog.plot_moc()
     small_sky_order1_catalog.moc.fill.assert_called_once()
