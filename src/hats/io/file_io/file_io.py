@@ -384,7 +384,7 @@ def read_parquet_file_to_pandas(file_pointer: str | Path | UPath, **kwargs) -> n
     # If we are trying to read a remote directory, we need to send the explicit list of files instead.
     # We don't want to get the list unnecessarily because it can be expensive.
     if file_pointer.protocol not in ("", "file") and file_pointer.is_dir():  # pragma: no cover
-        file_pointers = [f for f in file_pointer.iterdir() if f.is_file()]
+        file_pointers = [f.path for f in file_pointer.iterdir() if f.is_file()]
         return npd.read_parquet(
             file_pointers,
             filesystem=file_pointer.fs,
