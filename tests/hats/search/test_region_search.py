@@ -63,8 +63,8 @@ def test_cone_filter_correct_points(small_sky_catalog):
             assert len(cone_search_df.loc[cone_search_df["id"] == row["id"]]) == 0
 
 
-@pytest.mark.sphgeom
 def test_polygon_search_filters_correct_points(small_sky_catalog):
+    pytest.importorskip("lsst.sphgeom")
     vertices = [(300, -50), (300, -55), (272, -55), (272, -50)]
     polygon = get_cartesian_polygon(vertices)
 

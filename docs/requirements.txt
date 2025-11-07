@@ -1,6 +1,7 @@
 ipykernel
 ipython
 jupytext
+matplotlib
 myst_parser
 nbconvert
 nbsphinx
