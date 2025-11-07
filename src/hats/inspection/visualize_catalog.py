@@ -49,9 +49,7 @@ def plot_density(catalog: Catalog, *, plot_title: str | None = None, order=None,
     try:
         from matplotlib import pyplot as plt
     except ImportError as exc:
-        raise ImportError(
-            "matplotlib is required to use this method. Install with pip or conda."
-        ) from exc
+        raise ImportError("matplotlib is required to use this method. Install with pip or conda.") from exc
 
     if catalog is None or not catalog.on_disk:
         raise ValueError("on disk catalog required for point-wise visualization")
@@ -123,9 +121,7 @@ def plot_pixel_list(
     try:
         from matplotlib import pyplot as plt
     except ImportError as exc:
-        raise ImportError(
-            "matplotlib is required to use this method. Install with pip or conda."
-        ) from exc
+        raise ImportError("matplotlib is required to use this method. Install with pip or conda.") from exc
 
     orders = np.array([p.order for p in pixels])
     ipix = np.array([p.pixel for p in pixels])
@@ -207,9 +203,7 @@ def plot_moc(
     try:
         from matplotlib import pyplot as plt
     except ImportError as exc:
-        raise ImportError(
-            "matplotlib is required to use this method. Install with pip or conda."
-        ) from exc
+        raise ImportError("matplotlib is required to use this method. Install with pip or conda.") from exc
 
     fig, ax, wcs = _initialize_wcs_axes(
         projection=projection,
@@ -320,9 +314,7 @@ def plot_healpix_map(
     try:
         from matplotlib import pyplot as plt
     except ImportError as exc:
-        raise ImportError(
-            "matplotlib is required to use this method. Install with pip or conda."
-        ) from exc
+        raise ImportError("matplotlib is required to use this method. Install with pip or conda.") from exc
 
     if ipix is None or depth is None:
         order = int(np.ceil(np.log2(len(healpix_map) / 12) / 2))
