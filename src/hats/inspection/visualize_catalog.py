@@ -50,7 +50,7 @@ def plot_density(catalog: Catalog, *, plot_title: str | None = None, order=None,
         from matplotlib import pyplot as plt
     except ImportError as exc:
         raise ImportError(
-            "matplotlib is required to use this method. Install with hats[plotting] or hats[full]."
+            "matplotlib is required to use this method. Install with pip or conda."
         ) from exc
 
     if catalog is None or not catalog.on_disk:
@@ -124,7 +124,7 @@ def plot_pixel_list(
         from matplotlib import pyplot as plt
     except ImportError as exc:
         raise ImportError(
-            "matplotlib is required to use this method. Install with hats[plotting] or hats[full]."
+            "matplotlib is required to use this method. Install with pip or conda."
         ) from exc
 
     orders = np.array([p.order for p in pixels])
@@ -208,7 +208,7 @@ def plot_moc(
         from matplotlib import pyplot as plt
     except ImportError as exc:
         raise ImportError(
-            "matplotlib is required to use this method. Install with hats[plotting] or hats[full]."
+            "matplotlib is required to use this method. Install with pip or conda."
         ) from exc
 
     fig, ax, wcs = _initialize_wcs_axes(
@@ -321,7 +321,7 @@ def plot_healpix_map(
         from matplotlib import pyplot as plt
     except ImportError as exc:
         raise ImportError(
-            "matplotlib is required to use this method. Install with hats[plotting] or hats[full]."
+            "matplotlib is required to use this method. Install with pip or conda."
         ) from exc
 
     if ipix is None or depth is None:
