@@ -147,7 +147,7 @@ def read_row_group_fragments(metadata_file: str):
     if not file_io.is_regular_file(metadata_file):
         metadata_file = paths.get_parquet_metadata_pointer(metadata_file)
 
-    dataset = pds.parquet_dataset(metadata_file, filesystem=metadata_file.fs)
+    dataset = pds.parquet_dataset(metadata_file.path, filesystem=metadata_file.fs)
 
     for frag in dataset.get_fragments():
         yield from frag.row_groups
