@@ -29,7 +29,7 @@ class IndexCatalog(Dataset):
             that may contain rows for the id values
         """
         metadata_file = paths.get_parquet_metadata_pointer(self.catalog_base_dir)
-        dataset = pds.parquet_dataset(metadata_file, filesystem=metadata_file.fs)
+        dataset = pds.parquet_dataset(metadata_file.path, filesystem=metadata_file.fs)
 
         # There's a lot happening in a few pyarrow dataset methods:
         # We create a simple pyarrow expression that roughly corresponds to a SQL statement like
