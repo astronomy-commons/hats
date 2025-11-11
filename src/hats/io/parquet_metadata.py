@@ -258,6 +258,8 @@ def aggregate_column_statistics(
     """
     total_metadata = file_io.read_parquet_metadata(metadata_file)
     num_row_groups = total_metadata.num_row_groups
+    if num_row_groups == 0:
+        return pd.DataFrame()
     first_row_group = total_metadata.row_group(0)
 
     good_column_indexes, column_names = _pick_columns(
@@ -391,6 +393,8 @@ def per_pixel_statistics(
     """
     total_metadata = file_io.read_parquet_metadata(metadata_file)
     num_row_groups = total_metadata.num_row_groups
+    if num_row_groups == 0:
+        return pd.DataFrame()
     first_row_group = total_metadata.row_group(0)
 
     good_column_indexes, column_names = _pick_columns(

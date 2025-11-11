@@ -284,6 +284,13 @@ def test_aggregate_column_statistics_with_nulls(tmp_path):
     assert_column_stat_as_floats(result_frame, "Npix", min_value=1, max_value=6, null_count=4, row_count=6)
 
 
+def test_aggregate_column_statistics_empty_catalog(small_sky_order1_empty_margin_dir):
+    partition_info_file = paths.get_parquet_metadata_pointer(small_sky_order1_empty_margin_dir)
+
+    result_frame = aggregate_column_statistics(partition_info_file)
+    assert len(result_frame) == 0
+
+
 def test_per_pixel_statistics(small_sky_order1_dir):
     partition_info_file = paths.get_parquet_metadata_pointer(small_sky_order1_dir)
 
@@ -431,4 +438,11 @@ def test_per_pixel_statistics_with_rowgroups_empty_result(small_sky_source_dir):
     result_frame = per_pixel_statistics(
         partition_info_file, include_pixels=[HealpixPixel(1, 4)], multi_index=True
     )
+    assert len(result_frame) == 0
+
+
+def test_per_pixel_statistics_empty_catalog(small_sky_order1_empty_margin_dir):
+    partition_info_file = paths.get_parquet_metadata_pointer(small_sky_order1_empty_margin_dir)
+
+    result_frame = per_pixel_statistics(partition_info_file)
     assert len(result_frame) == 0
