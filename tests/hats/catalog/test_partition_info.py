@@ -1,6 +1,5 @@
 """Tests of partition info functionality"""
 
-import pandas as pd
 import pytest
 
 from hats.catalog import PartitionInfo
