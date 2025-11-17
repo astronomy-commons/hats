@@ -110,7 +110,7 @@ class HealpixDataset(Dataset):
             This value is undetermined when the catalog is modified, and
             therefore an error is raised.
         """
-        if self.catalog_info.total_rows == 0:
+        if self.catalog_info.total_rows is None:
             raise ValueError("The number of rows is undetermined because the catalog was modified.")
         return self.catalog_info.total_rows
 

@@ -227,7 +227,7 @@ def small_sky_collection_dir(test_data_dir) -> str:
 
 @pytest.fixture
 def small_sky_order1_empty_margin_dir(small_sky_collection_dir) -> str:
-    return small_sky_collection_dir / "small_sky_order1_margin_empty"
+    return small_sky_collection_dir / "small_sky_order1_margin_10arcs"
 
 
 @pytest.fixture

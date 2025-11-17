@@ -14,7 +14,7 @@ def test_read_hats_collection(small_sky_collection_dir, small_sky_order1_catalog
     assert isinstance(collection, CatalogCollection)
     assert collection.collection_path == small_sky_collection_dir
     assert collection.main_catalog_dir == small_sky_collection_dir / "small_sky_order1"
-    assert collection.all_margins == ["small_sky_order1_margin"]
+    assert collection.all_margins == ["small_sky_order1_margin", "small_sky_order1_margin_10arcs"]
     assert collection.default_margin_catalog_dir == small_sky_collection_dir / "small_sky_order1_margin"
     assert collection.all_indexes == {"id": "small_sky_order1_id_index"}
     assert collection.default_index_field == "id"
