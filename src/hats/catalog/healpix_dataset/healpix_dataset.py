@@ -224,7 +224,7 @@ class HealpixDataset(Dataset):
         """
         filtered_tree = filter_by_moc(self.pixel_tree, moc)
         filtered_moc = self.moc.intersection(moc) if self.moc is not None else None
-        filtered_catalog_info = self.catalog_info.copy_and_update(total_rows=0)
+        filtered_catalog_info = self.catalog_info.copy_and_update(total_rows=None)
         return self.__class__(
             filtered_catalog_info,
             pixels=filtered_tree,

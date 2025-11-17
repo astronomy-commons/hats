@@ -215,7 +215,7 @@ def test_cone_filter(small_sky_order1_catalog):
     assert filtered_pixels == [HealpixPixel(1, 44)]
 
     assert (1, 44) in filtered_catalog.pixel_tree
-    assert filtered_catalog.catalog_info.total_rows == 0
+    assert filtered_catalog.catalog_info.total_rows is None
 
     assert filtered_catalog.moc is not None
     cone_moc = MOC.from_cone(
@@ -270,7 +270,7 @@ def test_polygonal_filter(small_sky_order1_catalog):
     assert len(filtered_pixels) == 1
     assert filtered_pixels == [HealpixPixel(1, 46)]
     assert (1, 46) in filtered_catalog.pixel_tree
-    assert filtered_catalog.catalog_info.total_rows == 0
+    assert filtered_catalog.catalog_info.total_rows is None
     assert filtered_catalog.moc is not None
     ra, dec = np.array(polygon_vertices).T
     polygon_moc = MOC.from_polygon(
@@ -359,7 +359,7 @@ def test_box_filter(small_sky_order1_catalog):
     assert (1, 46) in filtered_catalog.pixel_tree
     assert (1, 47) in filtered_catalog.pixel_tree
     assert len(filtered_catalog.pixel_tree.pixels[1]) == 2
-    assert filtered_catalog.catalog_info.total_rows == 0
+    assert filtered_catalog.catalog_info.total_rows is None
     assert filtered_catalog.catalog_path is not None
 
     # Check that the previous filter is the same as intersecting the ra and dec filters
@@ -383,7 +383,7 @@ def test_box_filter_wrapped_ra(small_sky_order1_catalog):
     assert (1, 44) in filtered_catalog.pixel_tree
     assert (1, 45) in filtered_catalog.pixel_tree
     assert len(filtered_catalog.pixel_tree.pixels[1]) == 2
-    assert filtered_catalog.catalog_info.total_rows == 0
+    assert filtered_catalog.catalog_info.total_rows is None
 
 
 def test_box_filter_ra_boundary(small_sky_order1_catalog):
