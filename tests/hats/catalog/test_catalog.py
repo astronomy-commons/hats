@@ -117,8 +117,7 @@ def test_catalog_statistics(small_sky_order1_dir):
 
     filtered_catalog = cat.filter_by_cone(315, -66.443, 0.1)
     result_frame = filtered_catalog.aggregate_column_statistics()
-    assert len(result_frame) == 5
-    assert_column_stat_as_floats(result_frame, "dec", min_value=-69.5, max_value=-47.5, row_count=42)
+    assert len(result_frame) == 0
 
     result_frame = cat.per_pixel_statistics()
     # 4 = 4 pixels
@@ -138,9 +137,8 @@ def test_catalog_statistics(small_sky_order1_dir):
     assert result_frame.shape == (4, 4)
 
     result_frame = filtered_catalog.per_pixel_statistics()
-    # 1 = 1 pixels
-    # 30 = 5 columns * 6 stats per-column
-    assert result_frame.shape == (1, 30)
+    # statistics may be wrong for filtered catalog
+    assert result_frame.shape == (0, 0)
 
 
 def test_catalog_statistics_inmemory(catalog_info, catalog_pixels):
@@ -489,6 +487,21 @@ def test_empty_directory(tmp_path, catalog_info_data):
 
     catalog = read_hats(catalog_path)
     assert catalog.catalog_name == "test_name"
+
+
+def test_cone_emtpy_catalog(small_sky_order1_empty_margin_dir):
+    cat = read_hats(small_sky_order1_empty_margin_dir)
+
+    assert cat.get_healpix_pixels() == []
+    assert cat.catalog_info.total_rows == 0
+
+    filtered_catalog = cat.filter_by_cone(315, -66.443, 0.1)
+    filtered_pixels = filtered_catalog.get_healpix_pixels()
+
+    assert len(filtered_pixels) == 0
+    assert len(filtered_catalog.pixel_tree) == 0
+
+    assert filtered_catalog.catalog_info.total_rows is None
 
 
 @pytest.mark.timeout(20)

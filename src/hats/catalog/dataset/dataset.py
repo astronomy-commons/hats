@@ -41,10 +41,14 @@ class Dataset:
         self.catalog_name = self.catalog_info.catalog_name
 
         self.catalog_path = catalog_path
-        self.on_disk = catalog_path is not None
         self.catalog_base_dir = file_io.get_upath(self.catalog_path)
         self.schema = schema
         self.original_schema = original_schema
+
+    @property
+    def on_disk(self) -> bool:
+        """Is the catalog stored on disk?"""
+        return self.catalog_info.total_rows is not None and self.catalog_path is not None
 
     def aggregate_column_statistics(
         self,

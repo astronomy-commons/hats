@@ -138,3 +138,10 @@ def test_read_hats_nonstandard_npix_suffix(
 def test_read_hats_original_schema(small_sky_order1_dir):
     cat = hats.read_hats(small_sky_order1_dir)
     assert cat.schema == cat.original_schema
+
+
+def test_read_hats_empty_catalog(small_sky_order1_empty_margin_dir, small_sky_order1_catalog):
+    cat = hats.read_hats(small_sky_order1_empty_margin_dir)
+    assert cat.get_healpix_pixels() == []
+    assert cat.schema == small_sky_order1_catalog.schema
+    assert cat.catalog_info.total_rows == 0
