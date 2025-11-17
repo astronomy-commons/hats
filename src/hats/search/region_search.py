@@ -143,7 +143,10 @@ def get_cartesian_polygon(vertices: list[tuple[float, float]]):
     sphgeom.ConvexPolygon
         The convex polygon object.
     """
-    from lsst.sphgeom import ConvexPolygon, UnitVector3d  # pylint: disable=import-error
+    try:
+        from lsst.sphgeom import ConvexPolygon, UnitVector3d  # pylint: disable=import-error
+    except ImportError as exc:
+        raise ImportError("lsst.sphgeom is required to use this method. Install with pip or conda.") from exc
 
     vertices_xyz = hp.ang2vec(*np.array(vertices).T)
     edge_vectors = [UnitVector3d(x, y, z) for x, y, z in vertices_xyz]
