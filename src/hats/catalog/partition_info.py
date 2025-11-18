@@ -144,16 +144,12 @@ class PartitionInfo:
             The list of `HealpixPixel` extracted from the data in the metadata file
         """
         total_metadata = file_io.read_parquet_metadata(metadata_file)
-        if total_metadata.num_row_groups == 0 or total_metadata.row_group(0).num_columns == 0:
-            raise ValueError(f"Insufficient metadata in file {metadata_file}")
 
         pixel_list = [
             paths.get_healpix_from_path(total_metadata.row_group(index).column(0).file_path)
             for index in range(0, total_metadata.num_row_groups)
         ]
         pixel_list = [p for p in pixel_list if p != INVALID_PIXEL]
-        if len(pixel_list) == 0:
-            raise ValueError(f"Insufficient metadata in file {metadata_file}")
         ## Remove duplicates, preserving order.
         return list(dict.fromkeys(pixel_list))
 

@@ -34,7 +34,7 @@ class TableProperties(BaseModel):
 
     catalog_name: str = Field(alias="obs_collection")
     catalog_type: CatalogType = Field(alias="dataproduct_type")
-    total_rows: int = Field(alias="hats_nrows")
+    total_rows: Optional[int] = Field(alias="hats_nrows")
 
     ra_column: Optional[str] = Field(default=None, alias="hats_col_ra")
     dec_column: Optional[str] = Field(default=None, alias="hats_col_dec")
@@ -186,9 +186,20 @@ class TableProperties(BaseModel):
         )
 
         required_keys = set(
-            CATALOG_TYPE_REQUIRED_FIELDS[self.catalog_type] + ["catalog_name", "catalog_type", "total_rows"]
+            CATALOG_TYPE_REQUIRED_FIELDS[self.catalog_type] + ["catalog_name", "catalog_type"]
         )
         missing_required = required_keys - explicit_keys
+        if len(missing_required) > 0:
+            raise ValueError(
+                f"Missing required property for table type {self.catalog_type}: {missing_required}"
+            )
+
+        explicit_none_allowed_keys = set(
+            self.model_dump(by_alias=False, exclude_none=False).keys() - self.__pydantic_extra__.keys()
+        )
+
+        required_none_allowed_keys = set(["total_rows"])
+        missing_required = required_none_allowed_keys - explicit_none_allowed_keys
         if len(missing_required) > 0:
             raise ValueError(
                 f"Missing required property for table type {self.catalog_type}: {missing_required}"
