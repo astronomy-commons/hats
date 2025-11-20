@@ -319,11 +319,12 @@ def _get_alignment_dropping_siblings(
 
 
 def generate_incremental_alignment(
-    histogram: np.ndarray,
+    row_count_histogram: np.ndarray,
     existing_pixels: Sequence[tuple[int, int]],
     highest_order: int = 10,
     lowest_order: int = 0,
     threshold: int = 1_000_000,
+    mem_size_histogram: np.ndarray | None = None,
 ):
     """Generate alignment for an incremental catalog.
 
@@ -336,7 +337,7 @@ def generate_incremental_alignment(
 
     Parameters
     ----------
-    histogram : np.ndarray
+    row_count_histogram : np.ndarray
         one-dimensional numpy array of long integers where the
         value at each index corresponds to the number of objects
         found at the healpix pixel.
@@ -349,6 +350,10 @@ def generate_incremental_alignment(
         constrains the partitioning to prevent spatially large pixels. (Default value = 0)
     threshold : int
         the maximum number of objects allowed in a single pixel (Default value = 1_000_000)
+    mem_size_histogram : np.ndarray or None
+        one-dimensional numpy array of long integers where the value at each index corresponds to
+        the memory size (in bytes) of objects found at the healpix pixel. If provided, this will be
+        used to determine the thresholding instead of the param `histogram`. (Default value = None)
 
     Returns
     -------
@@ -360,9 +365,11 @@ def generate_incremental_alignment(
             - pixel number *at the above order*
             - the number of objects in the pixel
     """
-    _validate_alignment_arguments(histogram, highest_order, lowest_order, threshold)
+    _validate_alignment_arguments(
+        row_count_histogram, mem_size_histogram, highest_order, lowest_order, threshold
+    )
 
-    nested_sums = _get_nested_sums(histogram, highest_order, lowest_order)
+    nested_sums = _get_nested_sums(row_count_histogram, highest_order, lowest_order)
 
     tree = PixelTree.from_healpix(existing_pixels)
     if tree.tree_order > highest_order:
