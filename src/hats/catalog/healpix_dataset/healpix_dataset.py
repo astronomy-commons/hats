@@ -110,7 +110,7 @@ class HealpixDataset(Dataset):
             This value is undetermined when the catalog is modified, and
             therefore an error is raised.
         """
-        if self.catalog_info.total_rows == 0:
+        if self.catalog_info.total_rows is None:
             raise ValueError("The number of rows is undetermined because the catalog was modified.")
         return self.catalog_info.total_rows
 
@@ -224,7 +224,7 @@ class HealpixDataset(Dataset):
         """
         filtered_tree = filter_by_moc(self.pixel_tree, moc)
         filtered_moc = self.moc.intersection(moc) if self.moc is not None else None
-        filtered_catalog_info = self.catalog_info.copy_and_update(total_rows=0)
+        filtered_catalog_info = self.catalog_info.copy_and_update(total_rows=None)
         return self.__class__(
             filtered_catalog_info,
             pixels=filtered_tree,

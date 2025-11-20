@@ -195,3 +195,63 @@ def test_alignment_even_sky(drop_empty_siblings):
     # everything maps to order 7 (would be 5, but lowest of 7 is enforced)
     for mapping in result:
         assert mapping[0] == 7
+
+
+def test_incremental_alignment():
+    """Create alignment for existing catalog, considering new incoming data"""
+    existing_pixels = [(1, 44)]
+
+    increment_histogram = hist.empty_histogram(2)
+    # Increment counts for the children pix of (1,44):
+    increment_histogram[176:180] = [42, 30, 21, 12]
+    # Counts for some points out of (1,44):
+    increment_histogram[180:182] = [5, 8]
+
+    result = hist.generate_incremental_alignment(
+        increment_histogram, existing_pixels=existing_pixels, highest_order=2, lowest_order=0
+    )
+
+    expected = np.full(hp.order2npix(2), None)
+    # We expect the existing pixel (1, 44) to have the new counts
+    expected[176:180] = [(1, 44, 42 + 30 + 21 + 12)] * 4
+    # The data that falls out of (1,44) will be assigned a pixel at order 1.
+    # since, even though lowest_order=0, pixel (0,11) would overlap with (1,44).
+    expected[180:184] = [(1, 45, 5 + 8)] * 4
+    npt.assert_array_equal(result, expected)
+
+
+def test_incremental_alignment_higher_order():
+    """Create alignment for existing catalog, considering new incoming data"""
+    highest_order = 7
+    existing_pixels = [(highest_order, pix) for pix in range(0, 49152)]
+
+    increment_histogram = hist.empty_histogram(highest_order)
+    # Increment counts for bits on the end that are currently empty
+    ## 0, 1, 2, 3: will combine into an order 6, with sum 45
+    ## 4, 5, 6: still empty
+    ## 7: single order 7 pixel
+    increment_histogram[-8:] = [12, 11, 10, 12, 0, 0, 0, 47]
+
+    result = hist.generate_incremental_alignment(
+        increment_histogram,
+        existing_pixels=existing_pixels,
+        highest_order=highest_order,
+        lowest_order=0,
+        threshold=50,
+    )
+
+    expected = np.full(hp.order2npix(highest_order), None)
+    expected[-8:-4] = [(6, 49150, 45)] * 4
+    expected[-1] = (7, 196607, 47)
+
+    ## existing pixels unchanged, 5 new pixels added:
+    assert np.count_nonzero(result) == 5
+    npt.assert_array_equal(result, expected)
+
+
+def test_incremental_alignment_highest_order_invalid():
+    with pytest.raises(ValueError, match="existing catalog maximum order"):
+        # existing catalog max_order=1 while highest_order=0
+        hist.generate_incremental_alignment(
+            hist.empty_histogram(0), existing_pixels=[(1, 45)], highest_order=0
+        )

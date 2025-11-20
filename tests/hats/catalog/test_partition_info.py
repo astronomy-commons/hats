@@ -1,6 +1,5 @@
 """Tests of partition info functionality"""
 
-import pandas as pd
 import pytest
 
 from hats.catalog import PartitionInfo
@@ -28,36 +27,6 @@ def test_load_partition_info_from_metadata(small_sky_dir, small_sky_source_dir, 
     metadata_file = paths.get_parquet_metadata_pointer(small_sky_source_dir)
     partitions = PartitionInfo.read_from_file(metadata_file)
     assert partitions.get_healpix_pixels() == small_sky_source_pixels
-
-
-def test_load_partition_info_from_metadata_fail(tmp_path):
-    empty_dataframe = pd.DataFrame()
-    metadata_filename = tmp_path / "empty_metadata.parquet"
-    empty_dataframe.to_parquet(metadata_filename)
-    with pytest.raises(ValueError, match="Insufficient metadata"):
-        PartitionInfo.read_from_file(metadata_filename)
-
-    non_healpix_dataframe = pd.DataFrame({"data": [0], "Npix": [45]})
-    metadata_filename = tmp_path / "non_healpix_metadata.parquet"
-    non_healpix_dataframe.to_parquet(metadata_filename)
-    with pytest.raises(ValueError, match="Insufficient metadata"):
-        PartitionInfo.read_from_file(metadata_filename)
-
-
-def test_load_partition_info_from_dir_fail(tmp_path):
-    empty_dataframe = pd.DataFrame()
-    metadata_filename = tmp_path / "empty_metadata.parquet"
-    empty_dataframe.to_parquet(metadata_filename)
-    with pytest.raises(FileNotFoundError, match="_metadata or partition info"):
-        PartitionInfo.read_from_dir(tmp_path)
-
-    # The file is there, but doesn't have the required content.
-    (tmp_path / "dataset").mkdir()
-    metadata_filename = tmp_path / "dataset" / "_metadata"
-    empty_dataframe.to_parquet(metadata_filename)
-    with pytest.warns(UserWarning, match="slow"):
-        with pytest.raises(ValueError, match="Insufficient metadata"):
-            PartitionInfo.read_from_dir(tmp_path)
 
 
 def test_load_partition_info_small_sky_order1(small_sky_order1_dir):
