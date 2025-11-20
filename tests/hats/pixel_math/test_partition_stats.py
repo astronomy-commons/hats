@@ -260,7 +260,7 @@ def test_incremental_alignment_highest_order_invalid():
 def test_generate_alignment_mem_size():
     """Create alignment based on memory size histogram"""
     initial_row_count_histogram = hist.empty_histogram(2)
-    filled_pixels = [4, 11, 14, 13, 5, 7, 8, 9, 11, 23, 4, 4, 17, 0, 1, 0]
+    filled_pixels = [10_000, 11, 14, 13, 5, 7, 8, 9, 11, 23, 4, 4, 17, 0, 1, 0]
     initial_row_count_histogram[176:] = filled_pixels[:]
 
     initial_mem_size_histogram = hist.empty_histogram(2)
