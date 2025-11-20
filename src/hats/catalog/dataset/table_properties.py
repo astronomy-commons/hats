@@ -359,6 +359,9 @@ class TableProperties(BaseModel):
             builder_str = f"{builder}, "
         builder_str += f"hats v{version('hats')}"
 
+        if kwargs is None:
+            kwargs = {}
+
         properties = {}
         now = datetime.now(tz=timezone.utc)
         properties["hats_builder"] = builder_str
@@ -366,4 +369,4 @@ class TableProperties(BaseModel):
         properties["hats_estsize"] = int(_estimate_dir_size(path) / 1024) if path else 0
         properties["hats_release_date"] = "2025-08-22"
         properties["hats_version"] = "v1.0"
-        return properties | kwargs
+        return kwargs | properties
