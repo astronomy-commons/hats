@@ -123,12 +123,14 @@ def generate_alignment(
         exceed threshold.
     """
     # Validate inputs.
-    _validate_alignment_arguments(row_count_histogram, mem_size_histogram, highest_order, lowest_order, threshold)
+    _validate_alignment_arguments(
+        row_count_histogram, mem_size_histogram, highest_order, lowest_order, threshold
+    )
 
     # Generate nested sums.
-    nested_sums_row_count = _count_nested_sums(row_count_histogram, highest_order, lowest_order)
+    nested_sums_row_count = _get_nested_sums(row_count_histogram, highest_order, lowest_order)
     if mem_size_histogram is not None:
-        nested_sums_mem_size = _count_nested_sums(mem_size_histogram, highest_order, lowest_order)
+        nested_sums_mem_size = _get_nested_sums(mem_size_histogram, highest_order, lowest_order)
     else:
         nested_sums_mem_size = None
 
@@ -139,14 +141,14 @@ def generate_alignment(
         )
     return _get_alignment(nested_sums_row_count, highest_order, lowest_order, threshold, nested_sums_mem_size)
 
-  
-def _validate_alignment_arguments(histogram, highest_order, lowest_order, threshold):
-    if len(histogram) != hp.order2npix(highest_order):
-        raise ValueError("histogram is not the right size")
 
+def _validate_alignment_arguments(
+    row_count_histogram, mem_size_histogram, highest_order, lowest_order, threshold
+):
+    if len(row_count_histogram) != hp.order2npix(highest_order):
+        raise ValueError("histogram is not the right size")
     if lowest_order > highest_order:
         raise ValueError("lowest_order should be less than highest_order")
-
     if mem_size_histogram is not None:
         max_bin = np.amax(mem_size_histogram)
         if max_bin > threshold:
@@ -155,8 +157,7 @@ def _validate_alignment_arguments(histogram, highest_order, lowest_order, thresh
         max_bin = np.amax(row_count_histogram)
         if max_bin > threshold:
             raise ValueError(f"single pixel row count {max_bin} exceeds threshold {threshold}")
-
-    max_bin = np.amax(histogram)
+    max_bin = np.amax(row_count_histogram)
     if max_bin > threshold:
         raise ValueError(f"single pixel count {max_bin} exceeds threshold {threshold}")
 
