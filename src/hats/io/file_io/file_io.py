@@ -365,13 +365,19 @@ def delete_file(file_handle: str | Path | UPath):
     file_handle.unlink()
 
 
-def read_parquet_file_to_pandas(file_pointer: str | Path | UPath, **kwargs) -> npd.NestedFrame:
+def read_parquet_file_to_pandas(
+    file_pointer: str | Path | UPath, is_dir: bool | None = None, **kwargs
+) -> npd.NestedFrame:
     """Reads parquet file(s) to a pandas DataFrame
 
     Parameters
     ----------
     file_pointer: str | Path | UPath
         File Pointer to a parquet file or a directory containing parquet files
+    is_dir : bool | None
+        If True, we know the pointer is for a pixel directory and therefore there
+        is no need to call `upath.is_dir()`, as it is an expensive operation.
+        (Default value = None)
     **kwargs
         Additional arguments to pass to pandas read_parquet method
 
@@ -381,20 +387,20 @@ def read_parquet_file_to_pandas(file_pointer: str | Path | UPath, **kwargs) -> n
         Pandas DataFrame with the data from the parquet file(s)
     """
     file_pointer = get_upath(file_pointer)
-    # If we are trying to read a remote directory, we need to send the explicit list of files instead.
-    # We don't want to get the list unnecessarily because it can be expensive.
-    if file_pointer.protocol not in ("", "file") and file_pointer.is_dir():  # pragma: no cover
-        file_pointers = [f.path for f in file_pointer.iterdir() if f.is_file()]
-        return npd.read_parquet(
-            file_pointers,
-            filesystem=file_pointer.fs,
-            partitioning=None,  # Avoid the ArrowTypeError described in #367
-            **kwargs,
-        )
+
     if _parquet_precache_all_bytes(file_pointer):  # pragma: no cover
         return npd.read_parquet(BytesIO(file_pointer.read_bytes()), partitioning=None, **kwargs)
+
+    file_pointers = file_pointer.path
+
+    # If we are trying to read a remote directory, we need to send the explicit list of files instead.
+    # We don't want to get the list unnecessarily because it can be expensive.
+    is_dir = is_dir if is_dir else file_pointer.is_dir()
+    if file_pointer.protocol not in ("", "file") and is_dir:  # pragma: no cover
+        file_pointers = [f.path for f in file_pointer.iterdir() if f.is_file()]
+
     return npd.read_parquet(
-        file_pointer.path,
+        file_pointers,
         filesystem=file_pointer.fs,
         partitioning=None,  # Avoid the ArrowTypeError described in #367
         **kwargs,
