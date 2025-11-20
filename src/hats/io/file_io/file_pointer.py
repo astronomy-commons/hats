@@ -152,4 +152,5 @@ def directory_has_contents(pointer: str | Path | UPath) -> bool:
         True if there are any files or subdirectories below this directory.
     """
     pointer = get_upath(pointer)
-    return len(find_files_matching_path(pointer, "*")) > 0
+
+    return next(pointer.rglob("*"), None) is not None
