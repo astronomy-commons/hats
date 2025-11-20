@@ -185,9 +185,6 @@ def _get_alignment(nested_sums_row_count, highest_order, lowest_order, threshold
 
     Checks from low order (large areas), drilling down into higher orders (smaller areas) to
     find the appropriate order for an area of sky."""
-    # If nested_sums_mem_size is provided, we're in mem_size mode (and thresholding by memory size).
-    # This means we'll want to use the mem_size sums to generate our alignment, but still keep track
-    # of the row counts for the output.
     if nested_sums_mem_size is not None:
         nested_sums = nested_sums_mem_size
     else:
