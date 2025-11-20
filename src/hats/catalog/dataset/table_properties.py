@@ -359,9 +359,6 @@ class TableProperties(BaseModel):
             builder_str = f"{builder}, "
         builder_str += f"hats v{version('hats')}"
 
-        if kwargs is None:
-            kwargs = {}
-
         properties = {}
         now = datetime.now(tz=timezone.utc)
         properties["hats_builder"] = builder_str
