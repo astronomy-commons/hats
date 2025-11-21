@@ -206,22 +206,22 @@ def _get_alignment(nested_sums_row_count, highest_order, lowest_order, threshold
             elif nested_sums[read_order][index] == 0:
                 continue
             elif nested_sums[read_order][index] <= threshold:
-                # For row_count mode, use tuple of (order, pixel, count)
+                # For row_count mode, use tuple of (order, pixel, row_count)
                 if not nested_sums_mem_size:
                     nested_alignment[read_order][index] = (
                         read_order,
                         index,
                         nested_sums[read_order][index],
                     )
-                # For mem_size mode, use tuple of (order, pixel, mem_size, row_count)
+                # For mem_size mode, use tuple of (order, pixel, row_count, mem_size)
                 else:
                     mem_size = nested_sums_mem_size[read_order][index]
                     row_count = nested_sums_row_count[read_order][index]
                     nested_alignment[read_order][index] = (
                         read_order,
                         index,
-                        mem_size,
                         row_count,
+                        mem_size,
                     )
 
     return nested_alignment[highest_order]
@@ -293,16 +293,16 @@ def _get_alignment_dropping_siblings(
         )
         for pixel_high_index, intended_order in enumerate(order_map)
     ]
-    # For row_count mode, use tuple of (order, pixel, count)
+    # For row_count mode, use tuple of (order, pixel, row_count)
     if nested_sums_mem_size is None:
         nested_alignment = [
             (tup[0], tup[1], nested_sums[tup[0]][tup[1]]) if tup else None for tup in nested_alignment
         ]
-    # For mem_size mode, use tuple of (order, pixel, mem_size, row_count)
+    # For mem_size mode, use tuple of (order, pixel, row_count, mem_size)
     else:
         nested_alignment = [
             (
-                (tup[0], tup[1], nested_sums[tup[0]][tup[1]], nested_sum_row_count[tup[0]][tup[1]])
+                (tup[0], tup[1], nested_sum_row_count[tup[0]][tup[1]], nested_sums[tup[0]][tup[1]])
                 if tup
                 else None
             )
