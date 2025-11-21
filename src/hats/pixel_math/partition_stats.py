@@ -224,6 +224,16 @@ def _get_alignment(nested_sums_row_count, highest_order, lowest_order, threshold
                         mem_size,
                     )
 
+    # We no longer need to store mem_size sums once the alignment has been constructed.
+    if nested_sums_mem_size is not None:
+        nested_alignment[highest_order] = np.array(
+            [
+                pixel_alignment[:3] if pixel_alignment else None
+                for pixel_alignment in nested_alignment[highest_order]
+            ],
+            dtype="object",
+        )
+
     return nested_alignment[highest_order]
 
 
@@ -293,21 +303,11 @@ def _get_alignment_dropping_siblings(
         )
         for pixel_high_index, intended_order in enumerate(order_map)
     ]
-    # For row_count mode, use tuple of (order, pixel, row_count)
-    if nested_sums_mem_size is None:
-        nested_alignment = [
-            (tup[0], tup[1], nested_sums[tup[0]][tup[1]]) if tup else None for tup in nested_alignment
-        ]
-    # For mem_size mode, use tuple of (order, pixel, row_count, mem_size)
-    else:
-        nested_alignment = [
-            (
-                (tup[0], tup[1], nested_sum_row_count[tup[0]][tup[1]], nested_sums[tup[0]][tup[1]])
-                if tup
-                else None
-            )
-            for tup in nested_alignment
-        ]
+    # In both row_count and mem_size mode, use tuple of (order, pixel, row_count)
+    # as mem_size is no longer needed now that alignment has been constructed.
+    nested_alignment = [
+        (tup[0], tup[1], nested_sum_row_count[tup[0]][tup[1]]) if tup else None for tup in nested_alignment
+    ]
 
     return np.array(nested_alignment, dtype="object")
 
