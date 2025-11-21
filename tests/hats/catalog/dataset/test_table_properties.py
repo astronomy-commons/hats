@@ -202,13 +202,13 @@ def test_provenance_dict(small_sky_dir, tmp_path):
     contents = ",".join(load_text_file(tmp_path / "hats.properties"))
     assert "\\" not in contents
 
-    # Test that we can override a property and add another.
+    # Test that we can add other properties, but not override auto-generated ones.
     properties = TableProperties.new_provenance_dict(
         small_sky_dir, builder="lsdb v0.1", hats_estsize=1000, foo="bar"
     )
     assert properties["hats_builder"] == f"lsdb v0.1, hats v{version('hats')}"
     assert properties["hats_creation_date"].startswith("20")
-    assert properties["hats_estsize"] == 1000
+    assert properties["hats_estsize"] != 1000
     assert properties["hats_release_date"].startswith("20")
     assert properties["hats_version"].startswith("v")
     assert properties["foo"] == "bar"
