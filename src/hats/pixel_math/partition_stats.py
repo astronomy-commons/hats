@@ -149,15 +149,14 @@ def _validate_alignment_arguments(
         raise ValueError("histogram is not the right size")
     if lowest_order > highest_order:
         raise ValueError("lowest_order should be less than highest_order")
-    max_bin = np.amax(row_count_histogram)
-    if max_bin > threshold:
-        if mem_size_histogram is not None:
+    if mem_size_histogram is not None:
+        max_bin = np.amax(mem_size_histogram)
+        if max_bin > threshold:
             raise ValueError(f"single pixel mem_size {max_bin} exceeds threshold {threshold}")
-        else:
+    else:
+        max_bin = np.amax(row_count_histogram)
+        if max_bin > threshold:
             raise ValueError(f"single pixel row count {max_bin} exceeds threshold {threshold}")
-    max_bin = np.amax(row_count_histogram)
-    if max_bin > threshold:
-        raise ValueError(f"single pixel count {max_bin} exceeds threshold {threshold}")
 
 
 def _get_nested_sums(histogram, highest_order, lowest_order):
