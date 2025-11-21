@@ -260,7 +260,7 @@ def test_incremental_alignment_highest_order_invalid():
 def test_generate_alignment_mem_size():
     """Create alignment based on memory size histogram"""
     initial_row_count_histogram = hist.empty_histogram(2)
-    filled_pixels = [10_000, 11, 14, 13, 5, 7, 8, 9, 11, 23, 4, 4, 17, 0, 1, 0]
+    filled_pixels = [11_000, 11, 14, 13, 5, 7, 8, 9, 11, 23, 4, 4, 17, 0, 1, 0]
     initial_row_count_histogram[176:] = filled_pixels[:]
 
     initial_mem_size_histogram = hist.empty_histogram(2)
@@ -294,10 +294,10 @@ def test_generate_alignment_mem_size():
 
     expected = np.full(hp.order2npix(2), None)
     tuples = [
-        (1, 44, 7000, 42),
-        (1, 44, 7000, 42),
-        (1, 44, 7000, 42),
-        (1, 44, 7000, 42),
+        (1, 44, 7000, 11038),
+        (1, 44, 7000, 11038),
+        (1, 44, 7000, 11038),
+        (1, 44, 7000, 11038),
         (2, 180, 5000, 5),
         (2, 181, 7000, 7),
         (2, 182, 8000, 8),
@@ -384,7 +384,7 @@ def test_generate_alignment_mem_size_exceeds_threshold():
 
     initial_mem_size_histogram = hist.empty_histogram(2)
     filled_mem_sizes = [
-        4_000,
+        40_000,
         1_000,
         1_000,
         1_000,
