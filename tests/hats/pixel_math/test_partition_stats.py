@@ -319,15 +319,15 @@ def test_generate_alignment_mem_size():
 def test_generate_alignment_mem_size_dropping_siblings():
     """Create alignment based on memory size histogram"""
     initial_row_count_histogram = hist.empty_histogram(2)
-    filled_pixels = [4, 11, 14, 13, 5, 7, 8, 9, 11, 23, 4, 4, 17, 0, 1, 0]
+    filled_pixels = [0, 0, 14, 0, 5, 7, 8, 9, 11, 23, 4, 4, 17, 0, 1, 0]
     initial_row_count_histogram[176:] = filled_pixels[:]
 
     initial_mem_size_histogram = hist.empty_histogram(2)
     filled_mem_sizes = [
+        0,
+        0,
         4_000,
-        1_000,
-        1_000,
-        1_000,
+        0,
         5_000,
         7_000,
         8_000,
@@ -354,22 +354,22 @@ def test_generate_alignment_mem_size_dropping_siblings():
 
     expected = np.full(hp.order2npix(2), None)
     tuples = [
-        (1, 44, 7000, 42),
-        (1, 44, 7000, 42),
-        (1, 44, 7000, 42),
-        (1, 44, 7000, 42),
-        (2, 180, 5000, 5),
-        (2, 181, 7000, 7),
-        (2, 182, 8000, 8),
-        (2, 183, 9000, 9),
-        (2, 184, 1000, 11),
-        (2, 185, 2000, 23),
-        (2, 186, 4000, 4),
-        (2, 187, 4000, 4),
-        (1, 47, 8000, 18),
-        (1, 47, 8000, 18),
-        (1, 47, 8000, 18),
-        (1, 47, 8000, 18),
+        None,
+        None,
+        (2, 178, 14, 4000),
+        None,
+        (2, 180, 5, 5000),
+        (2, 181, 7, 7000),
+        (2, 182, 8, 8000),
+        (2, 183, 9, 9000),
+        (2, 184, 11, 1000),
+        (2, 185, 23, 2000),
+        (2, 186, 4, 4000),
+        (2, 187, 4, 4000),
+        (1, 47, 18, 8000),
+        (1, 47, 18, 8000),
+        (1, 47, 18, 8000),
+        (1, 47, 18, 8000),
     ]
     expected[176:192] = tuples
 
