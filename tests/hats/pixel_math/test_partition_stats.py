@@ -255,3 +255,159 @@ def test_incremental_alignment_highest_order_invalid():
         hist.generate_incremental_alignment(
             hist.empty_histogram(0), existing_pixels=[(1, 45)], highest_order=0
         )
+
+
+def test_generate_alignment_mem_size():
+    """Create alignment based on memory size histogram"""
+    initial_row_count_histogram = hist.empty_histogram(2)
+    filled_pixels = [11_000, 11, 14, 13, 5, 7, 8, 9, 11, 23, 4, 4, 17, 0, 1, 0]
+    initial_row_count_histogram[176:] = filled_pixels[:]
+
+    initial_mem_size_histogram = hist.empty_histogram(2)
+    filled_mem_sizes = [
+        4_000,
+        1_000,
+        1_000,
+        1_000,
+        5_000,
+        7_000,
+        8_000,
+        9_000,
+        1_000,
+        2_000,
+        4_000,
+        4_000,
+        7_000,
+        0,
+        1_000,
+        0,
+    ]
+    initial_mem_size_histogram[176:] = filled_mem_sizes[:]
+
+    # Generate alignment based on memory size thresholding.
+    result = hist.generate_alignment(
+        initial_row_count_histogram,
+        highest_order=2,
+        threshold=10_000,
+        mem_size_histogram=initial_mem_size_histogram,
+    )
+
+    expected = np.full(hp.order2npix(2), None)
+    tuples = [
+        (1, 44, 11038),
+        (1, 44, 11038),
+        (1, 44, 11038),
+        (1, 44, 11038),
+        (2, 180, 5),
+        (2, 181, 7),
+        (2, 182, 8),
+        (2, 183, 9),
+        (2, 184, 11),
+        (2, 185, 23),
+        (2, 186, 4),
+        (2, 187, 4),
+        (1, 47, 18),
+        (1, 47, 18),
+        (1, 47, 18),
+        (1, 47, 18),
+    ]
+    expected[176:192] = tuples
+
+    npt.assert_array_equal(result, expected)
+
+
+def test_generate_alignment_mem_size_dropping_siblings():
+    """Create alignment based on memory size histogram"""
+    initial_row_count_histogram = hist.empty_histogram(2)
+    filled_pixels = [0, 0, 14, 0, 5, 7, 8, 9, 11, 23, 4, 4, 17, 0, 1, 0]
+    initial_row_count_histogram[176:] = filled_pixels[:]
+
+    initial_mem_size_histogram = hist.empty_histogram(2)
+    filled_mem_sizes = [
+        0,
+        0,
+        4_000,
+        0,
+        5_000,
+        7_000,
+        8_000,
+        9_000,
+        1_000,
+        2_000,
+        4_000,
+        4_000,
+        7_000,
+        0,
+        1_000,
+        0,
+    ]
+    initial_mem_size_histogram[176:] = filled_mem_sizes[:]
+
+    # Generate alignment based on memory size thresholding.
+    result = hist.generate_alignment(
+        initial_row_count_histogram,
+        highest_order=2,
+        threshold=10_000,
+        drop_empty_siblings=True,
+        mem_size_histogram=initial_mem_size_histogram,
+    )
+
+    expected = np.full(hp.order2npix(2), None)
+    tuples = [
+        None,
+        None,
+        (2, 178, 14),
+        None,
+        (2, 180, 5),
+        (2, 181, 7),
+        (2, 182, 8),
+        (2, 183, 9),
+        (2, 184, 11),
+        (2, 185, 23),
+        (2, 186, 4),
+        (2, 187, 4),
+        (1, 47, 18),
+        (1, 47, 18),
+        (1, 47, 18),
+        (1, 47, 18),
+    ]
+    expected[176:192] = tuples
+
+    npt.assert_array_equal(result, expected)
+
+
+def test_generate_alignment_mem_size_exceeds_threshold():
+    """Create alignment based on memory size histogram"""
+    initial_row_count_histogram = hist.empty_histogram(2)
+    filled_pixels = [4, 11, 14, 13, 5, 7, 8, 9, 11, 23, 4, 4, 17, 0, 1, 0]
+    initial_row_count_histogram[176:] = filled_pixels[:]
+
+    initial_mem_size_histogram = hist.empty_histogram(2)
+    filled_mem_sizes = [
+        40_000,
+        1_000,
+        1_000,
+        1_000,
+        5_000,
+        7_000,
+        8_000,
+        9_000,
+        1_000,
+        2_000,
+        4_000,
+        4_000,
+        7_000,
+        0,
+        1_000,
+        0,
+    ]
+    initial_mem_size_histogram[176:] = filled_mem_sizes[:]
+
+    # We raise an error if any pixel exceeds the threshold.
+    with pytest.raises(ValueError, match="exceeds threshold"):
+        hist.generate_alignment(
+            initial_row_count_histogram,
+            highest_order=2,
+            threshold=5_000,
+            mem_size_histogram=initial_mem_size_histogram,
+        )
