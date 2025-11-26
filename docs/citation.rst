@@ -51,6 +51,17 @@ If you used Rubin Data Preview 1 (DP1) with HATS, please also consider citing th
         adsnote       = {Provided by the SAO/NASA Astrophysics Data System}
     }
 
+To cite the HATS format (and not this software package in particular), we suggest the following:
+
+.. code-block:: bash
+
+    @misc{ivoa:NOTE:2025:HATS,
+        author = {Caplar,Neven and DeLucchi, Melissa and  Jurić, Mario and Beebe,Wilson and Branton, Doug and  Campos,Sandro and Jones,  Derek  and  Malanchev,Konstantin and  McGuire,  Sean and  Lynn, Olivia and  Pineau, François-Xavier and  Raen,  Troy},
+        title = {{HATS: A Standard for the Hierarchical Adaptive Tiling Scheme in the Virtual Observatory}},
+        howpublished = {IVOA Note, Version 1.0},
+        year = {2025},
+        note = {Available at \url{https://www.ivoa.net/documents/Notes/HATS/}}
+    }
 
 Acknowledgements
 -------------------------------------------------------------------------------
