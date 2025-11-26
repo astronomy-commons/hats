@@ -282,9 +282,10 @@ def generate_incremental_alignment(
         one-dimensional numpy array of integer 3-tuples, where the value at each index corresponds
         to the destination pixel at order less than or equal to the mapping order.
         The tuple contains three integers:
-            - order of the destination pixel
-            - pixel number *at the above order*
-            - the number of objects in the pixel
+
+        - order of the destination pixel
+        - pixel number *at the above order*
+        - the number of objects in the pixel
     """
     _validate_alignment_arguments(histogram, highest_order, lowest_order, threshold)
 

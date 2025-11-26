@@ -1,6 +1,11 @@
 HATS Directory Scheme
 ===============================================================================
 
+You can read in more detail about the parts of the HATS directory structure
+in the `IVOA Note <https://www.ivoa.net/documents/Notes/HATS/>`__.
+This page provides a summary of what you can expect inside a HATS-structured
+catalog.
+
 Partitioning Scheme
 -------------------------------------------------------------------------------
 
@@ -33,22 +38,22 @@ structure:
 
 .. code-block:: 
     :class: no-copybutton
-    
-    __ /path/to/catalogs/<catalog_name>/
-       |__ partition_info.csv
-       |__ properties
-       |__ dataset/
-           |__ _common_metadata
-           |__ _metadata
-           |__ Norder=1/
-           |   |__ Dir=0/
-           |       |__ Npix=0.parquet
-           |       |__ Npix=1.parquet
-           |__ Norder=J/
-               |__ Dir=10000/
-                   |__ Npix=K.parquet
-                   |__ Npix=M.parquet
 
+      /path/to/catalogs/<catalog_name>/
+      ├── dataset
+      │   ├── _common_metadata
+      │   ├── _metadata
+      │   ├── Norder=0
+      │   │   └── Dir=0
+      │   │       ├── Npix=0.parquet
+      │   │       └── Npix=1.parquet
+      │   └── Norder=J
+      │       └── Dir=10000
+      │           ├── Npix=K.parquet
+      │           └── Npix=M.parquet
+      ├── hats.properties
+      ├── partition_info.csv
+      └── skymap.fits
 
 As you can notice, ``dataset/`` has the following heirarchy:
 
@@ -60,3 +65,38 @@ As you can notice, ``dataset/`` has the following heirarchy:
    Note: instead of being a single Parquet file, this can be a directory containing
    one or more Parquet files, representing a single data partition, i.e., they should
    be read together as a single data unit.
+
+Collections
+-------------------------------------------------------------------------------
+
+HATS also makes use of supplemental tables for catalogs, and these are grouped into
+catalog Collections. 
+
+.. code-block:: 
+    :class: no-copybutton
+
+      /path/to/catalogs/<catalog_name>/
+      ├── collection.properties
+      ├── primary_catalog
+      │   ├── dataset
+      |   |   └── ...
+      │   ├── hats.properties
+      │   ├── partition_info.csv
+      │   └── skymap.fits
+      ├── id_index
+      │   ├── dataset
+      |   |   └── ...
+      │   └── hats.properties
+      └── margin_10arcs
+         ├── dataset
+         |   └── ...
+         ├── hats.properties
+         └── partition_info.csv
+
+The ``primary_catalog`` directory will be the same format as the catalog described above.
+Here we have additional supplemental tables:
+
+* ``id_index`` - a secondary index to enable finding rows by non-spatial queries
+* ``margin_10arcs`` - a cache of rows that are within a limited angular threshold
+  around the primary catalog data partition, useful for cross-matching to catalogs
+  with slightly different astrometry.
