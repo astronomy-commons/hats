@@ -39,16 +39,16 @@ The latest release version of HATS is available to install with
                 pyenv virtualenv 3.11 hats_env
                 pyenv local hats_env
 
-    We recommend Python versions **>=3.10, <=3.12**.
+    We recommend Python versions **>=3.10, <=3.13**.
 
 HATS can also be installed from source on `GitHub <https://github.com/astronomy-commons/hats>`__.
-
 
 LSDB
 ----
 
-For the most part, we recommend accessing and processing HATS data using the `LSDB package
-<https://github.com/astronomy-commons/lsdb>`__ framework. LSDB provides a variety of utility
-functions as well as a lazy, distributed execution framework using Dask.
+For the most part, we recommend accessing and processing HATS data using the 
+`LSDB framework package <https://github.com/astronomy-commons/lsdb>`__.
+LSDB provides a variety of utility functions as well as a lazy, 
+distributed execution framework using Dask.
 
-For detail on LSDB, see the `readthedocs site <https://docs.lsdb.io/en/stable/>`__.
+For details on LSDB, see the `readthedocs site <https://docs.lsdb.io/en/stable/>`__.
