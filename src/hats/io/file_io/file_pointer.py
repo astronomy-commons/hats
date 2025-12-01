@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from importlib.metadata import version
 from pathlib import Path
+from urllib.parse import urlparse
 
 from upath import UPath
 
@@ -47,7 +49,15 @@ def get_upath_for_protocol(path: str | Path) -> UPath:
     if upath.protocol == "s3":
         upath = UPath(path, anon=True, default_block_size=BLOCK_SIZE)
     if upath.protocol in ("http", "https"):
-        upath = UPath(path, block_size=BLOCK_SIZE)
+        kwargs = {
+            "block_size": BLOCK_SIZE,
+            "client_kwargs": {"headers": {"User-Agent": f"hats/{version('hats')}"}},
+        }
+
+        parts = urlparse(path)
+        if parts.netloc == "vizcat.cds.unistra.fr":
+            kwargs["cache_options"] = {"parquet_precache_all_bytes": True}
+        upath = UPath(path, **kwargs)
     return upath
 
 
