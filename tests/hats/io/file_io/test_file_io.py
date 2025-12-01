@@ -5,6 +5,7 @@ import pytest
 from hats.io import paths
 from hats.io.file_io import (
     delete_file,
+    get_upath_for_protocol,
     load_csv_to_pandas,
     load_csv_to_pandas_generator,
     make_directory,
@@ -16,6 +17,7 @@ from hats.io.file_io import (
     write_fits_image,
     write_string_to_file,
 )
+from hats.io.file_io.file_io import _parquet_precache_all_bytes
 from hats.io.file_io.file_pointer import does_file_or_directory_exist
 
 
@@ -160,3 +162,32 @@ def test_write_point_map_roundtrip(small_sky_order1_dir, tmp_path):
     write_fits_image(expected_counts_skymap, output_map_pointer)
     counts_skymap = read_fits_image(output_map_pointer)
     np.testing.assert_array_equal(counts_skymap, expected_counts_skymap)
+
+
+def test_read_hats_with_s3():
+    upath = get_upath_for_protocol("s3://bucket/catalog")
+    assert upath.storage_options.get("anon")
+    assert upath.storage_options["default_block_size"] == 32 * 1024
+
+
+def test_read_hats_with_http():
+    """Confirm that we provide additional options to the default HTTP fsspec object."""
+    upath_http = get_upath_for_protocol("http://catalog")
+    assert upath_http.fs.block_size == 32 * 1024
+    assert upath_http.fs.client_kwargs["headers"]["User-Agent"].startswith("hats")
+    assert not _parquet_precache_all_bytes(upath_http.fs)
+
+    upath_https = get_upath_for_protocol("https://catalog")
+    assert upath_https.fs.block_size == 32 * 1024
+    assert upath_https.fs.client_kwargs["headers"]["User-Agent"].startswith("hats")
+    assert not _parquet_precache_all_bytes(upath_https.fs)
+
+    upath_http_full = get_upath_for_protocol("http://catalog.lsdb.org/hats/catalogs/gaia_dr3")
+    assert upath_http_full.fs.block_size == 32 * 1024
+    assert upath_http_full.fs.client_kwargs["headers"]["User-Agent"].startswith("hats")
+    assert not _parquet_precache_all_bytes(upath_http_full.fs)
+
+    upath_http_vizier = get_upath_for_protocol("https://vizcat.cds.unistra.fr/hats:n=1000000/gaia_dr3/")
+    assert upath_http_vizier.fs.block_size == 32 * 1024
+    assert upath_http_vizier.fs.client_kwargs["headers"]["User-Agent"].startswith("hats")
+    assert _parquet_precache_all_bytes(upath_http_vizier)
