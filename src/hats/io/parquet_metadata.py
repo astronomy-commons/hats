@@ -84,7 +84,7 @@ def write_parquet_metadata(
         # Create set for O(1) lookups in the loop that follows
         pq_file_list = set(random.sample(dataset.files, row_limit))
 
-    # Unified pass over all files: always count rows; optionally collect metadata & thumbnail rows.
+    # Pass over all files: always count rows; optionally collect metadata & thumbnail rows.
     for single_file in dataset.files:
         relative_path = single_file[len(dataset_path) + 1 :]
         file = file_io.read_parquet_file(dataset_subdir / relative_path)
