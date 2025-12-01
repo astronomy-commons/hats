@@ -28,35 +28,50 @@ def write_parquet_metadata(
     thumbnail_threshold: int = 1_000_000,
     create_metadata: bool = True,
 ):
-    """Generate parquet metadata, using the already-partitioned parquet files
-    for this catalog.
+    """Write Parquet dataset-level metadata files (and optional thumbnail) for a catalog.
 
-    For more information on the general parquet metadata files, and why we write them, see
+    Creates files (relative to the catalog root):
+        data_thumbnail.parquet        (only if create_thumbnail=True)
+        dataset/_common_metadata      (always written)
+        dataset/_metadata             (only if create_metadata=True)
+
+    The `_common_metadata` file contains the schema for the dataset, while
+    the `_metadata` file contains the combined footer metadata for all parquet
+    files in the dataset.
+
+    The `data_thumbnail.parquet` file contains one row from each data partition,
+    up to a maximum of `thumbnail_threshold` rows.
+
+    References
+    ----------
+    - For more information on the general parquet metadata files, and why we write them, see
     https://arrow.apache.org/docs/python/parquet.html#writing-metadata-and-common-metadata-files
+    - For more information on HATS-specific metadata files and conventions, see
+    https://www.ivoa.net/documents/Notes/HATS/20250822/NOTE-hats-ivoa-1.0-20250822.pdf
 
     Parameters
     ----------
     catalog_path : str | Path | UPath
-        base path for the catalog
-    order_by_healpix : bool
-        use False if the dataset is not to be reordered by
-        breadth-first healpix pixel (e.g. secondary indexes) (Default value = True)
-    output_path : str | Path | UPath | None
-        base path for writing out metadata files
-        defaults to `catalog_path` if unspecified
-    create_thumbnail : bool
-        if True, create a data thumbnail parquet file for
-        the dataset. Defaults to False.
-    thumbnail_threshold : int
-        maximum number of rows in the data thumbnail,
-        which is otherwise one row/partition. Defaults to 1_000_000.
-    create_metadata : bool
-        if False, skip creating _metadata file. Defaults to True.
+        Base path for the catalog root.
+    order_by_healpix : bool, default=True
+        If True, reorder combined metadata by breadth-first Healpix pixel ordering
+        (e.g., secondary indexes). Set False for datasets that should not be reordered.
+        Does not modify dataset files on disk.
+    output_path : str | Path | UPath | None, default=None
+        Base path to write metadata files. If None, uses `catalog_path`.
+    create_thumbnail : bool, default=False
+        If True, writes a compact `data_thumbnail.parquet` containing one row per
+        sampled file.
+    thumbnail_threshold : int, default=1_000_000
+        Maximum number of rows in the thumbnail (or maximum number of files, if
+        thumbnail_threshold exceeds the number of files). One row per partition.
+    create_metadata : bool, default=True
+        If True, writes `dataset/_metadata` combining row group footers.
 
     Returns
     -------
     int
-        sum of the number of rows in the dataset.
+        Total number of rows across all parquet files in the dataset.
     """
     ignore_prefixes = [
         "_common_metadata",
