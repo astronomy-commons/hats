@@ -106,6 +106,8 @@ def write_parquet_metadata(
 
         if create_thumbnail and single_file in pq_file_list:
             first_rows.append(next(file.iter_batches(batch_size=1)))
+    else:
+        total_rows = dataset.count_rows()
 
     # Set up output path.
     if output_path is None:

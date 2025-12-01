@@ -65,7 +65,7 @@ def test_skip_parquet_metadata_creation(tmp_path, small_sky_dir, small_sky_schem
 
     # Do NOT create _metadata OR thumbnail (but expect _common_metadata).
     total_rows = write_parquet_metadata(catalog_base_dir, create_metadata=False, create_thumbnail=False)
-    assert total_rows == 0
+    assert total_rows == 131
     assert not (catalog_base_dir / "dataset" / "_metadata").exists()
     assert (catalog_base_dir / "dataset" / "_common_metadata").exists()
     assert not (catalog_base_dir / "dataset" / "data_thumbnail.parquet").exists()
