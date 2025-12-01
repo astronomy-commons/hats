@@ -46,7 +46,7 @@ def test_write_parquet_metadata(tmp_path, small_sky_dir, small_sky_schema, check
     )
 
 
-def test_skip_parquet_metadata_creation(tmp_path, small_sky_dir, small_sky_schema, check_parquet_schema):
+def test_skip_parquet_metadata_creation(tmp_path, small_sky_dir):
     """Copy existing catalog and skip metadata file creation"""
     catalog_base_dir = tmp_path / "catalog"
     shutil.copytree(
@@ -54,12 +54,10 @@ def test_skip_parquet_metadata_creation(tmp_path, small_sky_dir, small_sky_schem
         catalog_base_dir,
     )
 
-    # Get paths.
+    # Remove existing files to ensure they are (or are not) re-created.
     metadata_file = catalog_base_dir / "dataset" / "_metadata"
-    common_metadata_file = catalog_base_dir / "dataset" / "_common_metadata"
     thumbnail_file = catalog_base_dir / "dataset" / "data_thumbnail.parquet"
 
-    # Remove existing files to ensure they are (or are not) re-created.
     metadata_file.unlink(missing_ok=True)
     thumbnail_file.unlink(missing_ok=True)
 
@@ -70,7 +68,7 @@ def test_skip_parquet_metadata_creation(tmp_path, small_sky_dir, small_sky_schem
     assert (catalog_base_dir / "dataset" / "_common_metadata").exists()
     assert not (catalog_base_dir / "dataset" / "data_thumbnail.parquet").exists()
 
-    # Now create only the thumbnail.
+    # Now create only the thumbnail, but make sure _metadata still is not created.
     total_rows = write_parquet_metadata(catalog_base_dir, create_metadata=False, create_thumbnail=True)
     assert total_rows == 131
     assert not (catalog_base_dir / "dataset" / "_metadata").exists()
