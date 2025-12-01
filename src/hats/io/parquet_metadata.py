@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 import random
 from pathlib import Path
 
@@ -85,29 +84,24 @@ def write_parquet_metadata(
         # Create set for O(1) lookups in the loop that follows
         pq_file_list = set(random.sample(dataset.files, row_limit))
 
-    # Collect metadata from each file.
-    if create_metadata or create_thumbnail:
-        # Only iterate through our limited list if we're only creating a thumbnail.
-        file_list = pq_file_list if not create_metadata else dataset.files
-
-        for single_file in file_list:
-            relative_path = single_file[len(dataset_path) + 1 :]
-            file = file_io.read_parquet_file(dataset_subdir / relative_path)
-            single_metadata = file.metadata
-        # Users must set the file path of each chunk before combining the metadata.
-        single_metadata.set_file_path(relative_path)
-
-        if order_by_healpix:
-            healpix_pixel = paths.get_healpix_from_path(relative_path)
-            healpix_pixels.append(healpix_pixel)
-
-        metadata_collector.append(single_metadata)
+    # Unified pass over all files: always count rows; optionally collect metadata & thumbnail rows.
+    for single_file in dataset.files:
+        relative_path = single_file[len(dataset_path) + 1 :]
+        file = file_io.read_parquet_file(dataset_subdir / relative_path)
+        single_metadata = file.metadata
         total_rows += single_metadata.num_rows
 
+        if create_metadata:
+            # Users must set the file path of each chunk before combining the metadata.
+            single_metadata.set_file_path(relative_path)
+            if order_by_healpix:
+                healpix_pixel = paths.get_healpix_from_path(relative_path)
+                healpix_pixels.append(healpix_pixel)
+            metadata_collector.append(single_metadata)
+
         if create_thumbnail and single_file in pq_file_list:
+            # Grab a single-row batch for this file for the thumbnail.
             first_rows.append(next(file.iter_batches(batch_size=1)))
-    else:
-        total_rows = dataset.count_rows()
 
     # Set up output path.
     if output_path is None:
