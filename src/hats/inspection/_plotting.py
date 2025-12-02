@@ -397,7 +397,7 @@ def _initialize_wcs_axes(
     return fig, ax, wcs
 
 
-# pylint: disable=import-outside-toplevel,import-error,disable=too-many-locals
+# pylint: disable=import-outside-toplevel,import-error,too-many-locals
 def _plot_healpix_value_map(ipix, depth, values, ax, wcs, cmap="viridis", norm=None, cbar=True, **kwargs):
     """Perform the plotting of a healpix pixel map."""
     import matplotlib.pyplot as plt
@@ -406,6 +406,8 @@ def _plot_healpix_value_map(ipix, depth, values, ax, wcs, cmap="viridis", norm=N
 
     # create dict mapping depth to ipix and values
     depth_ipix_d = {}
+    values = np.array(values)
+    ipix = np.array(ipix)
 
     for d in np.unique(depth):
         mask = depth == d

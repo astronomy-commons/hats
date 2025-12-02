@@ -2,6 +2,7 @@ from unittest.mock import MagicMock
 
 import astropy.units as u
 import numpy as np
+import pandas as pd
 import pytest
 from astropy.coordinates import Angle, SkyCoord
 from mocpy import MOC, WCS
@@ -841,6 +842,37 @@ def test_plot_kwargs():
         np.testing.assert_array_equal(path.vertices, verts)
         np.testing.assert_array_equal(path.codes, codes)
     np.testing.assert_array_equal(col.get_array(), pix_map)
+
+
+def test_plot_healpix_map_types():
+    """Pass healpix map, using various list-like types."""
+    pytest.importorskip("matplotlib.pyplot")
+
+    # First, use all numpy arrays to get the golden value.
+    length = 192
+    pix_map_np = np.arange(length)
+    _, ax = plot_healpix_map(pix_map_np)
+    num_np_paths = len(ax.collections[0].get_paths())
+
+    pix_map = list(np.arange(length))
+    _, ax = plot_healpix_map(pix_map)
+    assert len(ax.collections) > 0
+    assert len(ax.collections[0].get_paths()) == num_np_paths
+
+    order = 2
+    ipix = list(np.arange(length))
+    pix_map = list(range(0, length))
+    depth = list(np.full(length, fill_value=order))
+    _, ax = plot_healpix_map(pix_map, ipix=ipix, depth=depth)
+    assert len(ax.collections) > 0
+    assert len(ax.collections[0].get_paths()) == num_np_paths
+
+    ipix = pd.Series(range(0, length))
+    pix_map = range(0, length)
+    depth = pd.Series(np.full(length, fill_value=order))
+    _, ax = plot_healpix_map(pix_map, ipix=ipix, depth=depth)
+    assert len(ax.collections) > 0
+    assert len(ax.collections[0].get_paths()) == num_np_paths
 
 
 def test_plot_existing_fig():
