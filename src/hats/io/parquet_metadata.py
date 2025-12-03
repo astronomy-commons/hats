@@ -30,23 +30,34 @@ def write_parquet_metadata(
 ):
     """Write Parquet dataset-level metadata files (and optional thumbnail) for a catalog.
 
-    Creates files (relative to the catalog root):
-        data_thumbnail.parquet        (only if create_thumbnail=True)
-        dataset/_common_metadata      (always written)
-        dataset/_metadata             (only if create_metadata=True)
+    Creates files::
 
-    The `_common_metadata` file contains the schema for the dataset, while
-    the `_metadata` file contains the combined footer metadata for all parquet
-    files in the dataset.
+        catalog/
+        ├── data_thumbnail.parquet    (only if create_thumbnail=True)
+        ├── ...
+        ├── dataset/
+            ├── _common_metadata      (always written)
+            ├── _metadata             (only if create_metadata=True)
+            ├── ...
 
-    The `data_thumbnail.parquet` file contains one row from each data partition,
-    up to a maximum of `thumbnail_threshold` rows.
+    `data_thumbnail.parquet` gives the user a quick overview of the whole dataset.
+    It is a compact file containing one row from each data partition, up to a maximum
+    of `thumbnail_threshold` rows.
+
+    `dataset/_common_metadata` contains the full schema of the dataset. This file
+    will know all of the columns and their types, as well as any file-level key-value
+    metadata associated with the full Parquet dataset.
+
+    `dataset/_metadata` contains the combined row group footers from all Parquet files
+    in the dataset, which allows readers to read the entire dataset without having
+    to open each individual Parquet file. This file can be large for datasets with
+    many files, so users may choose to omit it by setting `create_metadata=False`.
 
     Notes
     -----
-    For more information on the general parquet metadata files, and why we write them, see
+    For more information on the general Parquet metadata files, and why we write them, see
     https://arrow.apache.org/docs/python/parquet.html#writing-metadata-and-common-metadata-files
-    
+
     For more information on HATS-specific metadata files and conventions, see
     https://www.ivoa.net/documents/Notes/HATS/
 
