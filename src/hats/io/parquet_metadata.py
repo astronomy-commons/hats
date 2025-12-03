@@ -35,10 +35,10 @@ def write_parquet_metadata(
         catalog/
         ├── data_thumbnail.parquet    (only if create_thumbnail=True)
         ├── ...
-        ├── dataset/
+        └── dataset/
             ├── _common_metadata      (always written)
             ├── _metadata             (only if create_metadata=True)
-            ├── ...
+            └──  ...
 
     ``data_thumbnail.parquet`` gives the user a quick overview of the whole dataset.
     It is a compact file containing one row from each data partition, up to a maximum
