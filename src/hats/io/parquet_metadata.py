@@ -42,11 +42,12 @@ def write_parquet_metadata(
     The `data_thumbnail.parquet` file contains one row from each data partition,
     up to a maximum of `thumbnail_threshold` rows.
 
-    References
-    ----------
-    - For more information on the general parquet metadata files, and why we write them, see
+    Notes
+    -----
+    For more information on the general parquet metadata files, and why we write them, see
     https://arrow.apache.org/docs/python/parquet.html#writing-metadata-and-common-metadata-files
-    - For more information on HATS-specific metadata files and conventions, see
+    
+    For more information on HATS-specific metadata files and conventions, see
     https://www.ivoa.net/documents/Notes/HATS/
 
     Parameters
