@@ -77,7 +77,9 @@ class PartitionInfo:
         file_io.write_dataframe_to_csv(self.as_dataframe(), partition_info_file, index=False)
 
     @classmethod
-    def read_from_dir(cls, catalog_base_dir: str | Path | UPath | None) -> PartitionInfo:
+    def read_from_dir(
+        cls, catalog_base_dir: str | Path | UPath | None, compute_from_catalog: bool = False
+    ) -> PartitionInfo:
         """Read partition info from a file within a hats directory.
 
         This will look for a `partition_info.csv` file, and if not found, will look for
@@ -85,10 +87,17 @@ class PartitionInfo:
         therefore a warning is issued to the user. In internal testing with large catalogs,
         the first approach takes less than a second, while the second can take 10-20 seconds.
 
+        If neither file is found, and `compute_from_catalog` is set to True, the partition info
+        will be computed from the individual catalog files. This is the slowest approach, and
+        a warning is issued to the user. In internal testing with large catalogs, this
+        approach can take (??) time.
+
         Parameters
         ----------
         catalog_base_dir : str | Path | UPath | None
-            path to the root directory of the catalog
+            Path to the root directory of the catalog
+        compute_from_catalog : bool
+            Whether to compute partition info from catalog files if no metadata or partition info file is found.
 
         Returns
         -------
@@ -107,6 +116,18 @@ class PartitionInfo:
         elif file_io.does_file_or_directory_exist(metadata_file):
             warnings.warn("Reading partitions from parquet metadata. This is typically slow.")
             pixel_list = PartitionInfo._read_from_metadata_file(metadata_file)
+        elif compute_from_catalog:
+            warnings.warn("Computing partitions from catalog parquet files. This may be slow.")
+            dataset_dir = paths.dataset_directory(catalog_base_dir)
+            pixel_list = []
+            # Recursively walk the dataset directory to find all parquet files.
+            for file_path in dataset_dir.rglob("*.parquet"):
+                if file_path.suffix == ".parquet":
+                    pixel = paths.get_healpix_from_path(str(file_path))
+                    if pixel != INVALID_PIXEL:
+                        pixel_list.append(pixel)
+            # Remove duplicates and sort by pixel.
+            pixel_list = sorted(set(pixel_list))
         else:
             raise FileNotFoundError(
                 f"_metadata or partition info file is required in catalog directory {catalog_base_dir}"
