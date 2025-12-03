@@ -322,6 +322,10 @@ class HealpixDataset(Dataset):
         if not self.on_disk:
             warnings.warn("Calling aggregate_column_statistics on an in-memory catalog. No results.")
             return pd.DataFrame()
+        if not self.unmodified:
+            warnings.warn(
+                "Calling aggregate_column_statistics on a modified catalog. Results may be inaccurate."
+            )
 
         if include_pixels is None:
             include_pixels = self.get_healpix_pixels()
@@ -373,6 +377,8 @@ class HealpixDataset(Dataset):
         if not self.on_disk:
             warnings.warn("Calling per_pixel_statistics on an in-memory catalog. No results.")
             return pd.DataFrame()
+        if not self.unmodified:
+            warnings.warn("Calling per_pixel_statistics on a modified catalog. Results may be inaccurate.")
 
         if include_pixels is None:
             include_pixels = self.get_healpix_pixels()
