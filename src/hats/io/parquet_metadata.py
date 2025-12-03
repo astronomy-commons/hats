@@ -42,7 +42,7 @@ def write_parquet_metadata(
 
     ``data_thumbnail.parquet`` gives the user a quick overview of the whole dataset.
     It is a compact file containing one row from each data partition, up to a maximum
-    of `thumbnail_threshold` rows.
+    of ``thumbnail_threshold`` rows.
 
     ``dataset/_common_metadata`` contains the full schema of the dataset. This file
     will know all of the columns and their types, as well as any file-level key-value
@@ -51,7 +51,7 @@ def write_parquet_metadata(
     ``dataset/_metadata`` contains the combined row group footers from all Parquet files
     in the dataset, which allows readers to read the entire dataset without having
     to open each individual Parquet file. This file can be large for datasets with
-    many files, so users may choose to omit it by setting `create_metadata=False`.
+    many files, so users may choose to omit it by setting ``create_metadata=False``.
 
     Notes
     -----
@@ -70,15 +70,15 @@ def write_parquet_metadata(
         (e.g., secondary indexes). Set False for datasets that should not be reordered.
         Does not modify dataset files on disk.
     output_path : str | Path | UPath | None, default=None
-        Base path to write metadata files. If None, uses `catalog_path`.
+        Base path to write metadata files. If None, uses ``catalog_path``.
     create_thumbnail : bool, default=False
-        If True, writes a compact `dataset/data_thumbnail.parquet` containing one row per
+        If True, writes a compact ``data_thumbnail.parquet`` containing one row per
         sampled file.
     thumbnail_threshold : int, default=1_000_000
         Maximum number of rows in the thumbnail (or maximum number of files, if
         thumbnail_threshold exceeds the number of files). One row per partition.
     create_metadata : bool, default=True
-        If True, writes `dataset/_metadata` combining row group footers.
+        If True, writes ``dataset/_metadata`` combining row group footers.
 
     Returns
     -------
