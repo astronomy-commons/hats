@@ -47,7 +47,7 @@ def write_parquet_metadata(
     - For more information on the general parquet metadata files, and why we write them, see
     https://arrow.apache.org/docs/python/parquet.html#writing-metadata-and-common-metadata-files
     - For more information on HATS-specific metadata files and conventions, see
-    https://www.ivoa.net/documents/Notes/HATS/20250822/NOTE-hats-ivoa-1.0-20250822.pdf
+    https://www.ivoa.net/documents/Notes/HATS/
 
     Parameters
     ----------
@@ -60,7 +60,7 @@ def write_parquet_metadata(
     output_path : str | Path | UPath | None, default=None
         Base path to write metadata files. If None, uses `catalog_path`.
     create_thumbnail : bool, default=False
-        If True, writes a compact `data_thumbnail.parquet` containing one row per
+        If True, writes a compact `dataset/data_thumbnail.parquet` containing one row per
         sampled file.
     thumbnail_threshold : int, default=1_000_000
         Maximum number of rows in the thumbnail (or maximum number of files, if
