@@ -48,7 +48,12 @@ class Dataset:
     @property
     def on_disk(self) -> bool:
         """Is the catalog stored on disk?"""
-        return self.catalog_info.total_rows is not None and self.catalog_path is not None
+        return self.catalog_path is not None
+
+    @property
+    def unmodified(self) -> bool:
+        """Has the catalog been modified from its original on disk state?"""
+        return self.catalog_info.total_rows is not None
 
     def aggregate_column_statistics(
         self,
@@ -77,6 +82,10 @@ class Dataset:
         if not self.on_disk:
             warnings.warn("Calling aggregate_column_statistics on an in-memory catalog. No results.")
             return pd.DataFrame()
+        if not self.unmodified:
+            warnings.warn(
+                "Calling aggregate_column_statistics on a modified catalog. Results may be inaccurate."
+            )
         return aggregate_column_statistics(
             self.catalog_base_dir / "dataset" / "_metadata",
             exclude_hats_columns=exclude_hats_columns,
@@ -121,6 +130,8 @@ class Dataset:
         if not self.on_disk:
             warnings.warn("Calling per_pixel_statistics on an in-memory catalog. No results.")
             return pd.DataFrame()
+        if not self.unmodified:
+            warnings.warn("Calling per_pixel_statistics on a modified catalog. Results may be inaccurate.")
         return per_pixel_statistics(
             self.catalog_base_dir / "dataset" / "_metadata",
             exclude_hats_columns=exclude_hats_columns,

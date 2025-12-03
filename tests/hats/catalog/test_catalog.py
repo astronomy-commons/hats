@@ -116,8 +116,9 @@ def test_catalog_statistics(small_sky_order1_dir):
     assert len(result_frame) == 2
 
     filtered_catalog = cat.filter_by_cone(315, -66.443, 0.1)
-    result_frame = filtered_catalog.aggregate_column_statistics()
-    assert len(result_frame) == 0
+    with pytest.warns(UserWarning, match="modified catalog"):
+        result_frame = filtered_catalog.aggregate_column_statistics()
+    assert len(result_frame) == 5
 
     result_frame = cat.per_pixel_statistics()
     # 4 = 4 pixels
@@ -136,9 +137,11 @@ def test_catalog_statistics(small_sky_order1_dir):
     # 4 = 2 columns * 2 stats per-column
     assert result_frame.shape == (4, 4)
 
-    result_frame = filtered_catalog.per_pixel_statistics()
-    # statistics may be wrong for filtered catalog
-    assert result_frame.shape == (0, 0)
+    with pytest.warns(UserWarning, match="modified catalog"):
+        result_frame = filtered_catalog.per_pixel_statistics()
+    # 1 = 1 pixel (the filtered catalog has only one pixel)
+    # 30 = 5 columns * 6 stats per-column
+    assert result_frame.shape == (1, 30)
 
 
 def test_catalog_statistics_inmemory(catalog_info, catalog_pixels):
