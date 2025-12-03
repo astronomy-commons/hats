@@ -38,6 +38,26 @@ POINT_MAP_FILENAME = "point_map.fits"
 SKYMAP_FILENAME = "skymap.fits"
 
 
+def dataset_directory(catalog_base_dir: str | Path | UPath | None) -> UPath:
+    """Create path pointer for the dataset directory. This will not create the directory.
+
+    The directory name will take the HiPS standard form of::
+
+        <catalog_base_dir>/dataset/
+
+    Parameters
+    ----------
+    catalog_base_dir : str | Path | UPath | None
+        base directory of the catalog (includes catalog name)
+
+    Returns
+    -------
+    UPath
+        dataset directory name
+    """
+    return get_upath(catalog_base_dir) / DATASET_DIR
+
+
 def pixel_directory(
     catalog_base_dir: str | Path | UPath | None,
     pixel_order: int,
