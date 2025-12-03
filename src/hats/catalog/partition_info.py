@@ -97,7 +97,8 @@ class PartitionInfo:
         catalog_base_dir : str | Path | UPath | None
             Path to the root directory of the catalog
         compute_from_catalog : bool
-            Whether to compute partition info from catalog files if no metadata or partition info file is found.
+            Whether to compute partition info from catalog files if no metadata or partition info
+            file is found.
 
         Returns
         -------
