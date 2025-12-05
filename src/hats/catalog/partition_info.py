@@ -45,6 +45,16 @@ class PartitionInfo:
         max_pixel = np.max(self.pixel_list)
         return max_pixel.order
 
+    def __len__(self):
+        """The number of partitions.
+
+        Returns
+        -------
+        int
+            The number of partition pixels.
+        """
+        return len(self.pixel_list)
+
     def write_to_file(
         self,
         partition_info_file: str | Path | UPath | None = None,
