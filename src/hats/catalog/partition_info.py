@@ -12,7 +12,7 @@ from upath import UPath
 import hats.pixel_math.healpix_shim as hp
 from hats.io import file_io, paths
 from hats.pixel_math.healpix_pixel import INVALID_PIXEL, HealpixPixel
-
+import hats.io
 
 class PartitionInfo:
     """Container class for per-partition info."""
@@ -237,3 +237,23 @@ class PartitionInfo:
         # 41253 is the number of square degrees in a sphere
         # https://en.wikipedia.org/wiki/Square_degree
         return (area_by_order * cov_count).sum() / (360**2 / np.pi)
+
+    def skymap_coverage(catalog, order=None):
+        """Calculate estimated sky coverage from a catalog's skymap. 
+
+        Parameters
+        ----------
+        catalog : str | Path | UPath
+            path to the catalog base directory
+        order : int | None
+            healpix order of the skymap to read. If None, the order will be inferred from the catalog.
+
+        Returns
+        -------
+        float
+            estimated fraction of sky covered by the catalog
+        """
+        if order is None:
+            order = hats.io.skymap.get_skymap_order(catalog)  # order_of_skymap
+
+        return np.mean(hats.io.skymap.read_skymap(catalog, order) > 0)
