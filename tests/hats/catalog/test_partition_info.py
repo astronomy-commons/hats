@@ -5,7 +5,7 @@ import pytest
 from hats.catalog import PartitionInfo
 from hats.io import paths
 from hats.pixel_math import HealpixPixel
-
+from catalog import skymap_coverage
 
 def test_load_partition_info_small_sky(small_sky_dir):
     """Instantiate the partition info for catalog with 1 pixel"""
@@ -104,3 +104,8 @@ def test_load_partition_info_from_dir_and_write(tmp_path, pixel_list_depth_first
     info.write_to_file()
     info.write_to_file(catalog_path=tmp_path)
     info.write_to_file(partition_info_file=tmp_path / "new_csv.csv")
+
+
+def test_skymap_coverage(small_sky_order1_catalog):
+    result = skymap_coverage(small_sky_order1_catalog)
+    
