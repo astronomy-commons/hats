@@ -77,47 +77,27 @@ class PartitionInfo:
         file_io.write_dataframe_to_csv(self.as_dataframe(), partition_info_file, index=False)
 
     @classmethod
-    def read_from_dir(
-        cls, catalog_base_dir: str | Path | UPath | None, compute_from_catalog: bool = False
-    ) -> PartitionInfo:
+    def read_from_dir(cls, catalog_base_dir: str | Path | UPath | None) -> PartitionInfo:
         """Read partition info from a file within a hats directory.
 
-        This will look for a `partition_info.csv` file, and if not found, will look for
-        a `_metadata` file. The second approach is typically slower for large catalogs
-        therefore a warning is issued to the user. In internal testing with large catalogs,
-        the first approach takes less than a second, while the second can take 10-20 seconds.
-
-        If neither file is found, and `compute_from_catalog` is set to True, the partition info
-        will be computed from the individual catalog files. This is the slowest approach, and
-        a warning is issued to the user. In internal testing with large catalogs, this
-        approach can take (??) time.
+        This will look for a `partition_info.csv` file, and if not found, the partition info
+        will be computed from the individual catalog files.
 
         Parameters
         ----------
         catalog_base_dir : str | Path | UPath | None
             Path to the root directory of the catalog
-        compute_from_catalog : bool
-            Whether to compute partition info from catalog files if no metadata or partition info
-            file is found.
 
         Returns
         -------
         PartitionInfo
             A `PartitionInfo` object with the data from the file
-
-        Raises
-        ------
-        FileNotFoundError
-            if neither desired file is found in the catalog_base_dir
         """
         metadata_file = paths.get_parquet_metadata_pointer(catalog_base_dir)
         partition_info_file = paths.get_partition_info_pointer(catalog_base_dir)
         if file_io.does_file_or_directory_exist(partition_info_file):
             pixel_list = PartitionInfo._read_from_csv(partition_info_file)
-        elif file_io.does_file_or_directory_exist(metadata_file):
-            warnings.warn("Reading partitions from parquet metadata. This is typically slow.")
-            pixel_list = PartitionInfo._read_from_metadata_file(metadata_file)
-        elif compute_from_catalog:
+        else:
             warnings.warn("Computing partitions from catalog parquet files. This may be slow.")
             dataset_dir = paths.dataset_directory(catalog_base_dir)
             pixel_list = []
@@ -129,10 +109,6 @@ class PartitionInfo:
                         pixel_list.append(pixel)
             # Remove duplicates and sort by pixel.
             pixel_list = sorted(set(pixel_list))
-        else:
-            raise FileNotFoundError(
-                f"_metadata or partition info file is required in catalog directory {catalog_base_dir}"
-            )
         return cls(pixel_list, catalog_base_dir)
 
     @classmethod
