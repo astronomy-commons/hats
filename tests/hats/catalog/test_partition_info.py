@@ -34,6 +34,7 @@ def test_load_partition_info_small_sky_order1(small_sky_order1_dir):
     partition_info_file = paths.get_parquet_metadata_pointer(small_sky_order1_dir)
     partitions = PartitionInfo.read_from_file(partition_info_file)
 
+    assert len(partitions) == 4
     order_pixel_pairs = partitions.get_healpix_pixels()
     assert len(order_pixel_pairs) == 4
     expected = [
