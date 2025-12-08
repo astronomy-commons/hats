@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import warnings
-from pathlib import Path
 from itertools import chain
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -96,7 +96,6 @@ class PartitionInfo:
         PartitionInfo
             A `PartitionInfo` object with the data from the file
         """
-        metadata_file = paths.get_parquet_metadata_pointer(catalog_base_dir)
         partition_info_file = paths.get_partition_info_pointer(catalog_base_dir)
         if file_io.does_file_or_directory_exist(partition_info_file):
             pixel_list = PartitionInfo._read_from_csv(partition_info_file)
