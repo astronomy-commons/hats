@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import warnings
-from itertools import chain
 from pathlib import Path
 
 import numpy as np
@@ -13,6 +12,7 @@ from upath import UPath
 import hats.pixel_math.healpix_shim as hp
 from hats.io import file_io, paths
 from hats.pixel_math.healpix_pixel import INVALID_PIXEL, HealpixPixel
+from hats.pixel_math.healpix_pixel_function import sort_pixels
 
 
 class PartitionInfo:
@@ -101,16 +101,23 @@ class PartitionInfo:
             pixel_list = PartitionInfo._read_from_csv(partition_info_file)
         else:
             warnings.warn("Computing partitions from catalog parquet files. This may be slow.")
-            dataset_dir = paths.dataset_directory(catalog_base_dir)
+
+            # Read the dataset dir to get the list of files.
             pixel_list = []
-            # Recursively walk the dataset directory to find all parquet files.
-            suffix_matches = chain(dataset_dir.rglob("*.parquet"), dataset_dir.rglob("*.pq"))
-            for file_path in suffix_matches:
-                pixel = paths.get_healpix_from_path(str(file_path))
+            ignore_prefixes = [
+                "_common_metadata",
+                "_metadata",
+                "data_thumbnail",
+            ]
+            dataset_subdir = paths.dataset_directory(catalog_base_dir)
+            (_, dataset) = file_io.read_parquet_dataset(dataset_subdir, ignore_prefixes=ignore_prefixes)
+
+            # Iterate through files to get the healpix pixels.
+            for file in dataset.files:
+                pixel = paths.get_healpix_from_path(str(file))
                 if pixel != INVALID_PIXEL:
                     pixel_list.append(pixel)
-            # Remove duplicates and sort by pixel.
-            pixel_list = sorted(set(pixel_list))
+            pixel_list = sort_pixels(pixel_list)
         return cls(pixel_list, catalog_base_dir)
 
     @classmethod

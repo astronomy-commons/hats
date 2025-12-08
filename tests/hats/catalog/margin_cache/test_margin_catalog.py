@@ -4,7 +4,7 @@ import pyarrow as pa
 import pytest
 
 import hats.pixel_math.healpix_shim as hp
-from hats.catalog import CatalogType, MarginCatalog, TableProperties
+from hats.catalog import CatalogType, MarginCatalog, PartitionInfo, TableProperties
 from hats.loaders import read_hats
 from hats.pixel_math import HealpixPixel
 
@@ -43,7 +43,7 @@ def test_read_from_file(margin_catalog_path, margin_catalog_pixels, margin_catal
 
 
 # pylint: disable=duplicate-code
-def test_empty_directory(tmp_path, margin_cache_catalog_info_data):
+def test_empty_directory(tmp_path, margin_cache_catalog_info_data, margin_catalog_pixels):
     """Test loading empty or incomplete data"""
     ## Path doesn't exist
     with pytest.raises(FileNotFoundError):
@@ -59,6 +59,13 @@ def test_empty_directory(tmp_path, margin_cache_catalog_info_data):
     ## catalog_info file exists - getting closer
     properties = TableProperties(**margin_cache_catalog_info_data)
     properties.to_properties_file(catalog_path)
+
+    with pytest.raises(FileNotFoundError):
+        read_hats(catalog_path)
+
+    ## Now we create the needed _metadata and everything is right.
+    part_info = PartitionInfo.from_healpix(margin_catalog_pixels)
+    part_info.write_to_file(catalog_path=catalog_path)
 
     catalog = read_hats(catalog_path)
     assert catalog.catalog_name == margin_cache_catalog_info_data["catalog_name"]

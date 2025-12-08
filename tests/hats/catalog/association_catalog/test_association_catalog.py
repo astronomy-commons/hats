@@ -58,13 +58,13 @@ def test_csv_round_trip(tmp_path, association_catalog_info_data):
     properties = TableProperties(**association_catalog_info_data)
     properties.to_properties_file(catalog_path)
 
-    # with pytest.raises(FileNotFoundError):
-    #     read_hats(catalog_path)
+    with pytest.raises(FileNotFoundError):
+        read_hats(catalog_path)
 
-    # file_name = catalog_path / "partition_info.csv"
-    # with open(file_name, "w", encoding="utf-8") as metadata_file:
-    #     # dump some garbage in there - just needs to exist.
-    #     metadata_file.write("Norder,Npix")
+    file_name = catalog_path / "partition_info.csv"
+    with open(file_name, "w", encoding="utf-8") as metadata_file:
+        # dump some garbage in there - just needs to exist.
+        metadata_file.write("Norder,Npix")
 
     catalog = read_hats(catalog_path)
     assert catalog.catalog_name == association_catalog_info_data["catalog_name"]
