@@ -4,7 +4,7 @@ import pyarrow as pa
 import pytest
 
 import hats.pixel_math.healpix_shim as hp
-from hats.catalog import CatalogType, MarginCatalog, PartitionInfo, TableProperties
+from hats.catalog import CatalogType, MarginCatalog, TableProperties
 from hats.loaders import read_hats
 from hats.pixel_math import HealpixPixel
 
@@ -43,7 +43,7 @@ def test_read_from_file(margin_catalog_path, margin_catalog_pixels, margin_catal
 
 
 # pylint: disable=duplicate-code
-def test_empty_directory(tmp_path, margin_cache_catalog_info_data, margin_catalog_pixels):
+def test_empty_directory(tmp_path, margin_cache_catalog_info_data):
     """Test loading empty or incomplete data"""
     ## Path doesn't exist
     with pytest.raises(FileNotFoundError):
