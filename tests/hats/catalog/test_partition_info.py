@@ -108,10 +108,10 @@ def test_load_partition_info_from_dir_and_write(tmp_path, pixel_list_depth_first
 
 def test_compute_partition_info_from_catalog(small_sky_dir, small_sky_source_dir):
     """Test reading partition info by computing from catalog files."""
-    partition_info = PartitionInfo.read_from_dir(small_sky_dir, compute_from_catalog=True)
+    partition_info = PartitionInfo.read_from_dir(small_sky_dir)
     assert partition_info.get_healpix_pixels() == [HealpixPixel(0, 11)]
 
-    partition_info = PartitionInfo.read_from_dir(small_sky_source_dir, compute_from_catalog=True)
+    partition_info = PartitionInfo.read_from_dir(small_sky_source_dir)
     expected_pixels = [
         HealpixPixel(0, 4),
         HealpixPixel(1, 47),

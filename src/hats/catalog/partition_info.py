@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import warnings
 from pathlib import Path
+from itertools import chain
 
 import numpy as np
 import pandas as pd
@@ -81,7 +82,9 @@ class PartitionInfo:
         """Read partition info from a file within a hats directory.
 
         This will look for a `partition_info.csv` file, and if not found, the partition info
-        will be computed from the individual catalog files.
+        will be computed from the individual catalog files. Computing from catalog files will be slower:
+        in internal testing, it took about half a second to compute from a catalog with ~40k partitions,
+        versus a few milliseconds to read from the CSV file.
 
         Parameters
         ----------
@@ -102,11 +105,11 @@ class PartitionInfo:
             dataset_dir = paths.dataset_directory(catalog_base_dir)
             pixel_list = []
             # Recursively walk the dataset directory to find all parquet files.
-            for file_path in dataset_dir.rglob("*.parquet"):
-                if file_path.suffix == ".parquet":
-                    pixel = paths.get_healpix_from_path(str(file_path))
-                    if pixel != INVALID_PIXEL:
-                        pixel_list.append(pixel)
+            suffix_matches = chain(dataset_dir.rglob("*.parquet"), dataset_dir.rglob("*.pq"))
+            for file_path in suffix_matches:
+                pixel = paths.get_healpix_from_path(str(file_path))
+                if pixel != INVALID_PIXEL:
+                    pixel_list.append(pixel)
             # Remove duplicates and sort by pixel.
             pixel_list = sorted(set(pixel_list))
         return cls(pixel_list, catalog_base_dir)

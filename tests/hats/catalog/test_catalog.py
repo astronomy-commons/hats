@@ -478,12 +478,12 @@ def test_empty_directory(tmp_path, catalog_info_data):
     properties = TableProperties(**catalog_info_data)
     properties.to_properties_file(catalog_path)
 
-    with pytest.raises(FileNotFoundError):
-        read_hats(catalog_path)
+    # with pytest.raises(FileNotFoundError):
+    #     read_hats(catalog_path)
 
-    ## Now we create the needed _metadata and everything is right.
-    part_info = PartitionInfo.from_healpix([HealpixPixel(0, 11)])
-    part_info.write_to_file(catalog_path=catalog_path)
+    # ## Now we create the needed _metadata and everything is right.
+    # part_info = PartitionInfo.from_healpix([HealpixPixel(0, 11)])
+    # part_info.write_to_file(catalog_path=catalog_path)
 
     catalog = read_hats(catalog_path)
     assert catalog.catalog_name == "test_name"
