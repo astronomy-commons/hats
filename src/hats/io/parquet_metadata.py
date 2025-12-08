@@ -33,16 +33,12 @@ def write_parquet_metadata(
     Creates files::
 
         catalog/
-        ├── data_thumbnail.parquet    (only if create_thumbnail=True)
         ├── ...
         └── dataset/
-            ├── _common_metadata      (always written)
-            ├── _metadata             (only if create_metadata=True)
+            ├── _common_metadata          (always written)
+            ├── _metadata                 (only if create_metadata=True)
+            ├── data_thumbnail.parquet    (only if create_thumbnail=True)
             └──  ...
-
-    ``data_thumbnail.parquet`` gives the user a quick overview of the whole dataset.
-    It is a compact file containing one row from each data partition, up to a maximum
-    of ``thumbnail_threshold`` rows.
 
     ``dataset/_common_metadata`` contains the full schema of the dataset. This file
     will know all of the columns and their types, as well as any file-level key-value
@@ -52,6 +48,10 @@ def write_parquet_metadata(
     in the dataset, which allows readers to read the entire dataset without having
     to open each individual Parquet file. This file can be large for datasets with
     many files, so users may choose to omit it by setting ``create_metadata=False``.
+
+    ``dataset/data_thumbnail.parquet`` gives the user a quick overview of the whole dataset.
+    It is a compact file containing one row from each data partition, up to a maximum
+    of ``thumbnail_threshold`` rows.
 
     Notes
     -----
