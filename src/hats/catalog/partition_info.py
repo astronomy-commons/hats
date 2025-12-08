@@ -127,7 +127,7 @@ class PartitionInfo:
                 pixel = paths.get_healpix_from_path(str(file))
                 if pixel != INVALID_PIXEL:
                     pixel_list.append(pixel)
-            pixel_list = sort_pixels(pixel_list)
+            pixel_list = sort_pixels(list(set(pixel_list)))
         return cls(pixel_list, catalog_base_dir)
 
     @classmethod
