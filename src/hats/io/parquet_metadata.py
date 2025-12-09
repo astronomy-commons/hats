@@ -26,34 +26,64 @@ def write_parquet_metadata(
     output_path: str | Path | UPath | None = None,
     create_thumbnail: bool = False,
     thumbnail_threshold: int = 1_000_000,
+    create_metadata: bool = True,
 ):
-    """Generate parquet metadata, using the already-partitioned parquet files
-    for this catalog.
+    """Write Parquet dataset-level metadata files (and optional thumbnail) for a catalog.
 
-    For more information on the general parquet metadata files, and why we write them, see
+    Creates files::
+
+        catalog/
+        ├── ...
+        └── dataset/
+            ├── _common_metadata          (always written)
+            ├── _metadata                 (only if create_metadata=True)
+            ├── data_thumbnail.parquet    (only if create_thumbnail=True)
+            └──  ...
+
+    ``dataset/_common_metadata`` contains the full schema of the dataset. This file
+    will know all of the columns and their types, as well as any file-level key-value
+    metadata associated with the full Parquet dataset.
+
+    ``dataset/_metadata`` contains the combined row group footers from all Parquet files
+    in the dataset, which allows readers to read the entire dataset without having
+    to open each individual Parquet file. This file can be large for datasets with
+    many files, so users may choose to omit it by setting ``create_metadata=False``.
+
+    ``dataset/data_thumbnail.parquet`` gives the user a quick overview of the whole dataset.
+    It is a compact file containing one row from each data partition, up to a maximum
+    of ``thumbnail_threshold`` rows.
+
+    Notes
+    -----
+    For more information on the general Parquet metadata files, and why we write them, see
     https://arrow.apache.org/docs/python/parquet.html#writing-metadata-and-common-metadata-files
+
+    For more information on HATS-specific metadata files and conventions, see
+    https://www.ivoa.net/documents/Notes/HATS/
 
     Parameters
     ----------
     catalog_path : str | Path | UPath
-        base path for the catalog
-    order_by_healpix : bool
-        use False if the dataset is not to be reordered by
-        breadth-first healpix pixel (e.g. secondary indexes) (Default value = True)
-    output_path : str | Path | UPath | None
-        base path for writing out metadata files
-        defaults to `catalog_path` if unspecified
-    create_thumbnail : bool
-        if True, create a data thumbnail parquet file for
-        the dataset. Defaults to False.
-    thumbnail_threshold : int
-        maximum number of rows in the data thumbnail,
-        which is otherwise one row/partition. Defaults to 1_000_000.
+        Base path for the catalog root.
+    order_by_healpix : bool, default=True
+        If True, reorder combined metadata by breadth-first Healpix pixel ordering
+        (e.g., secondary indexes). Set False for datasets that should not be reordered.
+        Does not modify dataset files on disk.
+    output_path : str | Path | UPath | None, default=None
+        Base path to write metadata files. If None, uses ``catalog_path``.
+    create_thumbnail : bool, default=False
+        If True, writes a compact ``data_thumbnail.parquet`` containing one row per
+        sampled file.
+    thumbnail_threshold : int, default=1_000_000
+        Maximum number of rows in the thumbnail (or maximum number of files, if
+        thumbnail_threshold exceeds the number of files). One row per partition.
+    create_metadata : bool, default=True
+        If True, writes ``dataset/_metadata`` combining row group footers.
 
     Returns
     -------
     int
-        sum of the number of rows in the dataset.
+        Total number of rows across all parquet files in the dataset.
     """
     ignore_prefixes = [
         "_common_metadata",
@@ -69,7 +99,7 @@ def write_parquet_metadata(
     healpix_pixels = []
     total_rows = 0
 
-    # Collect the first rows for the data thumbnail
+    # Collect the first rows for the data thumbnail.
     first_rows = []
     pq_file_list = set()
     if create_thumbnail:
@@ -81,25 +111,26 @@ def write_parquet_metadata(
         # Create set for O(1) lookups in the loop that follows
         pq_file_list = set(random.sample(dataset.files, row_limit))
 
+    # Pass over all files: always count rows; optionally collect metadata & thumbnail rows.
     for single_file in dataset.files:
         relative_path = single_file[len(dataset_path) + 1 :]
         file = file_io.read_parquet_file(dataset_subdir / relative_path)
         single_metadata = file.metadata
-
-        # Users must set the file path of each chunk before combining the metadata.
-        single_metadata.set_file_path(relative_path)
-
-        if order_by_healpix:
-            healpix_pixel = paths.get_healpix_from_path(relative_path)
-            healpix_pixels.append(healpix_pixel)
-
-        metadata_collector.append(single_metadata)
         total_rows += single_metadata.num_rows
 
+        if create_metadata:
+            # Users must set the file path of each chunk before combining the metadata.
+            single_metadata.set_file_path(relative_path)
+            if order_by_healpix:
+                healpix_pixel = paths.get_healpix_from_path(relative_path)
+                healpix_pixels.append(healpix_pixel)
+            metadata_collector.append(single_metadata)
+
         if create_thumbnail and single_file in pq_file_list:
+            # Grab a single-row batch for this file for the thumbnail.
             first_rows.append(next(file.iter_batches(batch_size=1)))
 
-    ## Write out the two metadata files
+    # Set up output path.
     if output_path is None:
         output_path = catalog_path
     if order_by_healpix:
@@ -107,18 +138,22 @@ def write_parquet_metadata(
         metadata_collector = np.array(metadata_collector)[argsort]
     catalog_base_dir = get_upath(output_path)
     file_io.make_directory(catalog_base_dir / "dataset", exist_ok=True)
-    metadata_file_pointer = paths.get_parquet_metadata_pointer(catalog_base_dir)
-    common_metadata_file_pointer = paths.get_common_metadata_pointer(catalog_base_dir)
 
-    file_io.write_parquet_metadata(
-        dataset.schema,
-        metadata_file_pointer,
-        metadata_collector=metadata_collector,
-        write_statistics=True,
-    )
+    # Write out the _metadata file.
+    if create_metadata:
+        metadata_file_pointer = paths.get_parquet_metadata_pointer(catalog_base_dir)
+        file_io.write_parquet_metadata(
+            dataset.schema,
+            metadata_file_pointer,
+            metadata_collector=metadata_collector,
+            write_statistics=True,
+        )
+
+    # Write out the _common_metadata file.
+    common_metadata_file_pointer = paths.get_common_metadata_pointer(catalog_base_dir)
     file_io.write_parquet_metadata(dataset.schema, common_metadata_file_pointer)
 
-    ## Write out the thumbnail file
+    # Write out the thumbnail file.
     if create_thumbnail:
         data_thumbnail_pointer = paths.get_data_thumbnail_pointer(catalog_path)
         data_thumbnail = pa.Table.from_batches(first_rows, dataset.schema)
