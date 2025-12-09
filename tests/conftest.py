@@ -4,6 +4,7 @@ from pathlib import Path
 import pyarrow as pa
 import pytest
 
+from hats.catalog import Catalog
 from hats.catalog.dataset.table_properties import TableProperties
 from hats.loaders import read_hats
 from hats.pixel_math import HealpixPixel
@@ -124,6 +125,11 @@ def margin_cache_catalog_info_data() -> dict:
 @pytest.fixture
 def margin_catalog_info(margin_cache_catalog_info_data) -> TableProperties:
     return TableProperties(**margin_cache_catalog_info_data)
+
+
+@pytest.fixture
+def inmemory_catalog(catalog_info, catalog_pixels):
+    return Catalog(catalog_info, catalog_pixels)
 
 
 @pytest.fixture
