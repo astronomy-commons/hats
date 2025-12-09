@@ -2,15 +2,23 @@
 
 import shutil
 
+import astropy.units as u
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
+from astropy.io.misc.parquet import read_parquet_votable
 from pandas.api.types import is_numeric_dtype
 from pyarrow.parquet import ParquetFile
 
 from hats.io import file_io, paths
-from hats.io.parquet_metadata import aggregate_column_statistics, per_pixel_statistics, write_parquet_metadata
+from hats.io.parquet_metadata import (
+    aggregate_column_statistics,
+    pa_schema_to_vo_schema,
+    per_pixel_statistics,
+    write_parquet_metadata,
+    write_voparquet_in_common_metadata,
+)
 from hats.pixel_math.healpix_pixel import HealpixPixel
 from hats.pixel_math.spatial_index import SPATIAL_INDEX_COLUMN
 
@@ -476,3 +484,135 @@ def test_per_pixel_statistics_empty_catalog(small_sky_order1_empty_margin_dir):
 
     result_frame = per_pixel_statistics(partition_info_file)
     assert len(result_frame) == 0
+
+
+def test_pa_schema_to_vo_schema_small(small_sky_nested_dir):
+    dec_utype = "stc:AstroCoords.Position2D.Value2.C2"
+    return_value = pa_schema_to_vo_schema(
+        small_sky_nested_dir,
+        field_units={
+            "ra": "deg",
+            "dec": u.deg,
+            "lc.source_ra": "deg",
+            "lc.source_dec": u.deg,
+            "lc.object_ra": "deg",
+            "lc.object_dec": u.deg,
+            "does_not_exist": "deg**2",
+        },
+        field_ucds={
+            "ra": "pos.eq.ra",
+            "dec": "pos.eq.dec",
+            "lc.source_ra": "pos.eq.ra",
+            "lc.source_dec": "pos.eq.dec",
+            "lc.object_ra": "pos.eq.ra",
+            "lc.object_dec": "pos.eq.dec",
+            "does_not_exist": "pos.eq.dec",
+        },
+        field_descriptions={
+            "ra": "Object ICRS Right Ascension",
+            "dec": "Object ICRS Declination",
+            "lc.source_ra": "Object ICRS Right Ascension",
+            "lc.source_dec": "Object ICRS Declination",
+            "lc.object_ra": "Object ICRS Right Ascension",
+            "lc.object_dec": "Object ICRS Declination",
+            "lc": "Properties of transient-object detections on the single-epoch difference images",
+            "lc.band": "Band used to take this observation",
+            "does_not_exist": "Band used to take this observation",
+        },
+        field_utypes={
+            "ra": "stc:AstroCoords.Position2D.Value2.C1",
+            "dec": dec_utype,
+            "does_not_exist": dec_utype,
+        },
+    )
+    assert return_value
+    dec_value = next(return_value.get_first_table().get_fields_by_utype(dec_utype))
+    assert dec_value.name == "dec"
+    assert dec_value.datatype == "double"
+    assert dec_value.unit == "deg"
+    assert dec_value.utype == dec_utype
+
+
+def test_write_voparquet_in_common_metadata_verbosity(small_sky_nested_dir, tmp_path, capsys):
+    catalog_base_dir = tmp_path / "catalog"
+    shutil.copytree(
+        small_sky_nested_dir,
+        catalog_base_dir,
+    )
+
+    dec_utype = "stc:AstroCoords.Position2D.Value2.C2"
+    field_kwargs = {
+        "field_units": {
+            "ra": "deg",
+            "dec": u.deg,
+            "does_not_exist": "deg**2",
+        },
+        "field_ucds": {
+            "ra": "pos.eq.ra",
+            "dec": "pos.eq.dec",
+            "does_not_exist": "pos.eq.dec",
+        },
+        "field_descriptions": {
+            "ra": "Object ICRS Right Ascension",
+            "dec": "Object ICRS Declination",
+            "does_not_exist": "Band used to take this observation",
+        },
+        "field_utypes": {
+            "ra": "stc:AstroCoords.Position2D.Value2.C1",
+            "dec": dec_utype,
+            "does_not_exist": dec_utype,
+        },
+    }
+
+    ## No verbosity - nothing printed
+    write_voparquet_in_common_metadata(catalog_base_dir, **field_kwargs)
+
+    captured = capsys.readouterr().out
+    assert captured == ""
+
+    ## Yes verbosity - print a few warnings and full XML
+    write_voparquet_in_common_metadata(catalog_base_dir, verbose=True, **field_kwargs)
+
+    captured = capsys.readouterr().out
+    assert "Extra Fields" in captured
+    assert "dropping some units" in captured
+    assert "dropping some descriptions" in captured
+    assert dec_utype in captured
+    # Default description for a nested field.
+    assert "multi-column nested format" in captured
+
+
+def test_write_voparquet_in_common_metadata_small(small_sky_order1_dir, tmp_path):
+    catalog_base_dir = tmp_path / "catalog"
+    shutil.copytree(
+        small_sky_order1_dir,
+        catalog_base_dir,
+    )
+
+    dec_utype = "stc:AstroCoords.Position2D.Value2.C2"
+    write_voparquet_in_common_metadata(
+        catalog_base_dir,
+        field_units={
+            "ra": "deg",
+            "dec": u.deg,
+            "does_not_exist": "deg**2",
+        },
+        field_ucds={
+            "ra": "pos.eq.ra",
+            "dec": "pos.eq.dec",
+            "does_not_exist": "pos.eq.dec",
+        },
+        field_descriptions={
+            "ra": "Object ICRS Right Ascension",
+            "dec": "Object ICRS Declination",
+            "does_not_exist": "Band used to take this observation",
+        },
+        field_utypes={
+            "ra": "stc:AstroCoords.Position2D.Value2.C1",
+            "dec": dec_utype,
+            "does_not_exist": dec_utype,
+        },
+    )
+
+    table = read_parquet_votable(catalog_base_dir / "dataset" / "_common_metadata")
+    assert table.colnames == ["_healpix_29", "id", "ra", "dec", "ra_error", "dec_error"]
