@@ -12,6 +12,7 @@ from upath import UPath
 import hats.pixel_math.healpix_shim as hp
 from hats.io import file_io, paths
 from hats.pixel_math.healpix_pixel import INVALID_PIXEL, HealpixPixel
+from hats.pixel_math.healpix_pixel_function import sort_pixels
 
 
 class PartitionInfo:
@@ -90,37 +91,43 @@ class PartitionInfo:
     def read_from_dir(cls, catalog_base_dir: str | Path | UPath | None) -> PartitionInfo:
         """Read partition info from a file within a hats directory.
 
-        This will look for a `partition_info.csv` file, and if not found, will look for
-        a `_metadata` file. The second approach is typically slower for large catalogs
-        therefore a warning is issued to the user. In internal testing with large catalogs,
-        the first approach takes less than a second, while the second can take 10-20 seconds.
+        This will look for a `partition_info.csv` file, and if not found, the partition info
+        will be computed from the individual catalog files. Computing from catalog files will be slower:
+        in internal testing, it took about half a second to compute from a catalog with ~40k partitions,
+        versus a few milliseconds to read from the CSV file.
 
         Parameters
         ----------
         catalog_base_dir : str | Path | UPath | None
-            path to the root directory of the catalog
+            Path to the root directory of the catalog
 
         Returns
         -------
         PartitionInfo
             A `PartitionInfo` object with the data from the file
-
-        Raises
-        ------
-        FileNotFoundError
-            if neither desired file is found in the catalog_base_dir
         """
-        metadata_file = paths.get_parquet_metadata_pointer(catalog_base_dir)
         partition_info_file = paths.get_partition_info_pointer(catalog_base_dir)
         if file_io.does_file_or_directory_exist(partition_info_file):
             pixel_list = PartitionInfo._read_from_csv(partition_info_file)
-        elif file_io.does_file_or_directory_exist(metadata_file):
-            warnings.warn("Reading partitions from parquet metadata. This is typically slow.")
-            pixel_list = PartitionInfo._read_from_metadata_file(metadata_file)
         else:
-            raise FileNotFoundError(
-                f"_metadata or partition info file is required in catalog directory {catalog_base_dir}"
-            )
+            warnings.warn("Computing partitions from catalog parquet files. This may be slow.")
+
+            # Read the dataset dir to get the list of files.
+            pixel_list = []
+            ignore_prefixes = [
+                "_common_metadata",
+                "_metadata",
+                "data_thumbnail",
+            ]
+            dataset_subdir = paths.dataset_directory(catalog_base_dir)
+            (_, dataset) = file_io.read_parquet_dataset(dataset_subdir, ignore_prefixes=ignore_prefixes)
+
+            # Iterate through files to get the healpix pixels.
+            for file in dataset.files:
+                pixel = paths.get_healpix_from_path(str(file))
+                if pixel != INVALID_PIXEL:
+                    pixel_list.append(pixel)
+            pixel_list = sort_pixels(list(set(pixel_list)))
         return cls(pixel_list, catalog_base_dir)
 
     @classmethod
