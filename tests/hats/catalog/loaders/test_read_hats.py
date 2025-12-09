@@ -118,13 +118,24 @@ def test_read_hats_nonstandard_npix_suffix(
     small_sky_npix_alt_suffix_dir,
     small_sky_npix_as_dir_dir,
 ):
-    read_hats(small_sky_npix_alt_suffix_dir)
+    """Make sure we can open the catalog via `read_hats`, AND that we
+    can read the contents of a single pixel data partition."""
+    cat = read_hats(small_sky_npix_alt_suffix_dir)
+    result = cat.read_pixel_to_pandas(cat.get_healpix_pixels()[0])
+    assert len(result) == 131
+
     read_hats(small_sky_npix_as_dir_dir)
+    result = cat.read_pixel_to_pandas(cat.get_healpix_pixels()[0])
+    assert len(result) == 131
 
 
 def test_read_hats_original_schema(small_sky_order1_dir):
+    """Make sure we can open the catalog via `read_hats`, AND that we
+    can read the contents of a single pixel data partition."""
     cat = hats.read_hats(small_sky_order1_dir)
     assert cat.schema == cat.original_schema
+    result = cat.read_pixel_to_pandas(cat.get_healpix_pixels()[0])
+    assert len(result) == 42
 
 
 def test_read_hats_empty_catalog(small_sky_order1_empty_margin_dir, small_sky_order1_catalog):
