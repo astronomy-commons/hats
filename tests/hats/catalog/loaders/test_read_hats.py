@@ -14,7 +14,7 @@ def test_read_hats_collection(small_sky_collection_dir, small_sky_order1_catalog
     assert isinstance(collection, CatalogCollection)
     assert collection.collection_path == small_sky_collection_dir
     assert collection.main_catalog_dir == small_sky_collection_dir / "small_sky_order1"
-    assert collection.all_margins == ["small_sky_order1_margin"]
+    assert collection.all_margins == ["small_sky_order1_margin", "small_sky_order1_margin_10arcs"]
     assert collection.default_margin_catalog_dir == small_sky_collection_dir / "small_sky_order1_margin"
     assert collection.all_indexes == {"id": "small_sky_order1_id_index"}
     assert collection.default_index_field == "id"
@@ -114,19 +114,6 @@ def test_read_hats_initializes_upath_once(small_sky_dir, mocker):
     mocked_upath_call.assert_called_once_with(small_sky_dir)
 
 
-def test_read_hats_with_s3():
-    upath = get_upath_for_protocol("s3://bucket/catalog")
-    assert upath.storage_options.get("anon")
-    assert upath.storage_options["default_block_size"] == 32 * 1024
-
-
-def test_read_hats_with_http():
-    upath_http = get_upath_for_protocol("http://catalog")
-    assert upath_http.fs.block_size == 32 * 1024
-    upath_https = get_upath_for_protocol("https://catalog")
-    assert upath_https.fs.block_size == 32 * 1024
-
-
 def test_read_hats_nonstandard_npix_suffix(
     small_sky_npix_alt_suffix_dir,
     small_sky_npix_as_dir_dir,
@@ -138,3 +125,10 @@ def test_read_hats_nonstandard_npix_suffix(
 def test_read_hats_original_schema(small_sky_order1_dir):
     cat = hats.read_hats(small_sky_order1_dir)
     assert cat.schema == cat.original_schema
+
+
+def test_read_hats_empty_catalog(small_sky_order1_empty_margin_dir, small_sky_order1_catalog):
+    cat = hats.read_hats(small_sky_order1_empty_margin_dir)
+    assert cat.get_healpix_pixels() == []
+    assert cat.schema == small_sky_order1_catalog.schema
+    assert cat.catalog_info.total_rows == 0

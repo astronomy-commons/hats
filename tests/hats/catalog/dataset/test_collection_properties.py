@@ -13,7 +13,7 @@ def test_read_collection_from_file(small_sky_collection_dir):
     expected_attributes = {
         "name": "small_sky_o1_collection",
         "hats_primary_table_url": "small_sky_order1",
-        "all_margins": "small_sky_order1_margin",
+        "all_margins": "small_sky_order1_margin small_sky_order1_margin_10arcs",
         "default_margin": "small_sky_order1_margin",
         "all_indexes": "id small_sky_order1_id_index",
         "default_index": "id",
@@ -157,7 +157,7 @@ def test_read_collection_from_file_round_trip(small_sky_collection_dir, tmp_path
 
 def test_read_collection_default_margin_not_found(small_sky_collection_dir, tmp_path):
     table_properties = CollectionProperties.read_from_dir(small_sky_collection_dir)
-    assert table_properties.all_margins == ["small_sky_order1_margin"]
+    assert table_properties.all_margins == ["small_sky_order1_margin", "small_sky_order1_margin_10arcs"]
     table_properties.default_margin = "small_sky_order1_margin_1deg"
     table_properties.to_properties_file(tmp_path)
     with pytest.raises(ValueError, match="not found in all_margins"):

@@ -46,6 +46,36 @@ def test_write_parquet_metadata(tmp_path, small_sky_dir, small_sky_schema, check
     )
 
 
+def test_skip_parquet_metadata_creation(tmp_path, small_sky_dir):
+    """Copy existing catalog and skip metadata file creation"""
+    catalog_base_dir = tmp_path / "catalog"
+    shutil.copytree(
+        small_sky_dir,
+        catalog_base_dir,
+    )
+
+    # Remove existing files to ensure they are (or are not) re-created.
+    metadata_file = catalog_base_dir / "dataset" / "_metadata"
+    thumbnail_file = catalog_base_dir / "dataset" / "data_thumbnail.parquet"
+
+    metadata_file.unlink(missing_ok=True)
+    thumbnail_file.unlink(missing_ok=True)
+
+    # Do NOT create _metadata OR thumbnail (but expect _common_metadata).
+    total_rows = write_parquet_metadata(catalog_base_dir, create_metadata=False, create_thumbnail=False)
+    assert total_rows == 131
+    assert not (catalog_base_dir / "dataset" / "_metadata").exists()
+    assert (catalog_base_dir / "dataset" / "_common_metadata").exists()
+    assert not (catalog_base_dir / "dataset" / "data_thumbnail.parquet").exists()
+
+    # Now create only the thumbnail, but make sure _metadata still is not created.
+    total_rows = write_parquet_metadata(catalog_base_dir, create_metadata=False, create_thumbnail=True)
+    assert total_rows == 131
+    assert not (catalog_base_dir / "dataset" / "_metadata").exists()
+    assert (catalog_base_dir / "dataset" / "_common_metadata").exists()
+    assert (catalog_base_dir / "dataset" / "data_thumbnail.parquet").exists()
+
+
 def test_write_parquet_metadata_order1(
     tmp_path, small_sky_order1_dir, small_sky_schema, check_parquet_schema
 ):
@@ -284,6 +314,13 @@ def test_aggregate_column_statistics_with_nulls(tmp_path):
     assert_column_stat_as_floats(result_frame, "Npix", min_value=1, max_value=6, null_count=4, row_count=6)
 
 
+def test_aggregate_column_statistics_empty_catalog(small_sky_order1_empty_margin_dir):
+    partition_info_file = paths.get_parquet_metadata_pointer(small_sky_order1_empty_margin_dir)
+
+    result_frame = aggregate_column_statistics(partition_info_file)
+    assert len(result_frame) == 0
+
+
 def test_per_pixel_statistics(small_sky_order1_dir):
     partition_info_file = paths.get_parquet_metadata_pointer(small_sky_order1_dir)
 
@@ -431,4 +468,11 @@ def test_per_pixel_statistics_with_rowgroups_empty_result(small_sky_source_dir):
     result_frame = per_pixel_statistics(
         partition_info_file, include_pixels=[HealpixPixel(1, 4)], multi_index=True
     )
+    assert len(result_frame) == 0
+
+
+def test_per_pixel_statistics_empty_catalog(small_sky_order1_empty_margin_dir):
+    partition_info_file = paths.get_parquet_metadata_pointer(small_sky_order1_empty_margin_dir)
+
+    result_frame = per_pixel_statistics(partition_info_file)
     assert len(result_frame) == 0

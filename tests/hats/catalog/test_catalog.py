@@ -116,7 +116,8 @@ def test_catalog_statistics(small_sky_order1_dir):
     assert len(result_frame) == 2
 
     filtered_catalog = cat.filter_by_cone(315, -66.443, 0.1)
-    result_frame = filtered_catalog.aggregate_column_statistics()
+    with pytest.warns(UserWarning, match="modified catalog"):
+        result_frame = filtered_catalog.aggregate_column_statistics()
     assert len(result_frame) == 5
     assert_column_stat_as_floats(result_frame, "dec", min_value=-69.5, max_value=-47.5, row_count=42)
 
@@ -137,8 +138,9 @@ def test_catalog_statistics(small_sky_order1_dir):
     # 4 = 2 columns * 2 stats per-column
     assert result_frame.shape == (4, 4)
 
-    result_frame = filtered_catalog.per_pixel_statistics()
-    # 1 = 1 pixels
+    with pytest.warns(UserWarning, match="modified catalog"):
+        result_frame = filtered_catalog.per_pixel_statistics()
+    # 1 = 1 pixel (the filtered catalog has only one pixel)
     # 30 = 5 columns * 6 stats per-column
     assert result_frame.shape == (1, 30)
 
@@ -215,7 +217,7 @@ def test_cone_filter(small_sky_order1_catalog):
     assert filtered_pixels == [HealpixPixel(1, 44)]
 
     assert (1, 44) in filtered_catalog.pixel_tree
-    assert filtered_catalog.catalog_info.total_rows == 0
+    assert filtered_catalog.catalog_info.total_rows is None
 
     assert filtered_catalog.moc is not None
     cone_moc = MOC.from_cone(
@@ -270,7 +272,7 @@ def test_polygonal_filter(small_sky_order1_catalog):
     assert len(filtered_pixels) == 1
     assert filtered_pixels == [HealpixPixel(1, 46)]
     assert (1, 46) in filtered_catalog.pixel_tree
-    assert filtered_catalog.catalog_info.total_rows == 0
+    assert filtered_catalog.catalog_info.total_rows is None
     assert filtered_catalog.moc is not None
     ra, dec = np.array(polygon_vertices).T
     polygon_moc = MOC.from_polygon(
@@ -359,7 +361,7 @@ def test_box_filter(small_sky_order1_catalog):
     assert (1, 46) in filtered_catalog.pixel_tree
     assert (1, 47) in filtered_catalog.pixel_tree
     assert len(filtered_catalog.pixel_tree.pixels[1]) == 2
-    assert filtered_catalog.catalog_info.total_rows == 0
+    assert filtered_catalog.catalog_info.total_rows is None
     assert filtered_catalog.catalog_path is not None
 
     # Check that the previous filter is the same as intersecting the ra and dec filters
@@ -383,7 +385,7 @@ def test_box_filter_wrapped_ra(small_sky_order1_catalog):
     assert (1, 44) in filtered_catalog.pixel_tree
     assert (1, 45) in filtered_catalog.pixel_tree
     assert len(filtered_catalog.pixel_tree.pixels[1]) == 2
-    assert filtered_catalog.catalog_info.total_rows == 0
+    assert filtered_catalog.catalog_info.total_rows is None
 
 
 def test_box_filter_ra_boundary(small_sky_order1_catalog):
@@ -486,9 +488,23 @@ def test_empty_directory(tmp_path, catalog_info_data):
     ## Now we create the needed _metadata and everything is right.
     part_info = PartitionInfo.from_healpix([HealpixPixel(0, 11)])
     part_info.write_to_file(catalog_path=catalog_path)
-
     catalog = read_hats(catalog_path)
     assert catalog.catalog_name == "test_name"
+
+
+def test_cone_emtpy_catalog(small_sky_order1_empty_margin_dir):
+    cat = read_hats(small_sky_order1_empty_margin_dir)
+
+    assert cat.get_healpix_pixels() == []
+    assert cat.catalog_info.total_rows == 0
+
+    filtered_catalog = cat.filter_by_cone(315, -66.443, 0.1)
+    filtered_pixels = filtered_catalog.get_healpix_pixels()
+
+    assert len(filtered_pixels) == 0
+    assert len(filtered_catalog.pixel_tree) == 0
+
+    assert filtered_catalog.catalog_info.total_rows is None
 
 
 @pytest.mark.timeout(20)
