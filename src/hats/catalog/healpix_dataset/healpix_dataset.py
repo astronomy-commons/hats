@@ -3,6 +3,7 @@ from __future__ import annotations
 import warnings
 from pathlib import Path
 
+import nested_pandas as npd
 import pandas as pd
 import pyarrow as pa
 from mocpy import MOC
@@ -14,6 +15,7 @@ from hats.catalog.dataset.table_properties import TableProperties
 from hats.catalog.partition_info import PartitionInfo
 from hats.inspection import plot_pixels
 from hats.inspection.visualize_catalog import plot_moc
+from hats.io import file_io, paths
 from hats.io.parquet_metadata import aggregate_column_statistics, per_pixel_statistics
 from hats.pixel_math import HealpixPixel
 from hats.pixel_math.region_to_moc import box_to_moc, cone_to_moc, pixel_list_to_moc, polygon_to_moc
@@ -415,3 +417,28 @@ class HealpixDataset(Dataset):
                 self.catalog_info.healpix_order = SPATIAL_INDEX_ORDER
                 return True
         return False
+
+    def read_pixel_to_pandas(self, pixel: HealpixPixel, **kwargs) -> npd.NestedFrame:
+        """Read the parquet file(s) for this pixel into a pandas dataframe.
+
+        Parameters
+        ----------
+        pixel : HealpixPixel
+            desired data partition, by healpix pixel
+        **kwargs
+            Additional arguments to pass to pandas read_parquet method
+
+        Returns
+        -------
+        NestedFrame
+            Pandas DataFrame with the data from the parquet file(s)
+        """
+        if not self.on_disk:
+            warnings.warn("Calling read_pixel_to_pandas on an in-memory catalog. No results.")
+            return pd.DataFrame()
+        object_path = paths.pixel_catalog_file(
+            self.catalog_base_dir, pixel, npix_suffix=self.catalog_info.npix_suffix
+        )
+        return file_io.read_parquet_file_to_pandas(
+            object_path, schema=self.schema, is_dir=(self.catalog_info.npix_suffix == "/"), **kwargs
+        )
