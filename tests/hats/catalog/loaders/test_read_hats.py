@@ -124,7 +124,7 @@ def test_read_hats_nonstandard_npix_suffix(
     result = cat.read_pixel_to_pandas(cat.get_healpix_pixels()[0])
     assert len(result) == 131
 
-    read_hats(small_sky_npix_as_dir_dir)
+    cat = read_hats(small_sky_npix_as_dir_dir)
     result = cat.read_pixel_to_pandas(cat.get_healpix_pixels()[0])
     assert len(result) == 131
 

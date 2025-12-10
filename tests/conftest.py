@@ -128,7 +128,7 @@ def margin_catalog_info(margin_cache_catalog_info_data) -> TableProperties:
 
 
 @pytest.fixture
-def inmemory_catalog(catalog_info, catalog_pixels):
+def in_memory_catalog(catalog_info, catalog_pixels):
     return Catalog(catalog_info, catalog_pixels)
 
 

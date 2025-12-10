@@ -243,13 +243,16 @@ def new_pixel_catalog_file(
     pixel : HealpixPixel
         the healpix pixel to create path to
     create_dirs: bool
-        should we create parent directories, and also possibly pixel directory (if a directory)
+        if True, create all parent directories, including the per-pixel
+        directory when ``npix_suffix == "/"``. Default is True.
     npix_suffix: str
-        (Default value = ".parquet") extension for the parquet file (or `/` if a directory)
+        suffix appended to the ``Npix=<pixel>`` component. For regular files,
+        this is typically a file extension such as ``".parquet"``. If set to
+        ``"/"``, ``Npix=<pixel>`` is treated as a directory and the returned
+        path points to a file within that directory.
     npix_parquet_name: (str)
-        name of the pixel parquet file to be used when npix_suffix=/.
-        By default, it will be named after the pixel with a .parquet extension
-        (e.g. 'Npix=10.parquet').
+        name of the parquet file inside the per-pixel directory when ``npix_suffix == "/"``. 
+        Defaults to ``"Npix=<pixel>.parquet"``. Ignored unless ``npix_suffix == "/"``.
 
     Returns
     -------
