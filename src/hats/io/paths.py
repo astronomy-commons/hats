@@ -251,7 +251,7 @@ def new_pixel_catalog_file(
         ``"/"``, ``Npix=<pixel>`` is treated as a directory and the returned
         path points to a file within that directory.
     npix_parquet_name: (str)
-        name of the parquet file inside the per-pixel directory when ``npix_suffix == "/"``. 
+        name of the parquet file inside the per-pixel directory when ``npix_suffix == "/"``.
         Defaults to ``"Npix=<pixel>.parquet"``. Ignored unless ``npix_suffix == "/"``.
 
     Returns
