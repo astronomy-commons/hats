@@ -1,5 +1,7 @@
 """Sparse 1-D histogram of healpix pixel counts."""
 
+from collections import defaultdict
+
 import numpy as np
 
 import hats.pixel_math.healpix_shim as hp
@@ -94,6 +96,8 @@ class HistogramAggregator:
         other : SparseHistogram
             the wrapper containing the addend
         """
+        if other is None:
+            return
         if not isinstance(other, SparseHistogram):
             raise ValueError("Both addends should be SparseHistogram.")
         if self.order != other.order:
@@ -109,3 +113,28 @@ class HistogramAggregator:
         indexes = self.full_histogram.nonzero()[0]
         counts = self.full_histogram[indexes]
         return SparseHistogram(indexes, counts, self.order)
+
+
+def supplemental_count_histogram(mapped_pixels, supplemental_count, highest_order):
+    """Specialized method for getting a histogram of some supplemental count,
+    collating according to the pixels in the first argument."""
+
+    mapped_pixel, count_at_pixel = np.unique(mapped_pixels, return_counts=True)
+    row_count_histo = SparseHistogram(mapped_pixel, count_at_pixel, highest_order)
+
+    # If using bytewise/mem_size thresholding, also add to mem_size histogram.
+    supplemental_count_histo = None
+    if supplemental_count is not None:
+        supplemental_count_sizes: dict[int, int] = defaultdict(int)
+        for pixel, mem_size in zip(mapped_pixels, supplemental_count, strict=True):
+            supplemental_count_sizes[pixel] += mem_size
+
+        # Turn our dict into two lists, the keys and vals, sorted so the keys are increasing
+        mapped_pixel_ids = np.array(list(supplemental_count_sizes.keys()), dtype=np.int64)
+        mapped_supplemental_count_sizes = np.array(list(supplemental_count_sizes.values()), dtype=np.int64)
+
+        supplemental_count_histo = SparseHistogram(
+            mapped_pixel_ids, mapped_supplemental_count_sizes, highest_order
+        )
+
+    return (row_count_histo, supplemental_count_histo)
