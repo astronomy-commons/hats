@@ -216,6 +216,79 @@ def pixel_catalog_file(
     )
 
 
+def new_pixel_catalog_file(
+    catalog_base_dir: str | Path | UPath | None,
+    pixel: HealpixPixel,
+    create_dirs: bool = True,
+    npix_suffix: str = ".parquet",
+    npix_parquet_name: str | None = None,
+) -> UPath:
+    """Create path for a single new pixel catalog file.
+
+    In the event that you are writing to a per-pixel directory, you will also need a name
+    for the new parquet file.
+
+    The catalog file name will take the HiPS standard form of::
+
+        <catalog_base_dir>/Norder=<pixel_order>/Dir=<directory number>/Npix=<pixel_number>.parquet
+
+    Where the directory number is calculated using integer division as::
+
+        (pixel_number/10000)*10000
+
+    Parameters
+    ----------
+    catalog_base_dir : str | Path | UPath | None
+        base directory of the catalog (includes catalog name)
+    pixel : HealpixPixel
+        the healpix pixel to create path to
+    create_dirs: bool
+        if True, create all parent directories, including the per-pixel
+        directory when ``npix_suffix == "/"``. Default is True.
+    npix_suffix: str
+        suffix appended to the ``Npix=<pixel>`` component. For regular files,
+        this is typically a file extension such as ``".parquet"``. If set to
+        ``"/"``, ``Npix=<pixel>`` is treated as a directory and the returned
+        path points to a file within that directory.
+    npix_parquet_name: (str)
+        name of the parquet file inside the per-pixel directory when ``npix_suffix == "/"``.
+        Defaults to ``"Npix=<pixel>.parquet"``. Ignored unless ``npix_suffix == "/"``.
+
+    Returns
+    -------
+    UPath
+        catalog file name
+    """
+    catalog_base_dir = get_upath(catalog_base_dir)
+    suffix = npix_suffix if npix_suffix not in ["/", "\\"] else ""
+
+    if create_dirs:
+        destination_dir = pixel_directory(
+            catalog_base_dir,
+            pixel.order,
+            pixel.pixel,
+            pixel.dir,
+        )
+        destination_dir.mkdir(parents=True, exist_ok=True)
+
+    destination_file = (
+        catalog_base_dir
+        / DATASET_DIR
+        / f"{PARTITION_ORDER}={pixel.order}"
+        / f"{PARTITION_DIR}={pixel.dir}"
+        / f"{PARTITION_PIXEL}={pixel.pixel}{suffix}"
+    )
+
+    if npix_suffix == "/":
+        if create_dirs:
+            destination_file.mkdir(exist_ok=True)
+        if npix_parquet_name is None:
+            npix_parquet_name = f"{PARTITION_PIXEL}={pixel.pixel}.parquet"
+        destination_file = destination_file / npix_parquet_name
+
+    return destination_file
+
+
 def get_partition_info_pointer(catalog_base_dir: str | Path | UPath) -> UPath:
     """Get file pointer to ``partition_info.csv`` metadata file
 
