@@ -12,11 +12,16 @@ import pandas as pd
 import pyarrow.dataset as pds
 import pyarrow.parquet as pq
 import upath.implementations.http
-from cdshealpix.skymap.skymap import Skymap
+from cdshealpix.skymap.skymap import SkymapExplicit, SkymapImplicit
+from astropy.io import fits
+
 from pyarrow.dataset import Dataset
 from upath import UPath
 
 from hats.io.file_io.file_pointer import get_upath
+
+
+SKYMAP_EXPLICIT_INDEX_SCHEME = "EXPLICIT"
 
 
 def make_directory(file_pointer: str | Path | UPath, exist_ok: bool = False):
@@ -329,7 +334,11 @@ def read_fits_image(map_file_pointer: str | Path | UPath) -> np.ndarray:
             _tmp_file.write(_map_file.read())
         tmp_path = _tmp_file.name
     try:
-        return Skymap.from_fits(tmp_path).values
+        with fits.open(tmp_path) as hdul:
+            extension_header = hdul[1].header
+        if extension_header["INDXSCHM"] == SKYMAP_EXPLICIT_INDEX_SCHEME:
+            return SkymapExplicit.from_fits(tmp_path).to_implicit().values
+        return SkymapImplicit.from_fits(tmp_path).values
     finally:
         os.unlink(tmp_path)
 
@@ -348,7 +357,10 @@ def write_fits_image(histogram: np.ndarray, map_file_pointer: str | Path | UPath
     map_file_pointer = get_upath(map_file_pointer)
     with tempfile.NamedTemporaryFile() as _tmp_file:
         with map_file_pointer.open("wb") as _map_file:
-            skymap = Skymap.from_array(histogram)
+            skymap = SkymapImplicit(histogram, null_value=0)
+            num_zeroes = np.count_nonzero(histogram == 0)
+            if num_zeroes / len(histogram) > 0.5:
+                skymap = skymap.to_explicit()
             skymap.to_fits(_tmp_file.name)
             _map_file.write(_tmp_file.read())
 
