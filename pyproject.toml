@@ -26,7 +26,7 @@ dependencies = [
     "mocpy>=0.19.0",
     "nested-pandas>=0.4.1",
     "numba>=0.58",
-    "numpy>=2,<3", 
+    "numpy>=2.3,<3", 
     "pandas>=2.0",
     # NOTE: package PINNED at:
     # !=19.0.0 due to https://github.com/astronomy-commons/hats/pull/516

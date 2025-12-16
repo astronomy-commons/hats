@@ -113,11 +113,30 @@ def test_supplemental_count_histogram():
     mapped_pixels = [44, 45, 44, 44, 9, 10]
     supplemental_count = [19, 45, 98, 104, 56, 78]
 
+    total_histogram_row_count = HistogramAggregator(2)
+    total_histogram_suppl = HistogramAggregator(2)
+
     row_count, supplemental_sum = supplemental_count_histogram(
         mapped_pixels=mapped_pixels, supplemental_count=supplemental_count, highest_order=2
     )
     assert row_count == SparseHistogram([9, 10, 44, 45], [1, 1, 3, 1], 2)
     assert supplemental_sum == SparseHistogram([9, 10, 44, 45], [56, 78, 221, 45], 2)
+
+    total_histogram_row_count.add(row_count)
+    total_histogram_suppl.add(supplemental_sum)
+
+    assert total_histogram_row_count.to_sparse() == SparseHistogram([9, 10, 44, 45], [1, 1, 3, 1], 2)
+    assert total_histogram_suppl.to_sparse() == SparseHistogram([9, 10, 44, 45], [56, 78, 221, 45], 2)
+
+    total_histogram_row_count.add(row_count)
+    total_histogram_suppl.add(supplemental_sum)
+
+    assert total_histogram_row_count.to_sparse() == SparseHistogram(
+        [9, 10, 44, 45], np.array([1, 1, 3, 1]) * 2, 2
+    )
+    assert total_histogram_suppl.to_sparse() == SparseHistogram(
+        [9, 10, 44, 45], np.array([56, 78, 221, 45]) * 2, 2
+    )
 
 
 def test_supplemental_count_histogram_edge():
