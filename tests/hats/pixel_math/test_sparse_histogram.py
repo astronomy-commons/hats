@@ -6,7 +6,11 @@ import pytest
 from numpy import frombuffer
 
 import hats.pixel_math.healpix_shim as hp
-from hats.pixel_math.sparse_histogram import HistogramAggregator, SparseHistogram
+from hats.pixel_math.sparse_histogram import (
+    HistogramAggregator,
+    SparseHistogram,
+    supplemental_count_histogram,
+)
 
 
 def test_make_empty():
@@ -14,6 +18,31 @@ def test_make_empty():
     histogram = SparseHistogram([], [], 5)
     expected_hist = np.zeros(hp.order2npix(5))
     npt.assert_array_equal(expected_hist, histogram.to_array())
+
+
+def test_sparse_histogram_error():
+    """Tests the initialization of an empty histogram at the specified order"""
+    with pytest.raises(ValueError, match="must be same length"):
+        SparseHistogram([], [5], 5)
+
+
+def test_sparse_histogram_eq():
+    """Tests the initialization of an empty histogram at the specified order"""
+    histogram = SparseHistogram([11], [131], 0)
+
+    assert histogram == SparseHistogram([11], [131], 0)
+    assert histogram != SparseHistogram([11], [132], 0)
+    assert histogram != ([11], [131], 0)
+
+
+def test_sparse_histogram_str():
+    """Tests the initialization of an empty histogram at the specified order"""
+    histogram = SparseHistogram([11], [131], 0)
+
+    str_repr = str(histogram)
+    assert str_repr.startswith("Histogram")
+    assert "[131]" in str_repr
+    assert "[11]" in str_repr
 
 
 def test_read_write_round_trip(tmp_path):
@@ -49,9 +78,7 @@ def test_add_same_order():
     npt.assert_array_equal(total_histogram.full_histogram, expected)
 
     sparse = total_histogram.to_sparse()
-    npt.assert_array_equal(sparse.indexes, [10, 11])
-    npt.assert_array_equal(sparse.counts, [4, 146])
-    npt.assert_array_equal(sparse.order, 0)
+    assert sparse == SparseHistogram([10, 11], [4, 146], 0)
 
 
 def test_add_different_order():
@@ -71,8 +98,39 @@ def test_add_different_type():
 
     total_histogram = HistogramAggregator(0)
     total_histogram.add(partial_histogram_left)
+
+    total_histogram.add(None)
+    total_histogram.add(SparseHistogram([], [], 0))
+
     with pytest.raises(ValueError, match="addends should be SparseHistogram"):
         total_histogram.add(5)
 
     with pytest.raises(ValueError, match="addends should be SparseHistogram"):
         total_histogram.add(([1, 2, 3, 4, 5], [1, 2, 3, 4, 5], 0))
+
+
+def test_supplemental_count_histogram():
+    mapped_pixels = [44, 45, 44, 44, 9, 10]
+    supplemental_count = [19, 45, 98, 104, 56, 78]
+
+    row_count, supplemental_sum = supplemental_count_histogram(
+        mapped_pixels=mapped_pixels, supplemental_count=supplemental_count, highest_order=2
+    )
+    assert row_count == SparseHistogram([9, 10, 44, 45], [1, 1, 3, 1], 2)
+    assert supplemental_sum == SparseHistogram([9, 10, 44, 45], [56, 78, 221, 45], 2)
+
+
+def test_supplemental_count_histogram_edge():
+    mapped_pixels = [44, 45, 44, 44, 9, 10]
+    supplemental_count = [19, 45, 98, 104, 56, 78]
+
+    row_count, supplemental_sum = supplemental_count_histogram(
+        mapped_pixels=mapped_pixels, supplemental_count=None, highest_order=2
+    )
+    assert row_count == SparseHistogram([9, 10, 44, 45], [1, 1, 3, 1], 2)
+    assert supplemental_sum is None
+
+    with pytest.raises(ValueError, match="must be the same length"):
+        supplemental_count_histogram(
+            mapped_pixels=mapped_pixels, supplemental_count=supplemental_count[:-2], highest_order=2
+        )

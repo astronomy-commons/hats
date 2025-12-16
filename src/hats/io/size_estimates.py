@@ -13,9 +13,9 @@ from hats.io import file_io
 
 def estimate_dir_size(path: str | Path | UPath | None = None, *, divisor=1):
     """Estimate the disk usage of a directory, and recursive contents."""
+    path = file_io.get_upath(path)
     if path is None:
         return 0
-    path = file_io.get_upath(path)
 
     def _estimate_dir_size(target_dir):
         total_size = 0
