@@ -29,8 +29,7 @@ def estimate_dir_size(path: str | Path | UPath | None = None, *, divisor=1):
     est_size = _estimate_dir_size(path)
     if divisor > 1:
         return int(est_size / divisor)
-    else:
-        return est_size
+    return est_size
 
 
 def _get_row_mem_size_data_frame(row):

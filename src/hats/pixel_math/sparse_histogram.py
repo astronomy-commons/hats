@@ -1,7 +1,5 @@
 """Sparse 1-D histogram of healpix pixel counts."""
 
-from collections import defaultdict
-
 import numpy as np
 
 import hats.pixel_math.healpix_shim as hp
