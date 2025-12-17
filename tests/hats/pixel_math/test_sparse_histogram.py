@@ -21,13 +21,13 @@ def test_make_empty():
 
 
 def test_sparse_histogram_error():
-    """Tests the initialization of an empty histogram at the specified order"""
+    """Tests error when trying to initialize a histogram with mismatched indexes and counts"""
     with pytest.raises(ValueError, match="must be same length"):
         SparseHistogram([], [5], 5)
 
 
 def test_sparse_histogram_eq():
-    """Tests the initialization of an empty histogram at the specified order"""
+    """Tests the use of the equality operator with histograms"""
     histogram = SparseHistogram([11], [131], 0)
 
     assert histogram == SparseHistogram([11], [131], 0)
@@ -36,7 +36,7 @@ def test_sparse_histogram_eq():
 
 
 def test_sparse_histogram_str():
-    """Tests the initialization of an empty histogram at the specified order"""
+    """Tests histogram string output"""
     histogram = SparseHistogram([11], [131], 0)
 
     str_repr = str(histogram)
