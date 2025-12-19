@@ -357,9 +357,13 @@ def test_per_pixel_statistics_multi_index(small_sky_order1_dir):
 def test_per_pixel_statistics_include_stats(small_sky_order1_dir):
     partition_info_file = paths.get_parquet_metadata_pointer(small_sky_order1_dir)
 
-    result_frame = per_pixel_statistics(partition_info_file, include_stats=["row_count"])
-    # 5 = 5 columns * 1 stat per column
-    assert result_frame.shape == (4, 5)
+    result_frame = per_pixel_statistics(partition_info_file, include_stats=["disk_bytes", "memory_bytes"])
+    # 10 = 5 columns * 2 stats per column
+    assert result_frame.shape == (4, 10)
+
+    # The order of the stats should not matter
+    result_frame_2 = per_pixel_statistics(partition_info_file, include_stats=["memory_bytes", "disk_bytes"])
+    pd.testing.assert_frame_equal(result_frame, result_frame_2)
 
     result_frame = per_pixel_statistics(
         partition_info_file, include_stats=["row_count"], include_columns=["id"]
