@@ -10,7 +10,7 @@ from typing_extensions import Self
 from upath import UPath
 
 from hats.catalog.catalog_type import CatalogType
-from hats.io import file_io
+from hats.io import file_io, size_estimates
 
 ## catalog_name, catalog_type, and total_rows are required for ALL types
 CATALOG_TYPE_REQUIRED_FIELDS = {
@@ -342,18 +342,6 @@ class TableProperties(BaseModel):
         dict
             A dictionary with properties for the HATS catalog.
         """
-
-        def _estimate_dir_size(target_dir):
-            total_size = 0
-            for item in target_dir.iterdir():
-                if item.is_dir():
-                    total_size += _estimate_dir_size(item)
-                else:
-                    total_size += item.stat().st_size
-            return total_size
-
-        path = file_io.get_upath(path)
-
         builder_str = ""
         if builder is not None:
             builder_str = f"{builder}, "
@@ -363,7 +351,7 @@ class TableProperties(BaseModel):
         now = datetime.now(tz=timezone.utc)
         properties["hats_builder"] = builder_str
         properties["hats_creation_date"] = now.strftime("%Y-%m-%dT%H:%M%Z")
-        properties["hats_estsize"] = int(_estimate_dir_size(path) / 1024) if path else 0
+        properties["hats_estsize"] = size_estimates.estimate_dir_size(path, divisor=1024)
         properties["hats_release_date"] = "2025-08-22"
         properties["hats_version"] = "v1.0"
         return kwargs | properties

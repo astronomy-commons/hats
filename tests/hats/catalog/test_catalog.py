@@ -145,15 +145,20 @@ def test_catalog_statistics(small_sky_order1_dir):
     assert result_frame.shape == (1, 30)
 
 
-def test_catalog_statistics_inmemory(catalog_info, catalog_pixels):
-    catalog = Catalog(catalog_info, catalog_pixels)
+def test_catalog_statistics_in_memory(in_memory_catalog):
     with pytest.warns(UserWarning, match="in-memory"):
-        result_frame = catalog.aggregate_column_statistics(include_columns=["ra", "dec"])
+        result_frame = in_memory_catalog.aggregate_column_statistics(include_columns=["ra", "dec"])
     assert len(result_frame) == 0
 
     with pytest.warns(UserWarning, match="in-memory"):
-        result_frame = catalog.per_pixel_statistics(include_columns=["ra", "dec"])
+        result_frame = in_memory_catalog.per_pixel_statistics(include_columns=["ra", "dec"])
     assert len(result_frame) == 0
+
+
+def test_read_pixel_to_pandas_in_memory(in_memory_catalog):
+    with pytest.warns(UserWarning, match="in-memory"):
+        result_frame = in_memory_catalog.read_pixel_to_pandas(in_memory_catalog.get_healpix_pixels()[0])
+        assert len(result_frame) == 0
 
 
 def test_load_catalog_small_sky_order1_moc(small_sky_order1_dir):

@@ -343,7 +343,7 @@ def aggregate_column_statistics(
     return frame
 
 
-# pylint: disable=too-many-positional-arguments
+# pylint: disable=too-many-positional-arguments,too-many-statements
 def per_pixel_statistics(
     metadata_file: str | Path | UPath,
     exclude_hats_columns: bool = True,
@@ -431,6 +431,7 @@ def per_pixel_statistics(
         for stat in include_stats:
             if stat not in all_stats:
                 raise ValueError(f"include_stats must be from list {all_stats} (found {stat})")
+        include_stats = [stat for stat in all_stats if stat in include_stats]
         int_stats = [stat for stat in int_stats if stat in include_stats]
 
     stat_mask = np.array([ind for ind, stat in enumerate(all_stats) if stat in include_stats])
