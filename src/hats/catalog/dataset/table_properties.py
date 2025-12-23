@@ -98,6 +98,12 @@ class TableProperties(BaseModel):
     skymap_alt_orders: Optional[list[int]] = Field(default=None, alias="hats_skymap_alt_orders")
     """Nested Order (K) of the healpix skymaps stored in altnernative skymap.K.fits."""
 
+    hats_max_rows: Optional[int] = Field(default=None, alias="hats_max_rows")
+    """Maximum number of rows in any partition of the catalog."""
+
+    hats_max_bytes: Optional[int] = Field(default=None, alias="hats_max_bytes")
+    """Maximum number of bytes in any partition of the catalog."""
+
     ## Allow any extra keyword args to be stored on the properties object.
     model_config = ConfigDict(extra="allow", populate_by_name=True, use_enum_values=True)
 
