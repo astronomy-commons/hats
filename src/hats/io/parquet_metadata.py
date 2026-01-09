@@ -514,10 +514,12 @@ def per_pixel_statistics(
 def pick_metadata_schema_file(catalog_base_dir: str | Path | UPath) -> UPath | None:
     """Determines the appropriate file to read for parquet metadata
     stored in the _common_metadata or _metadata files.
+
     Parameters
     ----------
     catalog_base_dir : str | Path | UPath
         base path for the catalog
+
     Returns
     -------
     UPath | None
@@ -533,8 +535,8 @@ def pick_metadata_schema_file(catalog_base_dir: str | Path | UPath) -> UPath | N
 
 
 # pylint: disable=protected-access
-def pa_schema_to_vo_schema(
-    catalog_base_dir: str | Path | UPath,
+def nested_frame_to_vo_schema(
+    nested_frame: npd.NestedFrame,
     *,
     verbose: bool = False,
     field_units: dict | None = None,
@@ -542,15 +544,17 @@ def pa_schema_to_vo_schema(
     field_descriptions: dict | None = None,
     field_utypes: dict | None = None,
 ):
-    """Create VOTableFile metadata, based on the names and types of fields in the parquet files.
+    """Create VOTableFile metadata, based on the names and types of fields in the NestedFrame.
     Add ancillary attributes to fields where they are provided in the optional dictionaries.
     Note on field names with nested columns: to include ancillary attributes (units, ucds, etc)
     for a nested sub-column, use dot notation (e.g. ``"lightcurve.band"``). You can add ancillary
     attributes for the entire nested column group using the nested column name (e.g. ``"lightcurve"``).
+
     Parameters
     ----------
-    catalog_base_dir : str | Path | UPath
-        base path for the catalog
+    nested_frame : npd.NestedFrame
+        nested frame representing catalog data. this can be empty, as we only need to
+        know about the column names and types.
     verbose: bool
         Should we print out additional debugging statements about the vo metadata?
     field_units: dict | None
@@ -561,37 +565,31 @@ def pa_schema_to_vo_schema(
         dictionary mapping column names to free-text descriptions
     field_utypes: dict | None
         dictionary mapping column names to utypes
+
     Returns
     -------
     VOTableFile
         VO object containing all relevant metadata (but no data)
     """
-    schema_file = pick_metadata_schema_file(catalog_base_dir=catalog_base_dir)
-    if not schema_file:
-        return None
-
     field_units = field_units or {}
     field_ucds = field_ucds or {}
     field_descriptions = field_descriptions or {}
     field_utypes = field_utypes or {}
 
-    ## Try to find VO metadata in the file:
-    # metadata = file_io.read_parquet_metadata(schema_file)
-    nested_schema = npd.read_parquet(schema_file)
-
-    df_types = nested_schema.to_pandas().dtypes
+    # Collate and tidy up the column names and data types.
+    df_types = nested_frame.to_pandas().dtypes
     names = []
     data_types = []
-    for col in nested_schema.base_columns:
+    for col in nested_frame.base_columns:
         names.append(col)
-        type_str = str(df_types[col]).split("[", maxsplit=1)[0]
-        data_types.append(type_str)
+        data_types.append(str(df_types[col]))
 
-    for col in nested_schema.nested_columns:
-        for key, val in nested_schema[col].dtype.column_dtypes.items():
+    for col in nested_frame.nested_columns:
+        for key, val in nested_frame[col].dtype.column_dtypes.items():
             names.append(f"{col}.{key}")
             data_types.append(str(val))
-    data_types = ["U" if t == "string" else t for t in data_types]
+    # astropy.Table uses numpy-style dtypes, and this cleans up type strings.
+    data_types = ["U" if "string" in t else t.removesuffix("[pyarrow]") for t in data_types]
 
     # Might have extra content for nested columns.
     named_descriptions = {key: field_descriptions[key] for key in field_descriptions if key in names}
@@ -617,7 +615,7 @@ def pa_schema_to_vo_schema(
 
     ## Add groups for nested columns
     vo_table = votablefile.get_first_table()
-    for col in nested_schema.nested_columns:
+    for col in nested_frame.nested_columns:
         new_group = Group(vo_table, name=col, config=vo_table._config, pos=vo_table._pos)
         if col in field_descriptions:
             new_group.description = field_descriptions[col]
@@ -628,7 +626,7 @@ def pa_schema_to_vo_schema(
         new_param = Param(vo_table, name="is_nested_column", datatype="boolean", value="t")
         new_group.entries.append(new_param)
 
-        for key in nested_schema[col].columns:
+        for key in nested_frame[col].columns:
             new_field = FieldRef(vo_table, ref=f"{col}.{key}")
             new_group.entries.append(new_field)
 
@@ -657,6 +655,7 @@ def write_voparquet_in_common_metadata(
     Note on field names with nested columns: to include ancillary attributes (units, ucds, etc)
     for a nested sub-column, use dot notation (e.g. ``"lightcurve.band"``). You can add ancillary
     attributes for the entire nested column group using the nested column name (e.g. ``"lightcurve"``).
+
     Parameters
     ----------
     catalog_base_dir : str | Path | UPath
@@ -672,9 +671,13 @@ def write_voparquet_in_common_metadata(
     field_utypes: dict | None
         dictionary mapping column names to utypes
     """
-    votablefile = pa_schema_to_vo_schema(
+    schema_file = pick_metadata_schema_file(catalog_base_dir=catalog_base_dir)
+    if not schema_file:
+        return
+    nested_frame = npd.read_parquet(schema_file)
+    votablefile = nested_frame_to_vo_schema(
+        nested_frame=nested_frame,
         verbose=verbose,
-        catalog_base_dir=catalog_base_dir,
         field_units=field_units,
         field_ucds=field_ucds,
         field_descriptions=field_descriptions,
@@ -688,9 +691,7 @@ def write_voparquet_in_common_metadata(
         print("================== Table XML ==================")
         print(xml_str)
 
-    common_metadata_file_pointer = paths.get_common_metadata_pointer(catalog_base_dir)
-
-    pa_schema = file_io.read_parquet_metadata(common_metadata_file_pointer).schema.to_arrow_schema()
+    pa_schema = file_io.read_parquet_metadata(schema_file).schema.to_arrow_schema()
 
     original_metadata = pa_schema.metadata or {}
     updated_metadata = original_metadata | {
@@ -700,4 +701,4 @@ def write_voparquet_in_common_metadata(
 
     pa_schema = pa_schema.with_metadata(updated_metadata)
 
-    file_io.write_parquet_metadata(pa_schema, common_metadata_file_pointer)
+    file_io.write_parquet_metadata(pa_schema, schema_file)

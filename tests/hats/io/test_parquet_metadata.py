@@ -3,6 +3,7 @@
 import shutil
 
 import astropy.units as u
+import nested_pandas as npd
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -14,7 +15,7 @@ from pyarrow.parquet import ParquetFile
 from hats.io import file_io, paths
 from hats.io.parquet_metadata import (
     aggregate_column_statistics,
-    pa_schema_to_vo_schema,
+    nested_frame_to_vo_schema,
     per_pixel_statistics,
     write_parquet_metadata,
     write_voparquet_in_common_metadata,
@@ -490,10 +491,10 @@ def test_per_pixel_statistics_empty_catalog(small_sky_order1_empty_margin_dir):
     assert len(result_frame) == 0
 
 
-def test_pa_schema_to_vo_schema_small(small_sky_nested_dir):
+def test_nested_frame_to_vo_schema_small(small_sky_nested_dir):
     dec_utype = "stc:AstroCoords.Position2D.Value2.C2"
-    return_value = pa_schema_to_vo_schema(
-        small_sky_nested_dir,
+    return_value = nested_frame_to_vo_schema(
+        npd.read_parquet(small_sky_nested_dir / "dataset" / "_common_metadata"),
         field_units={
             "ra": "deg",
             "dec": u.deg,
