@@ -17,6 +17,7 @@ from hats.catalog.index.index_catalog import IndexCatalog
 from hats.catalog.partition_info import PartitionInfo
 from hats.io import file_io, paths
 from hats.io.file_io import read_parquet_metadata
+from hats.io.parquet_metadata import pick_metadata_schema_file
 
 DATASET_TYPE_TO_CLASS = {
     CatalogType.OBJECT: Catalog,
@@ -106,16 +107,12 @@ def _read_moc_from_point_map(catalog_base_dir: str | Path | UPath) -> MOC | None
 
 def _read_schema_from_metadata(catalog_base_dir: str | Path | UPath) -> pa.Schema | None:
     """Reads the schema information stored in the _common_metadata or _metadata files."""
-    common_metadata_file = paths.get_common_metadata_pointer(catalog_base_dir)
-    common_metadata_exists = file_io.does_file_or_directory_exist(common_metadata_file)
-    metadata_file = paths.get_parquet_metadata_pointer(catalog_base_dir)
-    metadata_exists = file_io.does_file_or_directory_exist(metadata_file)
-    if not (common_metadata_exists or metadata_exists):
+    schema_file = pick_metadata_schema_file(catalog_base_dir=catalog_base_dir)
+    if not schema_file:
         warnings.warn(
             "_common_metadata or _metadata files not found for this catalog."
             "The arrow schema will not be set."
         )
         return None
-    schema_file = common_metadata_file if common_metadata_exists else metadata_file
     metadata = read_parquet_metadata(schema_file)
     return metadata.schema.to_arrow_schema()
