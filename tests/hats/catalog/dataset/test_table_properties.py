@@ -130,7 +130,7 @@ def test_copy_and_update():
 
     prop_c = initital_properties.copy_and_update(moc_sky_fraction=0.54)
     assert initital_properties != prop_c
-    assert prop_c.__pydantic_extra__["moc_sky_fraction"] == pytest.approx(0.54)
+    assert prop_c.moc_sky_fraction == pytest.approx(0.54)
 
 
 def test_read_from_dir_branches(
@@ -212,3 +212,8 @@ def test_provenance_dict(small_sky_dir, tmp_path):
     assert properties["hats_release_date"].startswith("20")
     assert properties["hats_version"].startswith("v")
     assert properties["foo"] == "bar"
+
+
+def test_datatype_parsing(small_sky_dir):
+    properties = TableProperties.read_from_dir(small_sky_dir)
+    assert isinstance(properties.moc_sky_fraction, float)
