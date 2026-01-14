@@ -244,13 +244,15 @@ def _pick_columns(
 
     column_names = [name.removesuffix(".list.element") for name in column_names]
     numeric_columns = [name.removesuffix(".list.element") for name in numeric_columns]
-    good_column_indexes = [
-        index
-        for index, name in enumerate(column_names)
-        if (len(include_columns) == 0 or name in include_columns)
-        and not (len(exclude_columns) > 0 and name in exclude_columns)
-        and (not only_numeric_columns or name in numeric_columns)
-    ]
+
+    good_column_indexes = []
+    for index, name in enumerate(column_names):
+        base_name = name.split(".")[0]
+        included = not include_columns or name in include_columns or base_name in include_columns
+        excluded = exclude_columns and (name in exclude_columns or base_name in exclude_columns)
+        numeric_ok = not only_numeric_columns or name in numeric_columns
+        if included and not excluded and numeric_ok:
+            good_column_indexes.append(index)
     column_names = [column_names[i] for i in good_column_indexes]
 
     return good_column_indexes, column_names
