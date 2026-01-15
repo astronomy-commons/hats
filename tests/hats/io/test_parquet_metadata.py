@@ -203,6 +203,29 @@ def test_aggregate_column_statistics(small_sky_order1_dir):
     assert len(result_frame) == 0
 
 
+def test_aggregate_column_statistics_nested(small_sky_nested_dir):
+    partition_info_file = paths.get_parquet_metadata_pointer(small_sky_nested_dir)
+
+    result_frame = aggregate_column_statistics(partition_info_file)
+    assert len(result_frame) == 13
+
+    result_frame = aggregate_column_statistics(partition_info_file, include_columns=["ra", "lc"])
+    # 9 = 1 base column + 8 nested sub-columns
+    assert len(result_frame) == 9
+
+    result_frame = aggregate_column_statistics(partition_info_file, include_columns=["ra", "lc.source_ra"])
+    # 2 = 1 base column + 1 nested sub-column
+    assert len(result_frame) == 2
+
+    result_frame = aggregate_column_statistics(partition_info_file, exclude_columns=["lc"])
+    # 5 base columns
+    assert len(result_frame) == 5
+
+    result_frame = aggregate_column_statistics(partition_info_file, exclude_columns=["lc.source_dec"])
+    # 12 = 5 base columns + 7 nested sub-columns
+    assert len(result_frame) == 12
+
+
 def assert_column_stat_as_floats(
     result_frame, column_name, min_value=None, max_value=None, null_count=0, row_count=None
 ):
@@ -347,6 +370,31 @@ def test_per_pixel_statistics(small_sky_order1_dir):
 
     result_frame = per_pixel_statistics(partition_info_file, include_columns=["does", "not", "exist"])
     assert len(result_frame) == 0
+
+
+def test_per_pixel_statistics_nested(small_sky_nested_dir):
+    # 13 = 13 pixels
+    partition_info_file = paths.get_parquet_metadata_pointer(small_sky_nested_dir)
+
+    result_frame = per_pixel_statistics(partition_info_file)
+    # 78 = (5 base columns + 8 nested sub-columns) * 6 stats
+    assert result_frame.shape == (13, 78)
+
+    result_frame = per_pixel_statistics(partition_info_file, include_columns=["lc", "ra"])
+    # 54 = (8 nested sub-columns + "ra") * 6 stats
+    assert result_frame.shape == (13, 54)
+
+    result_frame = per_pixel_statistics(partition_info_file, include_columns=["lc.source_ra", "ra"])
+    # 12 = ("lc.source_ra" + "ra") * 6 stats
+    assert result_frame.shape == (13, 12)
+
+    result_frame = per_pixel_statistics(partition_info_file, exclude_columns=["lc"])
+    # 30 = 5 base columns * 6 stats
+    assert result_frame.shape == (13, 30)
+
+    result_frame = per_pixel_statistics(partition_info_file, exclude_columns=["lc.source_ra"])
+    # 72 = (5 base columns + 7 nested sub-columns) * 6 stats
+    assert result_frame.shape == (13, 72)
 
 
 def test_per_pixel_statistics_multi_index(small_sky_order1_dir):
