@@ -406,10 +406,9 @@ def read_parquet_file_to_pandas(
         )
 
     if _parquet_precache_all_bytes(file_pointer):  # pragma: no cover
-        return npd.read_parquet(BytesIO(file_pointer.read_bytes()),
-                                partitioning=None,
-                                is_dir=is_dir,
-                                **kwargs)
+        return npd.read_parquet(
+            BytesIO(file_pointer.read_bytes()), partitioning=None, is_dir=is_dir, **kwargs
+        )
 
     return npd.read_parquet(
         file_pointer.path,
