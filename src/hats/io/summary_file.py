@@ -155,23 +155,27 @@ def generate_hugging_face_yaml_metadata(collection: CatalogCollection) -> str:
     configs = [
         {
             "config_name": "default",
-            "data_dir": props.hats_primary_table_url,
+            # We use string concatenation here, because we always need "/", not current
+            # OS-specific separator.
+            "data_dir": f"{props.hats_primary_table_url}/dataset",
         }
     ]
-    for margin in props.all_margins or []:
-        configs.append(
-            {
-                "config_name": margin,
-                "data_dir": margin,
-            }
-        )
-    for index_field, index_dir in (props.all_indexes or {}).items():
-        configs.append(
-            {
-                "config_name": index_field,
-                "data_dir": index_dir,
-            }
-        )
+    if props.all_margins is not None:
+        for margin in props.all_margins:
+            configs.append(
+                {
+                    "config_name": margin,
+                    "data_dir": f"{margin}/dataset",
+                }
+            )
+    if props.all_indexes is not None:
+        for index in props.all_indexes.values():
+            configs.append(
+                {
+                    "config_name": index,
+                    "data_dir": f"{index}/dataset",
+                }
+            )
 
     data = {
         "configs": configs,

@@ -153,7 +153,7 @@ def test_generate_hugging_face_yaml_metadata(small_sky_collection_dir):
     # Check default config
     default_config = configs[0]
     assert default_config["config_name"] == "default"
-    assert default_config["data_dir"] == "small_sky_order1"
+    assert default_config["data_dir"] == "small_sky_order1/dataset"
 
     # Check margin configs
     margin_configs = [
@@ -164,9 +164,9 @@ def test_generate_hugging_face_yaml_metadata(small_sky_collection_dir):
     assert len(margin_configs) == 2
 
     # Check index configs
-    index_configs = [c for c in configs if c["config_name"] == "id"]
+    index_configs = [c for c in configs if c["config_name"] == "small_sky_order1_id_index"]
     assert len(index_configs) == 1
-    assert index_configs[0]["data_dir"] == "small_sky_order1_id_index"
+    assert index_configs[0]["data_dir"] == "small_sky_order1_id_index/dataset"
 
 
 def test_generate_hugging_face_yaml_metadata_no_margins(tmp_path, small_sky_collection_dir):
@@ -224,3 +224,61 @@ def test_write_collection_summary_file_with_non_collection_raises_error(small_sk
             small_sky_dir,
             fmt="markdown",
         )
+
+
+def test_load_hats_collection_with_huggingface_datasets(tmp_path, small_sky_collection_dir):
+    """Test loading HATS collection configs with Hugging Face datasets library"""
+    datasets = pytest.importorskip("datasets")
+
+    collection_base_dir = tmp_path / "collection"
+    shutil.copytree(small_sky_collection_dir, collection_base_dir)
+
+    # Generate the summary file with Hugging Face metadata
+    write_collection_summary_file(
+        collection_base_dir,
+        fmt="markdown",
+        huggingface_metadata=True,
+    )
+
+    # Load the collection to get expected row counts
+    collection = read_hats(collection_base_dir)
+    collection_props = collection.collection_properties
+
+    # Test default config - load directly from collection directory using metadata
+    dataset_default = datasets.load_dataset(
+        str(collection_base_dir),
+        name="default",
+    )
+    assert dataset_default is not None
+    assert "train" in dataset_default
+    assert "ra" in dataset_default["train"].column_names
+    assert "dec" in dataset_default["train"].column_names
+
+    # Verify exact row count matches the main catalog
+    assert len(dataset_default["train"]) == collection.main_catalog.catalog_info.total_rows
+
+    # Test margin config
+    margin_name = collection_props.default_margin
+    dataset_margin = datasets.load_dataset(
+        str(collection_base_dir),
+        name=margin_name,
+    )
+    assert dataset_margin is not None
+    assert "train" in dataset_margin
+
+    # Load margin catalog and verify exact row count
+    margin_catalog = read_hats(collection_base_dir / margin_name)
+    assert len(dataset_margin["train"]) == margin_catalog.catalog_info.total_rows
+
+    # Test index config
+    index_dir = collection_props.all_indexes[collection_props.default_index]
+    dataset_index = datasets.load_dataset(
+        str(collection_base_dir),
+        name=index_dir,
+    )
+    assert dataset_index is not None
+    assert "train" in dataset_index
+
+    # Load index catalog and verify exact row count
+    index_catalog = read_hats(collection_base_dir / index_dir)
+    assert len(dataset_index["train"]) == index_catalog.catalog_info.total_rows
