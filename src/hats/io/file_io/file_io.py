@@ -12,9 +12,7 @@ import pandas as pd
 import pyarrow.dataset as pds
 import pyarrow.parquet as pq
 import upath.implementations.http
-from cdshealpix.skymap.skymap import Skymap, Scheme, SkymapImplicit
-from astropy.io import fits
-
+from cdshealpix.skymap.skymap import Scheme, Skymap, SkymapImplicit
 from pyarrow.dataset import Dataset
 from upath import UPath
 
