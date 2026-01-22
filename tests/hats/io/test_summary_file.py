@@ -114,6 +114,18 @@ def test_write_collection_summary_file_invalid_format(tmp_path, small_sky_collec
         )
 
 
+def test_write_collection_summary_file_unsupported_fits_format(tmp_path, small_sky_collection_dir):
+    """Test that fits format raises an error for unsupported format"""
+    collection_base_dir = tmp_path / "collection"
+    shutil.copytree(small_sky_collection_dir, collection_base_dir)
+
+    with pytest.raises(ValueError, match="Unsupported format"):
+        write_collection_summary_file(
+            collection_base_dir,
+            fmt="fits",  # Not supported
+        )
+
+
 def test_generate_markdown_collection_summary_basic(small_sky_collection_dir):
     """Test generating markdown summary content"""
     collection = read_hats(small_sky_collection_dir)
