@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from upath import UPath
 
-from hats.catalog import Catalog
+from hats.catalog.catalog import Catalog
+from hats.catalog.catalog_type import CatalogType
 from hats.catalog.dataset.collection_properties import CollectionProperties
+from hats.catalog.dataset.table_properties import TableProperties
 from hats.pixel_math import HealpixPixel
 
 
@@ -90,3 +92,25 @@ class CatalogCollection:
     def get_healpix_pixels(self) -> list[HealpixPixel]:
         """The list of HEALPix pixels of the main catalog"""
         return self.main_catalog.get_healpix_pixels()
+
+    def get_margin_thresholds(self) -> dict[str, float]:
+        """Get the margin thresholds for all margin catalogs in the collection.
+
+        Returns
+        -------
+        dict[str, float]
+            A dictionary mapping margin catalog names to their threshold values.
+        """
+        if self.all_margins is None:
+            return {}
+
+        thresholds = {}
+        for margin_name in self.all_margins:
+            margin_path = self.collection_path / margin_name
+            margin_properties = TableProperties.read_from_dir(margin_path)
+            if margin_properties.catalog_type != CatalogType.MARGIN:
+                raise ValueError("Catalog `{margin_name}` is not a margin catalog")
+            # It should be non-None for a margin catalog
+            thresholds[margin_name] = margin_properties.margin_threshold
+
+        return thresholds
