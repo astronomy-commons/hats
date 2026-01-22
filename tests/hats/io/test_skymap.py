@@ -1,5 +1,7 @@
 import numpy as np
 import pytest
+from cdshealpix.skymap import Skymap
+from cdshealpix.skymap.skymap import Scheme
 
 import hats.pixel_math.healpix_shim as hp
 from hats import read_hats
@@ -17,6 +19,27 @@ def test_write_skymap_roundtrip(tmp_path):
     assert skymap_path.exists()
     skymap_order1_path = tmp_path / "skymap.1.fits"
     assert not skymap_order1_path.exists()
+    skymap = Skymap.from_fits(skymap_path)
+    # Check that we wrote in implicit format for a dense map
+    assert skymap.scheme == Scheme.IMPLICIT
+    counts_skymap = read_fits_image(tmp_path / "skymap.fits")
+    np.testing.assert_array_equal(counts_skymap, dense)
+
+
+def test_write_skymap_roundtrip_sparse(tmp_path):
+    """Test the reading/writing of a catalog point map using explicit sparse format"""
+    dense = np.arange(0, 3072)
+    dense[0:2000] = 0  # Make it sparse
+
+    # Writes a single, non-sampled, skymap
+    write_skymap(dense, tmp_path)
+    skymap_path = tmp_path / "skymap.fits"
+    assert skymap_path.exists()
+    skymap_order1_path = tmp_path / "skymap.1.fits"
+    assert not skymap_order1_path.exists()
+    skymap = Skymap.from_fits(skymap_path)
+    # Check that we wrote in explicit format for a sparse map
+    assert skymap.scheme == Scheme.EXPLICIT
     counts_skymap = read_fits_image(tmp_path / "skymap.fits")
     np.testing.assert_array_equal(counts_skymap, dense)
 

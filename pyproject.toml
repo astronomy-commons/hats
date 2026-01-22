@@ -20,7 +20,7 @@ requires-python = ">=3.11"
 dependencies = [
     "aiohttp>=3.10.0", # http filesystem support
     "astropy>=7.0.0",
-    "cdshealpix>=0.7.0",
+    "cdshealpix>=0.8.0",
     "fsspec>=2023.10.0", # Used for abstract filesystems
     "jproperties>=2.0.0",
     "mocpy>=0.19.0",
