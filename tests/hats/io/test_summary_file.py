@@ -1,16 +1,30 @@
 """Tests for summary file generation"""
 
+import re
 import shutil
 
 import pytest
 import yaml
 
-from hats.io.summary_file import (
-    generate_hugging_face_yaml_metadata,
-    generate_markdown_collection_summary,
-    write_collection_summary_file,
-)
+from hats.io.summary_file import generate_markdown_collection_summary, write_collection_summary_file
 from hats.loaders import read_hats
+
+
+def extract_yaml_from_readme(readme_path):
+    """Extract YAML frontmatter from a README file.
+
+    The YAML is expected to be between the first two "---" lines.
+    """
+    content = readme_path.read_text()
+
+    # Use regex to find YAML frontmatter between --- delimiters
+    match = re.search(r"^---\s*\n(.*?)\n---", content, re.MULTILINE | re.DOTALL)
+
+    if not match:
+        raise ValueError("README file does not contain YAML frontmatter (no closing '---')")
+
+    yaml_content = match.group(1)
+    return yaml.safe_load(yaml_content)
 
 
 def test_write_collection_summary_file_markdown(tmp_path, small_sky_collection_dir):
@@ -82,7 +96,7 @@ def test_write_collection_summary_file_with_huggingface_metadata(tmp_path, small
 
     content = output_path.read_text()
     # Check for YAML frontmatter
-    assert content.startswith("---\n")
+    assert content.strip().startswith("---\n")
     assert "configs:" in content
     assert "tags:" in content
     assert "astronomy" in content
@@ -127,19 +141,24 @@ def test_generate_markdown_collection_summary_with_huggingface(small_sky_collect
         huggingface_metadata=True,
     )
 
-    assert content.startswith("---\n")
+    assert content.strip().startswith("---\n")
     assert "# Test Title" in content
     assert "Test Description" in content
 
 
 def test_generate_hugging_face_yaml_metadata(small_sky_collection_dir):
     """Test generating Hugging Face YAML metadata for a collection"""
-    collection = read_hats(small_sky_collection_dir)
+    collection_base_dir = small_sky_collection_dir
 
-    yaml_content = generate_hugging_face_yaml_metadata(collection)
+    # Generate the summary file with Hugging Face metadata
+    readme_path = write_collection_summary_file(
+        collection_base_dir,
+        fmt="markdown",
+        huggingface_metadata=True,
+    )
 
-    # Parse the YAML to verify structure
-    data = yaml.safe_load(yaml_content)
+    # Extract YAML from README file
+    data = extract_yaml_from_readme(readme_path)
 
     assert "configs" in data
     assert "tags" in data
@@ -183,8 +202,15 @@ def test_generate_hugging_face_yaml_metadata_no_margins(tmp_path, small_sky_coll
     # Re-read the collection
     collection = read_hats(collection_base_dir)
 
-    yaml_content = generate_hugging_face_yaml_metadata(collection)
-    data = yaml.safe_load(yaml_content)
+    # Generate the summary file with Hugging Face metadata
+    readme_path = write_collection_summary_file(
+        collection_base_dir,
+        fmt="markdown",
+        huggingface_metadata=True,
+    )
+
+    # Extract YAML from README file
+    data = extract_yaml_from_readme(readme_path)
 
     # Check that only default config exists (no margin configs)
     configs = data["configs"]
@@ -207,8 +233,15 @@ def test_generate_hugging_face_yaml_metadata_no_indexes(tmp_path, small_sky_coll
     # Re-read the collection
     collection = read_hats(collection_base_dir)
 
-    yaml_content = generate_hugging_face_yaml_metadata(collection)
-    data = yaml.safe_load(yaml_content)
+    # Generate the summary file with Hugging Face metadata
+    readme_path = write_collection_summary_file(
+        collection_base_dir,
+        fmt="markdown",
+        huggingface_metadata=True,
+    )
+
+    # Extract YAML from README file
+    data = extract_yaml_from_readme(readme_path)
 
     # Check that only default and margin configs exist (no index configs)
     configs = data["configs"]

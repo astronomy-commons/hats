@@ -22,6 +22,7 @@ dependencies = [
     "astropy>=7.0.0",
     "cdshealpix>=0.7.0",
     "fsspec>=2023.10.0", # Used for abstract filesystems
+    "jinja2>=3.0.0", # Used for summary file templating
     "jproperties>=2.0.0",
     "mocpy>=0.19.0",
     "nested-pandas>=0.6.6",
@@ -35,7 +36,6 @@ dependencies = [
     "pyarrow>=14.0.1,!=19.0.0; platform_system != 'Windows'",
 
     "pydantic>=2.0",
-    "PyYAML", # Used for Hugging Face metadata, version from astropy requirements
     "scipy>=1.7.2",
     "typing-extensions>=4.3.0",
     "universal-pathlib>=0.3.1",
@@ -56,6 +56,7 @@ dev = [
     "pytest-cov", # Used to report total code coverage
     "pytest-mock", # Used to mock objects in tests
     "pytest-timeout", # Used to test for code efficiency
+    "PyYAML", # Used to test Hugging-Face YAML metadata generation
 ]
 plotting = [
     "matplotlib>=3.10.1",

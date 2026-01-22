@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Literal
 
-import yaml
+import jinja2
 from upath import UPath
 
 from hats.catalog.catalog_collection import CatalogCollection
@@ -17,6 +17,7 @@ def write_collection_summary_file(
     title: str | None = None,
     description: str | None = None,
     huggingface_metadata: bool = False,
+    jinja2_template: str | None = None,
 ) -> UPath:
     """Write a summary readme file for a HATS catalog.
 
@@ -32,14 +33,18 @@ def write_collection_summary_file(
     title : str | None, default=None
         Title of the summary document. By default, generated based on catalog
         name. This default is a subject of frequent changes, do not rely on it.
-    description : str | None, default=None :
+    description : str | None, default=None
         Description of the catalog. By default, generated based on catalog
         metadata. The default is a subject of frequent changes, do not rely
         on it.
-    huggingface_metadata : bool, optional
+    huggingface_metadata : bool, default=False
         Whether to include Hugging Face specific metadata header in
-        the markdown file, by default False. Supported only when
+        the Markdown file, by default False. Supported only when
         `fmt="markdown"`.
+    jinja2_template : str, default=NOne
+        `jinja2` template string to use for generating the summary file.
+        If provided, it would override the default template:
+        - `DEFAULT_MD_TEMPLATE` for `fmt="markdown"`.
 
     Returns
     -------
@@ -50,9 +55,7 @@ def write_collection_summary_file(
     -----
 
     1. Not all options are supported for all formats.
-    2. Default string generation is a subject of frequent changes, including
-       patch releases, so do not rely on them for the reproducible results.
-       However, we are trying to make them as useful as possible.
+    2. Default template is the subject of frequent changes, do not rely on it.
     """
     collection_path = get_upath(collection_path)
     if fmt != "markdown" and huggingface_metadata:
@@ -78,6 +81,7 @@ def write_collection_summary_file(
                 title=title,
                 description=description,
                 huggingface_metadata=huggingface_metadata,
+                jinja2_template=jinja2_template,
             )
         case _:
             raise ValueError(f"Unsupported format: {fmt=}")
@@ -97,88 +101,74 @@ def write_collection_summary_file(
     return output_path
 
 
+# Should be extended in the future to include sections like:
+# - Load code examples
+# - File structure
+# - Statistics
+# - Column schema
+# - Sky maps
+# See https://github.com/astronomy-commons/hats/issues/615
+DEFAULT_MD_TEMPLATE = """
+{%- if huggingface_metadata %}
+---
+configs:
+- config_name: default
+  data_dir: {{primary_table}}/dataset
+{%- for margin in all_margins %}
+- config_name: {{margin}}
+  data_dir: {{margin}}/dataset
+{%- endfor %}
+{%- for index in all_indexes %}
+- config_name: {{index}}
+  data_dir: {{index}}/dataset
+{%- endfor %}
+tags:
+- astronomy
+---
+{%- endif %}
+
+# {{title}}
+
+{{description}}
+"""
+
+
 def generate_markdown_collection_summary(
     collection: CatalogCollection,
     *,
     title: str,
     description: str,
     huggingface_metadata: bool,
+    jinja2_template: str | None = None,
 ) -> str:
-    """Generate markdown summary content for a HATS collection.
+    """Generate Markdown summary content for a HATS collection.
 
     Parameters
     ----------
     title : str
-        Title of the markdown document.
+        Title of the Markdown document.
     description : str
         Description of the catalog.
     huggingface_metadata : bool
         Whether to include Hugging Face specific metadata header in
-        the markdown file.
-    """
-    snippets = []
-    if huggingface_metadata:
-        hf_yaml = generate_hugging_face_yaml_metadata(collection)
-        snippets.append(f"---\n" f"{hf_yaml}\n" f"---\n")
-    snippets.append(f"# {title}")
-    snippets.append(f"{description}")
+        the Markdown file.
+    jinja2_template : str | None
 
-    # Should be extended in the future to include sections like:
-    # - Load code examples
-    # - File structure
-    # - Statistics
-    # - Column schema
-    # - Sky maps
-    # See https://github.com/astronomy-commons/hats/issues/615
-
-    return "\n".join(snippets)
-
-
-def generate_hugging_face_yaml_metadata(collection: CatalogCollection) -> str:
-    """Generate Hugging Face specific YAML "frontmatter" for a HATS collection.
-
-    Parameters
-    ----------
-    collection : CatalogCollection
-        The HATS collection for which to generate the metadata.
-
-    Returns
-    -------
-    str
-        The generated YAML metadata as a string.
     """
     props = collection.collection_properties
+    env = jinja2.Environment(undefined=jinja2.StrictUndefined)
+    if jinja2_template is None:
+        jinja2_template = DEFAULT_MD_TEMPLATE
+    template = env.from_string(jinja2_template)
 
-    # Configs specify different datasets within a single HF repository.
-    # We set default config to be the HATS catalog, and others to be
-    # other collection catalogs like margin and index.
-    configs = [
-        {
-            "config_name": "default",
-            # We use string concatenation here, because we always need "/", not current
-            # OS-specific separator.
-            "data_dir": f"{props.hats_primary_table_url}/dataset",
-        }
-    ]
-    if props.all_margins is not None:
-        for margin in props.all_margins:
-            configs.append(
-                {
-                    "config_name": margin,
-                    "data_dir": f"{margin}/dataset",
-                }
-            )
-    if props.all_indexes is not None:
-        for index in props.all_indexes.values():
-            configs.append(
-                {
-                    "config_name": index,
-                    "data_dir": f"{index}/dataset",
-                }
-            )
+    all_margins = props.all_margins or []
+    all_indexes = list((props.all_indexes or {}).values())
 
-    data = {
-        "configs": configs,
-        "tags": ["astronomy"],
-    }
-    return yaml.dump(data, sort_keys=False, default_flow_style=False)
+    return template.render(
+        title=title,
+        description=description,
+        primary_table=props.hats_primary_table_url,
+        all_margins=all_margins,
+        all_indexes=all_indexes,
+        huggingface_metadata=huggingface_metadata,
+    )
