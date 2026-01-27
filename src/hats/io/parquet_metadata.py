@@ -96,7 +96,7 @@ def write_parquet_metadata(
 
     catalog_path = get_upath(catalog_path)
     dataset_subdir = catalog_path / "dataset"
-    (dataset_path, dataset) = file_io.read_parquet_dataset(dataset_subdir, ignore_prefixes=ignore_prefixes)
+    dataset_path, dataset = file_io.read_parquet_dataset(dataset_subdir, ignore_prefixes=ignore_prefixes)
     metadata_collector = []
     # Collect the healpix pixels so we can sort before writing.
     healpix_pixels = []

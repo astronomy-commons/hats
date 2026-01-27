@@ -134,16 +134,16 @@ def test_read_parquet_data(tmp_path):
 
 
 def test_read_parquet_dataset(small_sky_dir, small_sky_order1_dir):
-    (paths, ds) = read_parquet_dataset(small_sky_dir / "dataset" / "Norder=0")
+    paths, ds = read_parquet_dataset(small_sky_dir / "dataset" / "Norder=0")
 
     assert ds.count_rows() == 131
 
-    (paths, ds) = read_parquet_dataset([small_sky_dir / "dataset" / "Norder=0" / "Dir=0" / "Npix=11.parquet"])
+    paths, ds = read_parquet_dataset([small_sky_dir / "dataset" / "Norder=0" / "Dir=0" / "Npix=11.parquet"])
 
     assert ds.count_rows() == 131
     assert len(paths) == 1
 
-    (paths, ds) = read_parquet_dataset(
+    paths, ds = read_parquet_dataset(
         [
             small_sky_order1_dir / "dataset" / "Norder=1" / "Dir=0" / "Npix=44.parquet",
             small_sky_order1_dir / "dataset" / "Norder=1" / "Dir=0" / "Npix=45.parquet",
