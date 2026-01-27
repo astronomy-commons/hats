@@ -71,7 +71,7 @@ def is_valid_catalog(
         else:
             warnings.warn(msg)
 
-    (is_valid, _) = _is_valid_catalog_strict(pointer, handle_error, verbose)
+    is_valid, _ = _is_valid_catalog_strict(pointer, handle_error, verbose)
     return is_valid
 
 
@@ -134,7 +134,7 @@ def is_valid_collection(
     is_valid = True
 
     collection_properties = CollectionProperties.read_from_dir(pointer)
-    (subcatalog_valid, sub_catalog) = _is_valid_catalog_strict(
+    subcatalog_valid, sub_catalog = _is_valid_catalog_strict(
         pointer / collection_properties.hats_primary_table_url,
         handle_error,
         verbose,
@@ -150,7 +150,7 @@ def is_valid_collection(
 
     if collection_properties.all_margins:
         for margin in collection_properties.all_margins:
-            (subcatalog_valid, sub_catalog) = _is_valid_catalog_strict(
+            subcatalog_valid, sub_catalog = _is_valid_catalog_strict(
                 pointer / margin,
                 handle_error,
                 verbose,
@@ -166,7 +166,7 @@ def is_valid_collection(
 
     if collection_properties.all_indexes:
         for index_field, index_dir in collection_properties.all_indexes.items():
-            (subcatalog_valid, sub_catalog) = _is_valid_catalog_strict(
+            subcatalog_valid, sub_catalog = _is_valid_catalog_strict(
                 pointer / index_dir, handle_error, verbose
             )
             is_valid &= subcatalog_valid
