@@ -66,7 +66,7 @@ class PixelTree:
         bool
             True if the tree contains the pixel, False if not
         """
-        (order, pixel) = get_healpix_tuple(pixel)
+        order, pixel = get_healpix_tuple(pixel)
         if order > self.tree_order:
             return False
         d_order = self.tree_order - order

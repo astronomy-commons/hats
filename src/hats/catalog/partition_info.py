@@ -120,7 +120,7 @@ class PartitionInfo:
                 "data_thumbnail",
             ]
             dataset_subdir = paths.dataset_directory(catalog_base_dir)
-            (_, dataset) = file_io.read_parquet_dataset(dataset_subdir, ignore_prefixes=ignore_prefixes)
+            _, dataset = file_io.read_parquet_dataset(dataset_subdir, ignore_prefixes=ignore_prefixes)
 
             # Iterate through files to get the healpix pixels.
             for file in dataset.files:
