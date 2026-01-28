@@ -143,6 +143,8 @@ def generate_markdown_collection_summary(
 
     Parameters
     ----------
+    collection : CatalogCollection
+        HATS collection to generate summary for.
     name : str
         Title of the Markdown document.
     description : str
