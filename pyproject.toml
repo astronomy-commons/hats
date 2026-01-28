@@ -22,6 +22,7 @@ dependencies = [
     "astropy>=7.0.0",
     "cdshealpix>=0.8.0",
     "fsspec>=2023.10.0", # Used for abstract filesystems
+    "human_readable", # Used for pretty-printing file sizes
     "jinja2>=3.0.0", # Used for summary file templating
     "jproperties>=2.0.0",
     "mocpy>=0.19.0",
@@ -73,6 +74,9 @@ requires = [
     "setuptools_scm>=6.2", # Gets release version from git. Makes it available programmatically
 ]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools.package-data]
+hats = ["io/templates/*.jinja2"]
 
 [tool.setuptools_scm]
 write_to = "src/hats/_version.py"
