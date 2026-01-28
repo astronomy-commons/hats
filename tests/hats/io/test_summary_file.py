@@ -131,6 +131,7 @@ def test_generate_markdown_collection_summary_basic(small_sky_collection_dir):
         collection=collection,
         name="Test Title",
         description="Test Description",
+        uri=None,
         huggingface_metadata=False,
     )
 
@@ -147,6 +148,7 @@ def test_generate_markdown_collection_summary_with_huggingface(small_sky_collect
         collection=collection,
         name="Test Title",
         description="Test Description",
+        uri=None,
         huggingface_metadata=True,
     )
 

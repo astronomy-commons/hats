@@ -49,8 +49,9 @@ def write_collection_summary_file(
         Description of the catalog. By default, generated based on catalog
         metadata.
     uri : str | None, default=None
-        URI of the catalog to use for the code-snippet examples. Not validated.
-        If None, a placeholder would be used.
+        URI of the catalog to use for the hyperlinks and code-snippet examples.
+        Not validated. If None, a placeholder would be used for
+        the code-snippets.
     huggingface_metadata : bool, default=False
         Whether to include Hugging Face specific metadata header in
         the Markdown file, by default False. Supported only when
@@ -134,7 +135,7 @@ def generate_markdown_collection_summary(
     *,
     name: str,
     description: str,
-    uri: str | None = None,
+    uri: str | None,
     huggingface_metadata: bool,
     jinja2_template: str | None = None,
 ) -> str:
@@ -146,6 +147,10 @@ def generate_markdown_collection_summary(
         Title of the Markdown document.
     description : str
         Description of the catalog.
+    uri : str | None
+        URI of the catalog to use for the hyperlinks and code-snippet examples.
+        Not validated. If None, a placeholder would be used for
+        the code-snippets.
     huggingface_metadata : bool
         Whether to include Hugging Face specific metadata header in
         the Markdown file.
@@ -162,7 +167,6 @@ def generate_markdown_collection_summary(
     template = env.from_string(jinja2_template)
 
     has_partition_info = get_partition_info_pointer(collection.main_catalog_dir).exists()
-    uri = uri or "<PATH_TO_CATALOG>"
     margin_thresholds = collection.get_margin_thresholds()
 
     if (common_metadata := get_common_metadata_pointer(collection.main_catalog_dir)).exists():
