@@ -22,7 +22,7 @@ tags:
 
 ### Access the catalog
 
-It is recommended to use [LSDB](https://lsdb.io) Python framework to access HATS catalogs.
+We recommended the use of the [LSDB](https://lsdb.io) Python framework to access HATS catalogs.
 LSDB can be installed via `pip install lsdb` or `conda install conda-forge::lsdb`,
 see more details [in the docs](https://docs.lsdb.io/).
 The following code provides a minimal example of opening this catalog:
@@ -33,8 +33,7 @@ import lsdb
 catalog = lsdb.open_catalog("{{uri}}")
 ```
 
-Since each catalog in this collection is represented as a separate [Apache Parquet dataset](https://arrow.apache.org/docs/python/dataset.html),
-which may be accessed with a variety of tools, including `pandas`, `pyarrow`, `dask`, `Spark`, `DuckDB`, etc.
+Each catalog in this collection is represented as a separate [Apache Parquet dataset](https://arrow.apache.org/docs/python/dataset.html) and can be accessed with a variety of tools, including `pandas`, `pyarrow`, `dask`, `Spark`, `DuckDB`.
 
 ### File structure
 

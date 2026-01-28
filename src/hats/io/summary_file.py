@@ -55,7 +55,7 @@ def write_collection_summary_file(
         Whether to include Hugging Face specific metadata header in
         the Markdown file, by default False. Supported only when
         `fmt="markdown"`.
-    jinja2_template : str, default=NOne
+    jinja2_template : str, default=None
         `jinja2` template string to use for generating the summary file.
         If provided, it would override the default template from these
         functions:
