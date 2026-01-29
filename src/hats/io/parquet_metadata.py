@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import itertools
 import random
 from pathlib import Path
 
@@ -30,12 +31,14 @@ def write_parquet_metadata(
     create_thumbnail: bool = False,
     thumbnail_threshold: int = 1_000_000,
     create_metadata: bool = True,
+    create_per_pixel_stats: bool = False,
 ):
     """Write Parquet dataset-level metadata files (and optional thumbnail) for a catalog.
 
     Creates files::
 
         catalog/
+        ├── per_pixel_statistics.parquet  (only if create_per_pixel_stats=True)
         ├── ...
         └── dataset/
             ├── _common_metadata          (always written)
@@ -114,6 +117,10 @@ def write_parquet_metadata(
         # Create set for O(1) lookups in the loop that follows
         pq_file_list = set(random.sample(dataset.files, row_limit))
 
+    pixels = []
+    leaf_stats = []
+    single_metadata = None
+
     # Pass over all files: always count rows; optionally collect metadata & thumbnail rows.
     for single_file in dataset.files:
         relative_path = single_file[len(dataset_path) + 1 :]
@@ -128,6 +135,37 @@ def write_parquet_metadata(
                 healpix_pixel = paths.get_healpix_from_path(relative_path)
                 healpix_pixels.append(healpix_pixel)
             metadata_collector.append(single_metadata)
+        if create_per_pixel_stats:
+            healpix_pixel = paths.get_healpix_from_path(relative_path)
+            for row_group_index in range(0, single_metadata.num_row_groups):
+                row_group = single_metadata.row_group(row_group_index)
+                row_stats = [
+                    (
+                        [
+                            None,
+                            None,
+                            0,
+                            row_group.column(col).num_values,
+                            row_group.column(col).total_compressed_size,
+                            row_group.column(col).total_uncompressed_size,
+                        ]
+                        if row_group.column(col).statistics is None
+                        else [
+                            row_group.column(col).statistics.min,
+                            row_group.column(col).statistics.max,
+                            row_group.column(col).statistics.null_count,
+                            row_group.column(col).num_values,
+                            row_group.column(col).total_compressed_size,
+                            row_group.column(col).total_uncompressed_size,
+                        ]
+                    )
+                    for col in range(0, single_metadata.num_columns)
+                ]
+
+                leaf_stats.append(
+                    [healpix_pixel.order, healpix_pixel.pixel, row_group_index]
+                    + list(itertools.chain.from_iterable(row_stats))
+                )
 
         if create_thumbnail and single_file in pq_file_list:
             # Grab a single-row batch for this file for the thumbnail.
@@ -151,6 +189,17 @@ def write_parquet_metadata(
             metadata_collector=metadata_collector,
             write_statistics=True,
         )
+    if create_per_pixel_stats and single_metadata is not None:
+        all_stats = ["min_value", "max_value", "null_count", "row_count", "disk_bytes", "memory_bytes"]
+        _, column_names = _pick_columns(single_metadata.row_group(0), exclude_hats_columns=False)
+        mod_col_names = [[f"{col_name}::{stat}" for stat in all_stats] for col_name in column_names]
+        mod_col_names = ["Norder", "Npix", "row_group_index"] + list(
+            itertools.chain.from_iterable(mod_col_names)
+        )
+        transposed_lists = [list(row) for row in zip(*pixels)] + [list(row) for row in zip(*leaf_stats)]
+        table = pa.Table.from_arrays(transposed_lists, names=mod_col_names)
+        output_file = catalog_path / "per_pixel_statistics.parquet"
+        pq.write_table(table, output_file.path, filesystem=output_file.fs)
 
     # Write out the _common_metadata file.
     common_metadata_file_pointer = paths.get_common_metadata_pointer(catalog_base_dir)
@@ -240,6 +289,7 @@ def _pick_columns(
 
 def aggregate_column_statistics(
     metadata_file: str | Path | UPath,
+    *,
     exclude_hats_columns: bool = True,
     exclude_columns: list[str] = None,
     include_columns: list[str] = None,
@@ -348,6 +398,7 @@ def aggregate_column_statistics(
 # pylint: disable=too-many-positional-arguments,too-many-statements
 def per_pixel_statistics(
     metadata_file: str | Path | UPath,
+    *,
     exclude_hats_columns: bool = True,
     exclude_columns: list[str] = None,
     include_columns: list[str] = None,
@@ -448,7 +499,7 @@ def per_pixel_statistics(
             continue
         row_stats = [
             (
-                [None, None, 0, 0]
+                [None, None, 0, 0, 0, 0]
                 if row_group.column(col).statistics is None
                 else [
                     row_group.column(col).statistics.min,
@@ -511,6 +562,74 @@ def per_pixel_statistics(
             {stat_name: int for stat_name in int_col_names}
         )
     return frame
+
+
+def write_per_pixel_statistics_from_metadata(catalog_base_dir: str | Path | UPath):
+    """Reads the footer statistics from `dataset/_metadata` file, collects the per-pixel-statistics,
+    and writes out at `per_pixel_statistics.parquet`
+
+    Parameters
+    ----------
+    catalog_base_dir : str | Path | UPath
+        base path for the catalog
+    """
+
+    metadata_file = paths.get_parquet_metadata_pointer(catalog_base_dir)
+    if not metadata_file.exists():
+        raise FileNotFoundError("No dataset/_metadata file found where expected")
+    total_metadata = file_io.read_parquet_metadata(metadata_file)
+    num_row_groups = total_metadata.num_row_groups
+    if num_row_groups == 0:
+        return pd.DataFrame()
+    first_row_group = total_metadata.row_group(0)
+
+    good_column_indexes, column_names = _pick_columns(
+        first_row_group=first_row_group,
+        exclude_hats_columns=False,
+    )
+    if not good_column_indexes:
+        return pd.DataFrame()
+
+    all_stats = ["min_value", "max_value", "null_count", "row_count", "disk_bytes", "memory_bytes"]
+
+    leaf_stats = []
+
+    for row_group_index in range(0, num_row_groups):
+        row_group = total_metadata.row_group(row_group_index)
+        pixel = paths.get_healpix_from_path(row_group.column(0).file_path)
+        row_stats = [
+            (
+                [
+                    None,
+                    None,
+                    0,
+                    row_group.column(col).num_values,
+                    row_group.column(col).total_compressed_size,
+                    row_group.column(col).total_uncompressed_size,
+                ]
+                if row_group.column(col).statistics is None
+                else [
+                    row_group.column(col).statistics.min,
+                    row_group.column(col).statistics.max,
+                    row_group.column(col).statistics.null_count,
+                    row_group.column(col).num_values,
+                    row_group.column(col).total_compressed_size,
+                    row_group.column(col).total_uncompressed_size,
+                ]
+            )
+            for col in good_column_indexes
+        ]
+
+        leaf_stats.append(
+            [pixel.order, pixel.pixel, row_group_index] + list(itertools.chain.from_iterable(row_stats))
+        )
+
+    mod_col_names = [[f"{col_name}::{stat}" for stat in all_stats] for col_name in column_names]
+    mod_col_names = ["Norder", "Npix", "row_group_index"] + list(itertools.chain.from_iterable(mod_col_names))
+    transposed_lists = [list(row) for row in zip(*leaf_stats)]
+    table = pa.Table.from_arrays(transposed_lists, names=mod_col_names)
+    output_file = catalog_base_dir / "per_pixel_statistics.parquet"
+    pq.write_table(table, output_file.path, filesystem=output_file.fs)
 
 
 def pick_metadata_schema_file(catalog_base_dir: str | Path | UPath) -> UPath | None:
