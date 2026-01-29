@@ -30,7 +30,7 @@ The following code provides a minimal example of opening this catalog:
 ```python
 import lsdb
 
-catalog = lsdb.open_catalog("{{uri}}")
+catalog = lsdb.open_catalog("{{uris["collection"]}}")
 ```
 
 Each catalog in this collection is represented as a separate [Apache Parquet dataset](https://arrow.apache.org/docs/python/dataset.html) and can be accessed with a variety of tools, including `pandas`, `pyarrow`, `dask`, `Spark`, `DuckDB`.
@@ -38,34 +38,27 @@ Each catalog in this collection is represented as a separate [Apache Parquet dat
 ### File structure
 
 This catalog is represented by the following files and directories:
-- [`collection.properties`](./collection.properties) — textual metadata file describing the HATS collection of catalogs
-- [`{{col_props.hats_primary_table_url}}/`](./{{col_props.hats_primary_table_url}}/) — main HATS catalog directory
-  - [`dataset/`](./{{col_props.hats_primary_table_url}}/dataset/) — Apache Parquet dataset directory for the main catalog
+
+- [`collection.properties`]({{uris["collection"]}}/collection.properties) — textual metadata file describing the HATS collection of catalogs
+- [`{{uris["primary"]["name"]}}`]({{uris["primary"]["uri"]}}) — main HATS catalog directory
+  - [`dataset/`]({{uris["primary"]["uri"]}}/dataset/) — Apache Parquet dataset directory for the main catalog
     - ... parquet metadata and data files in sub directories ...
-  - [`hats.properties`](./{{col_props.hats_primary_table_url}}/hats.properties) — textual metadata file describing the main HATS catalog
+  - [`hats.properties`]({{uris["primary"]["uri"]}}/hats.properties) — textual metadata file describing the main HATS catalog
   {%- if has_partition_info %}
-  - [`partition_info.csv`](./{{col_props.hats_primary_table_url}}/partition_info.csv) — CSV file with a list of catalog HEALPix tiles (catalog partitions)
+  - [`partition_info.csv`]({{uris["primary"]["uri"]}}/partition_info.csv) — CSV file with a list of catalog HEALPix tiles (catalog partitions)
   {%- endif %}
   {%- if cat_props.skymap_order %}
-  - [`skymap.fits`](./{{col_props.hats_primary_table_url}}/skymap.fits) — HEALPix skymap FITS file with row-counts per HEALPix tile of fixed order {{cat_props.skymap_order}}
+  - [`skymap.fits`]({{uris["primary"]["uri"]}}/skymap.fits) — HEALPix skymap FITS file with row-counts per HEALPix tile of fixed order {{cat_props.skymap_order}}
   {%- for alt_order in (cat_props.skymap_alt_orders or []) %}
-  - [`skymap.{{alt_order}}.fits`](./{{col_props.hats_primary_table_url}}/skymap.{{alt_order}}.fits) — Same, but for order {{alt_order}}
+  - [`skymap.{{alt_order}}.fits`]({{uris["primary"]["uri"]}}/skymap.{{alt_order}}.fits) — Same, but for order {{alt_order}}
   {%- endfor %}
   {%- endif %}
-{%- if col_props.default_margin %}
-- [`{{col_props.default_margin}}/`](./{{col_props.hats_primary_table_url}}/{{col_props.default_margin}}/) — margin catalog to ensure data completeness in cross-matching, margin threshold is {{ '%.1f' % margin_thresholds[col_props.default_margin]}} arcseconds
-  - ... margin catalog files and directories ...
-{%- endif %}
-{%- for margin in (col_props.all_margins or []) if margin != col_props.default_margin %}
-- [`{{margin}}/`](./{{margin}}/) — margin catalog to ensure data completeness in cross-matching, margin threshold is {{ '%.1f' % margin_thresholds[margin]}} arcseconds
+{%- for margin in uris["margins"] %}
+- [`{{margin["name"]}}/`]({{margin["uri"]}}) — {% if loop.first and col_props.default_margin %}default {% endif %}margin catalog to ensure data completeness in cross-matching, the margin threshold is {{ '%.1f' % margin_thresholds[margin["name"]]}} arcseconds
   - ... margin catalog files and directories ...
 {%- endfor %}
-{%- if col_props.default_index %}{%- set dir = col_props.all_indexes[col_props.default_index] %}
-- [`{{dir}}/`](./{{dir}}/) — default secondary index catalog for fast queries over column `{{col_props.default_index}}`
-  - ... index catalog files and directories ...
-{%- endif %}
-{%- for column, dir in (col_props.all_indexes or {}).items() if column != col_props.default_index %}
-- [`{{dir}}/`](./{{dir}}/) — secondary index catalog for fast queries over column `column`
+{%- for index in uris["indexes"] %}
+- [`{{index["name"]}}/`]({{index["uri"]}}) — {% if loop.first and col_props.default_index %}default {% endif %}secondary index catalog for fast queries over column `{{index["column"]}}`
   - ... index catalog files and directories ...
 {%- endfor %}
 
@@ -85,7 +78,7 @@ The main HATS catalog contains the following columns:
 | **Name** | {% for col in column_table.column %} **`{{col}}`** |{% endfor %}
 | --- | {% for _ in column_table.column %} --- |{% endfor %}
 | **Data Type** | {% for value in column_table.dtype %} `{{value}}` |{% endfor %}
-{% if has_default_columns -%}
+{%- if has_default_columns %}
 | **Default?** | {%- for value in column_table.default %} {{ "Yes" if value else "No" }} |{%- endfor %}
 {%- endif %}
 {% if has_nested_columns -%}
@@ -94,7 +87,7 @@ The main HATS catalog contains the following columns:
 {%if has_default_columns %}
 "Default" indicates whether the column is included when loading the catalog with `lsdb.open_catalog()`
 without specifying any columns to load.
-The list of default columns is available in the [`hats.properties`](./{{col_props.hats_primary_table_url}}/hats.properties) file.
+The list of default columns is available in the [`hats.properties`]({{uris["primary"]["uri"]}}/hats.properties) file.
 {% endif %}
 {%if has_nested_columns %}
 "Nested" indicates whether the column is stored as a nested field inside another "struct" column.

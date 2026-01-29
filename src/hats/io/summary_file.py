@@ -8,6 +8,7 @@ import nested_pandas as npd
 import pandas as pd
 from upath import UPath
 
+from hats.catalog import CollectionProperties
 from hats.catalog.catalog_collection import CatalogCollection
 from hats.catalog.healpix_dataset.healpix_dataset import HealpixDataset
 from hats.io import get_common_metadata_pointer, get_partition_info_pointer, templates
@@ -168,6 +169,7 @@ def generate_markdown_collection_summary(
         jinja2_template = default_md_template()
     template = env.from_string(jinja2_template)
 
+    uris = _catalog_uris(col_props, uri)
     has_partition_info = get_partition_info_pointer(collection.main_catalog_dir).exists()
     margin_thresholds = collection.get_margin_thresholds()
 
@@ -193,6 +195,7 @@ def generate_markdown_collection_summary(
         description=description,
         col_props=col_props,
         cat_props=cat_props,
+        uris=uris,
         has_partition_info=has_partition_info,
         margin_thresholds=margin_thresholds,
         uri=uri,
@@ -249,3 +252,60 @@ def _gen_md_column_table(nf: npd.NestedFrame, default_columns: list[str]) -> pd.
             default.append(name in default_columns)
 
     return pd.DataFrame({"column": column, "dtype": dtype, "default": default, "nested_into": nested_into})
+
+
+def _join_catalog_uri(col_upath: str | None, path: str) -> str:
+    if col_upath is None:
+        return path
+
+    try:
+        upath = UPath(path)
+    except ValueError:
+        return path
+
+    # If path is an absolute URI, return it as-is
+    if upath.protocol:
+        return path
+
+    try:
+        return str(UPath(col_upath) / path)
+    except ValueError:
+        return path
+
+
+def _catalog_uris(properties: CollectionProperties, uri: str | None) -> dict[str, object]:
+    margin_urls = (properties.all_margins or []).copy()
+    if properties.default_margin is not None:
+        default_margin_idx = margin_urls.index(properties.default_margin)
+        margin_urls[0], margin_urls[default_margin_idx] = margin_urls[default_margin_idx], margin_urls[0]
+
+    index_columns = list(properties.all_indexes or {})
+    if properties.default_index is not None:
+        default_index_idx = index_columns.index(properties.default_index)
+        index_columns[0], index_columns[default_index_idx] = (
+            index_columns[default_index_idx],
+            index_columns[0],
+        )
+
+    return {
+        "collection": uri or "<PATH>",
+        "primary": {
+            "name": properties.hats_primary_table_url,
+            "uri": _join_catalog_uri(uri, properties.hats_primary_table_url),
+        },
+        "margins": [
+            {
+                "name": margin,
+                "uri": _join_catalog_uri(uri, margin),
+            }
+            for margin in margin_urls
+        ],
+        "indexes": [
+            {
+                "column": column,
+                "name": properties.all_indexes[column],
+                "uri": _join_catalog_uri(uri, properties.all_indexes[column]),
+            }
+            for column in index_columns
+        ],
+    }
