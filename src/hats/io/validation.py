@@ -15,8 +15,7 @@ from hats.catalog.index.index_catalog import IndexCatalog
 from hats.catalog.margin_cache.margin_catalog import MarginCatalog
 from hats.catalog.partition_info import PartitionInfo
 from hats.io import get_common_metadata_pointer, get_parquet_metadata_pointer, get_partition_info_pointer
-from hats.io.file_io import does_file_or_directory_exist, get_upath
-from hats.io.file_io.file_pointer import is_regular_file
+from hats.io.file_io import get_upath
 from hats.io.paths import get_healpix_from_path
 from hats.loaders import read_hats
 from hats.pixel_math.healpix_pixel import INVALID_PIXEL
@@ -242,7 +241,7 @@ def _is_valid_catalog_strict(pointer, handle_error, verbose):
         parquet_path_pixels = []
         for hats_file in dataset.files:
             hats_fp = UPath(hats_file, protocol=metadata_file.protocol, **metadata_file.storage_options)
-            if not does_file_or_directory_exist(hats_fp):
+            if not hats_fp.exists():
                 handle_error(f"Pixel partition is missing: {hats_fp}")
                 is_valid = False
             healpix_pixel = get_healpix_from_path(hats_file)
@@ -291,20 +290,14 @@ def is_collection_info_valid(pointer: str | Path | UPath) -> bool:
 
 def _is_partition_info_valid(pointer: UPath) -> bool:
     """Checks if partition_info is valid for a given base catalog pointer"""
-    partition_info_pointer = get_partition_info_pointer(pointer)
-    partition_info_exists = is_regular_file(partition_info_pointer)
-    return partition_info_exists
+    return get_partition_info_pointer(pointer).exists()
 
 
 def _is_metadata_valid(pointer: UPath) -> bool:
     """Checks if _metadata is valid for a given base catalog pointer"""
-    metadata_file = get_parquet_metadata_pointer(pointer)
-    metadata_file_exists = is_regular_file(metadata_file)
-    return metadata_file_exists
+    return get_parquet_metadata_pointer(pointer).exists()
 
 
 def _is_common_metadata_valid(pointer: UPath) -> bool:
     """Checks if _common_metadata is valid for a given base catalog pointer"""
-    metadata_file = get_common_metadata_pointer(pointer)
-    metadata_file_exists = is_regular_file(metadata_file)
-    return metadata_file_exists
+    return get_common_metadata_pointer(pointer).exists()

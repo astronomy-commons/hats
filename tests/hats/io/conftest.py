@@ -8,7 +8,6 @@ import pytest
 
 from hats.io import file_io
 from hats.io.file_io.file_io import load_text_file
-from hats.io.file_io.file_pointer import does_file_or_directory_exist
 
 # pylint: disable=missing-function-docstring, redefined-outer-name
 
@@ -31,7 +30,7 @@ def assert_text_file_matches():
             expected_lines(:obj:`string array`) list of strings, formatted as regular expressions.
             file_name (str): fully-specified path of the file to read
         """
-        assert does_file_or_directory_exist(file_name), f"file not found [{file_name}]"
+        assert file_name.exists(), f"file not found [{file_name}]"
         contents = load_text_file(file_name)
 
         assert len(expected_lines) == len(
@@ -49,7 +48,7 @@ def assert_text_file_matches():
 def check_parquet_schema():
     def check_parquet_schema(file_name, expected_schema, expected_num_row_groups=1):
         """Check parquet schema against expectations"""
-        assert file_io.does_file_or_directory_exist(file_name), f"file not found [{file_name}]"
+        assert file_name.exists(), f"file not found [{file_name}]"
 
         single_metadata = file_io.read_parquet_metadata(file_name)
         schema = single_metadata.schema.to_arrow_schema()

@@ -299,9 +299,9 @@ class TableProperties(BaseModel):
         """
         catalog_path = file_io.get_upath(catalog_dir)
         file_path = catalog_path / "hats.properties"
-        if not file_io.does_file_or_directory_exist(file_path):
+        if not file_path.exists():
             file_path = catalog_path / "properties"
-            if not file_io.does_file_or_directory_exist(file_path):
+            if not file_path.exists():
                 raise FileNotFoundError(f"No properties file found where expected: {str(file_path)}")
         p = Properties()
         with file_path.open("rb") as f:
