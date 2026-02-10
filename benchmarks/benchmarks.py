@@ -5,6 +5,7 @@ https://asv.readthedocs.io/en/stable/writing_benchmarks.html."""
 
 from pathlib import Path
 
+import nested_pandas as npd
 import numpy as np
 
 import hats.pixel_math as hist
@@ -14,6 +15,7 @@ from hats.catalog import Catalog, TableProperties
 from hats.pixel_math import HealpixPixel
 from hats.pixel_tree import align_trees
 from hats.pixel_tree.pixel_tree import PixelTree
+from hats.search.region_search import cone_filter
 
 BENCH_DATA_DIR = Path(__file__).parent / "data"
 
@@ -80,3 +82,34 @@ def time_small_cone_large_catalog():
     original_catalog = read_hats(BENCH_DATA_DIR / "large_catalog")
 
     original_catalog.filter_by_cone(315, -66.443, 1)
+
+
+class ConeFilterSuite:
+    """Benchmark the cone_filter angular separation computation."""
+
+    def __init__(self):
+        self.metadata = None
+        self.data_frame = None
+        self.ra = None
+        self.dec = None
+        self.radius_arcsec = None
+
+    def setup(self):
+        rng = np.random.default_rng(42)
+        n = 100_000
+        ra = rng.uniform(0, 360, n)
+        dec = np.degrees(np.arcsin(rng.uniform(-1, 1, n)))
+        self.metadata = TableProperties(
+            catalog_name="bench",
+            catalog_type="object",
+            total_rows=n,
+            ra_column="ra",
+            dec_column="dec",
+        )
+        self.data_frame = npd.NestedFrame({"ra": ra, "dec": dec})
+        self.ra = 180.0
+        self.dec = 0.0
+        self.radius_arcsec = 10.0 * 3600  # 10 degrees
+
+    def time_cone_filter_benchmark(self):
+        cone_filter(self.data_frame, self.ra, self.dec, self.radius_arcsec, self.metadata)
