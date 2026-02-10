@@ -93,8 +93,9 @@ def cone_filter(data_frame: npd.NestedFrame, ra, dec, radius_arcsec, metadata: T
     dec0 = np.radians(dec)
 
     cos_dec0 = np.cos(dec0)
-    a = np.square(np.sin((dec_rad - dec0) * 0.5)) + cos_dec0 * np.cos(dec_rad) * np.square(
-        np.sin((ra_rad - ra0) * 0.5)
+    a = (
+        np.square(np.sin((dec_rad - dec0) * 0.5))
+        + cos_dec0 * np.cos(dec_rad) * np.square(np.sin((ra_rad - ra0) * 0.5))
     )
     radius_rad = np.radians(radius_arcsec / 3600)
     threshold = np.square(np.sin(radius_rad * 0.5))
