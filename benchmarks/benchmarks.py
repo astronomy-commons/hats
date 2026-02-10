@@ -87,6 +87,13 @@ def time_small_cone_large_catalog():
 class ConeFilterSuite:
     """Benchmark the cone_filter angular separation computation."""
 
+    def __init__(self):
+        self.metadata = None
+        self.data_frame = None
+        self.ra = None
+        self.dec = None
+        self.radius_arcsec = None
+
     def setup(self):
         rng = np.random.default_rng(42)
         n = 100_000
