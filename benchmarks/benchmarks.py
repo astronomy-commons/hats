@@ -84,7 +84,7 @@ def time_small_cone_large_catalog():
     original_catalog.filter_by_cone(315, -66.443, 1)
 
 
-class AngularSeparationSuite:
+class ConeFilterSuite:
     """Benchmark the cone_filter angular separation computation."""
 
     def setup(self):
