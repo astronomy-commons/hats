@@ -1,4 +1,19 @@
 {
+    "benchmarks.ConeFilterSuite.time_cone_filter_benchmark": {
+        "code": "class ConeFilterSuite:\n    def time_cone_filter_benchmark(self):\n        cone_filter(self.data_frame, self.ra, self.dec, self.radius_arcsec, self.metadata)\n\n    def setup(self):\n        rng = np.random.default_rng(42)\n        n = 100_000\n        ra = rng.uniform(0, 360, n)\n        dec = np.degrees(np.arcsin(rng.uniform(-1, 1, n)))\n        self.metadata = TableProperties(\n            catalog_name=\"bench\",\n            catalog_type=\"object\",\n            total_rows=n,\n            ra_column=\"ra\",\n            dec_column=\"dec\",\n        )\n        self.data_frame = npd.NestedFrame({\"ra\": ra, \"dec\": dec})\n        self.ra = 180.0\n        self.dec = 0.0\n        self.radius_arcsec = 10.0 * 3600  # 10 degrees",
+        "min_run_count": 2,
+        "name": "benchmarks.ConeFilterSuite.time_cone_filter_benchmark",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "c9488fc79efb6aa6fb7bc1cfb99bd90000fb63f7a9ec7faad71ca83db77108aa",
+        "warmup_time": -1
+    },
     "benchmarks.Suite.time_inner_pixel_alignment": {
         "code": "class Suite:\n    def time_inner_pixel_alignment(self):\n        align_trees(self.pixel_tree_1, self.pixel_tree_2)\n\n    def setup(self):\n        self.pixel_list = [HealpixPixel(8, pixel) for pixel in np.arange(100000)]\n        self.pixel_tree_1 = PixelTree.from_healpix(self.pixel_list)\n        self.pixel_tree_2 = PixelTree.from_healpix(\n            [HealpixPixel(9, pixel) for pixel in np.arange(0, 400000, 4)]\n        )",
         "min_run_count": 2,
