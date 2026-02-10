@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import nested_pandas as npd
 import numpy as np
+from astropy.coordinates import angular_separation
 
 import hats.pixel_math.healpix_shim as hp
 from hats.catalog import TableProperties
@@ -92,13 +93,9 @@ def cone_filter(data_frame: npd.NestedFrame, ra, dec, radius_arcsec, metadata: T
     ra0 = np.radians(ra)
     dec0 = np.radians(dec)
 
-    cos_angle = np.sin(dec_rad) * np.sin(dec0) + np.cos(dec_rad) * np.cos(dec0) * np.cos(ra_rad - ra0)
-
-    # Clamp to valid range to avoid numerical issues
-    cos_separation = np.clip(cos_angle, -1.0, 1.0)
-
-    cos_radius = np.cos(np.radians(radius_arcsec / 3600))
-    data_frame = data_frame[cos_separation >= cos_radius]
+    separation = angular_separation(ra_rad, dec_rad, ra0, dec0)
+    radius_rad = np.radians(radius_arcsec / 3600)
+    data_frame = data_frame[separation <= radius_rad]
     return data_frame
 
 
