@@ -91,7 +91,7 @@ class AngularSeparationSuite:
         rng = np.random.default_rng(42)
         n = 100_000
         ra = rng.uniform(0, 360, n)
-        dec = rng.uniform(-90, 90, n)
+        dec = np.degrees(np.arcsin(rng.uniform(-1, 1, n)))
         self.metadata = TableProperties(
             catalog_name="bench",
             catalog_type="object",
@@ -104,5 +104,5 @@ class AngularSeparationSuite:
         self.dec = 0.0
         self.radius_arcsec = 10.0 * 3600  # 10 degrees
 
-    def time_cone_filter(self):
+    def time_cone_filter_benchmark(self):
         cone_filter(self.data_frame, self.ra, self.dec, self.radius_arcsec, self.metadata)
