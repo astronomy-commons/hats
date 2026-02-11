@@ -10,7 +10,7 @@ import pytest
 import yaml
 
 from hats.io.summary_file import (
-    _gen_md_column_table,
+    _build_column_table,
     _gen_md_metadata_table,
     default_md_template,
     generate_markdown_collection_summary,
@@ -431,7 +431,7 @@ def test_gen_md_column_table_nested_columns():
 
     default_columns = ["id", "ra", "photometry.flux"]
 
-    column_table = _gen_md_column_table(nf, default_columns)
+    column_table = _build_column_table(nf, default_columns, fmt_value=lambda x: x)
 
     # Should have 5 rows: id, ra, dec, photometry.flux, photometry.mag
     assert len(column_table) == 5
@@ -449,7 +449,8 @@ def test_gen_md_column_table_nested_columns():
             ],
             "default": [True, True, False, True, False],
             "nested_into": [None, None, None, "photometry", "photometry"],
+            "example": pd.Series([1, 1.0, 3.0, [1.0], [20.0]], dtype=object),
         }
     )
 
-    pd.testing.assert_frame_equal(column_table.reset_index(drop=True), expected)
+    pd.testing.assert_frame_equal(column_table.reset_index(drop=False).reset_index(drop=True), expected)
