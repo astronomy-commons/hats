@@ -3,6 +3,7 @@
 import re
 import shutil
 
+import jinja2
 import nested_pandas as npd
 import pandas as pd
 import pyarrow as pa
@@ -11,6 +12,7 @@ import yaml
 
 from hats.io.summary_file import (
     _build_column_table,
+    _gen_md_column_table,
     _gen_md_metadata_table,
     default_md_template,
     generate_markdown_collection_summary,
@@ -455,3 +457,48 @@ def test_gen_md_column_table_nested_columns():
     )
 
     pd.testing.assert_frame_equal(column_table.reset_index(drop=False).reset_index(drop=True), expected)
+
+
+def test_gen_md_column_table_nested_catalog(small_sky_nested_dir):
+    """Test column table generation from a real nested catalog with nested columns"""
+    catalog = read_hats(small_sky_nested_dir)
+    column_table = _gen_md_column_table(catalog, empty_nf=None)
+
+    # The nested catalog has regular columns and lc.* nested columns
+    assert "nested_into" in column_table.columns
+
+    # Check that lc.* columns are marked as nested into "lc"
+    lc_columns = [col for col in column_table.index if col.startswith("lc.")]
+    assert len(lc_columns) > 0
+    for col in lc_columns:
+        assert column_table.loc[col, "nested_into"] == "lc"
+        assert column_table.loc[col, "dtype"].startswith("list[")
+
+    # Check that regular columns are not nested
+    for col in ["id", "ra", "dec"]:
+        assert pd.isna(column_table.loc[col, "nested_into"]) or column_table.loc[col, "nested_into"] is None
+
+    # Check that example values are present
+    assert "example" in column_table.columns
+
+    # Check that nested columns have list-type example values
+    for col in lc_columns:
+        example = column_table.loc[col, "example"]
+        assert isinstance(example, str)
+        assert example.startswith("[")
+
+    # Render the column table with the default template to verify it produces valid markdown
+    env = jinja2.Environment(undefined=jinja2.StrictUndefined)
+    # Render only the column table portion
+    column_template = (
+        '{% if "nested_into" in column_table %}'
+        "| **Nested?** |"
+        " {% for value in column_table.nested_into %}"
+        " {{ value or '\\u2014' }} |"
+        "{% endfor %}"
+        "{% endif %}"
+    )
+    template = env.from_string(column_template)
+    rendered = template.render(column_table=column_table)
+    assert "Nested?" in rendered
+    assert "lc" in rendered
