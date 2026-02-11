@@ -157,9 +157,10 @@ def test_generate_markdown_collection_summary_with_huggingface(small_sky_collect
     assert "Test Description" in content
 
 
-def test_generate_hugging_face_yaml_metadata(small_sky_collection_dir):
+def test_generate_hugging_face_yaml_metadata(tmp_path, small_sky_collection_dir):
     """Test generating Hugging Face YAML metadata for a collection"""
-    collection_base_dir = small_sky_collection_dir
+    collection_base_dir = tmp_path / "collection"
+    shutil.copytree(small_sky_collection_dir, collection_base_dir)
 
     # Generate the summary file with Hugging Face metadata
     readme_path = write_collection_summary_file(
