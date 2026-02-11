@@ -368,7 +368,7 @@ def _gen_md_column_table(
 
     row_count = stats["row_count"]
     if np.any(row_count != props.total_rows):
-        result["rows"] = _fill_missed(row_count)
+        result["rows"] = _fill_missed(row_count.map(lambda n: f"{n:,}"))
     if stats["null_count"].sum() > 0:
         null_count = stats["null_count"]
         nulls = pd.Series(
