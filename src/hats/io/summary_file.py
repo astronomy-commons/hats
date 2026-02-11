@@ -1,10 +1,12 @@
 import importlib.resources
+from itertools import starmap
 from pathlib import Path
 from typing import Literal
 
 import human_readable
 import jinja2
 import nested_pandas as npd
+import numpy as np
 import pandas as pd
 from upath import UPath
 
@@ -13,6 +15,7 @@ from hats.catalog.catalog_collection import CatalogCollection
 from hats.catalog.healpix_dataset.healpix_dataset import HealpixDataset
 from hats.io import get_common_metadata_pointer, get_partition_info_pointer, templates
 from hats.io.file_io import get_upath, read_parquet_file_to_pandas
+from hats.io.paths import get_data_thumbnail_pointer
 from hats.loaders.read_hats import read_hats
 
 
@@ -178,17 +181,24 @@ def generate_markdown_collection_summary(
     else:
         empty_nf = None
 
-    has_nested_columns = False if empty_nf is None else len(empty_nf.nested_columns) > 0
-
     metadata_table = _gen_md_metadata_table(
         catalog, total_columns=None if empty_nf is None else empty_nf.shape[1]
     )
 
-    column_table = (
-        pd.DataFrame()
-        if empty_nf is None
-        else _gen_md_column_table(empty_nf, cat_props.default_columns or [])
-    )
+    column_table = _gen_md_column_table(catalog, empty_nf)
+
+    if "example" in column_table:
+        ra = np.round(float(column_table.loc[cat_props.ra_column]["example"]))
+        if ra >= 360.0:
+            ra -= 360.0
+        dec = np.round(float(column_table.loc[cat_props.dec_column]["example"]))
+        if dec >= 90.0:
+            dec = 89.9
+        if dec <= -90.0:
+            dec = -89.9
+        cone_code_example = {"ra": ra, "dec": dec}
+    else:
+        cone_code_example = None
 
     return template.render(
         name=name,
@@ -197,11 +207,11 @@ def generate_markdown_collection_summary(
         cat_props=cat_props,
         uris=uris,
         has_partition_info=has_partition_info,
+        has_default_columns=bool(cat_props.default_columns),
+        cone_code_example=cone_code_example,
         margin_thresholds=margin_thresholds,
         uri=uri,
         huggingface_metadata=huggingface_metadata,
-        has_default_columns=cat_props.default_columns is not None,
-        has_nested_columns=has_nested_columns,
         metadata_table=metadata_table,
         column_table=column_table,
     )
@@ -230,28 +240,158 @@ def _gen_md_metadata_table(catalog: HealpixDataset, total_columns: int | None) -
     return metadata_table
 
 
-def _gen_md_column_table(nf: npd.NestedFrame, default_columns: list[str]) -> pd.DataFrame:
-    default_columns = frozenset(default_columns)
+def _fmt_count_percent(n: int, total: int) -> str:
+    if n == 0:
+        return "0"
+    percent = round(n / total * 100, 2)
+    if percent < 0.01:
+        return f"{n:,} (<0.01%)"
+    return f"{n:,} ({percent}%)"
+
+
+def _hard_truncate(s: str, limit: int) -> str:
+    if len(s) <= limit:
+        return s
+    return s[: limit - 1] + "…"
+
+
+def _format_example_value(
+    value, *, float_precision: int = 4, soft_limit: int = 50, hard_limit: int = 70
+) -> str:
+    """Format an example value for display in a summary table.
+
+    Floats are rounded to a limited number of significant figures.
+    Lists are shown with as many items as fit within ``soft_limit``
+    characters (always at least one), with a ``(N total)`` suffix when
+    truncated. Any resulting string longer than ``hard_limit`` is
+    truncated with ``…``.
+    """
+    if value is None:
+        return "*NULL*"
+
+    if isinstance(value, (float, np.floating)):
+        if np.isnan(value):
+            return "*NaN*"
+        if np.isinf(value):
+            return "-∞" if value < 0 else "∞"
+        return f"{value:.{float_precision}g}"
+
+    if isinstance(value, (list, tuple, np.ndarray)):
+        items = list(value)
+        if len(items) == 0:
+            return "[]"
+        fmt_kwargs = {"float_precision": float_precision, "soft_limit": soft_limit, "hard_limit": hard_limit}
+        suffix = f", … ({len(items)} total)]"
+        # Always include at least one item
+        parts = [_format_example_value(items[0], **fmt_kwargs)]
+        for item in items[1:]:
+            candidate = _format_example_value(item, **fmt_kwargs)
+            # Check if adding this item would exceed the soft limit,
+            # accounting for the truncation suffix
+            preview = "[" + ", ".join(parts + [candidate]) + suffix
+            if len(preview) > soft_limit:
+                break
+            parts.append(candidate)
+        if len(parts) < len(items):
+            result = "[" + ", ".join(parts) + suffix
+        else:
+            result = "[" + ", ".join(parts) + "]"
+    else:
+        result = str(value)
+
+    return _hard_truncate(result, hard_limit)
+
+
+def _build_column_table(
+    nf: npd.NestedFrame, default_columns, fmt_value=_format_example_value
+) -> pd.DataFrame:
+    """Build column info table from a NestedFrame and default column names."""
+    default_columns = frozenset(default_columns or [])
+    has_nested_columns = len(nf.nested_columns) > 0
+    has_example_row = not nf.empty
 
     column = []
     dtype = []
-    default = []
-    nested_into = []
+    default = [] if len(default_columns) > 0 else None
+    nested_into = [] if has_nested_columns else None
+    example = [] if has_example_row else None
 
     for name, dt in nf.dtypes.items():
+        cell = None if nf.empty else nf[name].iloc[0]
         if isinstance(dt, npd.NestedDtype):
             subcolumns = nf.get_subcolumns(name)
             column.extend(subcolumns)
             dtype.extend(f"list[{nf[sc].dtype.pyarrow_dtype}]" for sc in subcolumns)
-            default.extend(name in default_columns or sc in default_columns for sc in subcolumns)
+            if default is not None:
+                default.extend(name in default_columns or sc in default_columns for sc in subcolumns)
             nested_into.extend([name] * len(subcolumns))
+            example.extend(fmt_value(series.to_list()) for _, series in cell.items())
         else:
             column.append(name)
             dtype.append(str(dt.pyarrow_dtype))
-            nested_into.append(None)
-            default.append(name in default_columns)
+            if default is not None:
+                default.append(name in default_columns)
+            if nested_into is not None:
+                nested_into.append(None)
+            if example is not None:
+                example.append(fmt_value(cell))
 
-    return pd.DataFrame({"column": column, "dtype": dtype, "default": default, "nested_into": nested_into})
+    index = pd.Index(column, name="column")
+    result = pd.DataFrame(
+        {
+            "dtype": pd.Series(dtype, dtype=str, index=index),
+        },
+        index=index,
+    )
+    if default is not None:
+        result["default"] = pd.Series(default, dtype=bool, index=index)
+    if nested_into is not None:
+        result["nested_into"] = pd.Series(nested_into, dtype=str, index=index)
+    if example is not None:
+        result["example"] = pd.Series(example, dtype=object, index=index)
+
+    return result
+
+
+def _gen_md_column_table(
+    catalog: HealpixDataset, empty_nf: npd.NestedFrame | None, fmt_value=_format_example_value
+) -> pd.DataFrame:
+    props = catalog.catalog_info
+
+    nf = _get_example_row(catalog)
+    if nf is None:
+        if empty_nf is None:
+            return pd.DataFrame()
+        nf = empty_nf
+
+    result = _build_column_table(nf, props.default_columns, fmt_value)
+
+    stats = catalog.aggregate_column_statistics(exclude_hats_columns=False)
+    if stats.empty:
+        return result
+
+    index = result.index
+    missed_columns = list(set(index) - set(stats.index))
+
+    def _fill_missed(series):
+        for col in missed_columns:
+            series.loc[col] = "*N/A*"
+        return series
+
+    result["min_value"] = _fill_missed(stats["min_value"].map(fmt_value))
+    result["max_value"] = _fill_missed(stats["max_value"].map(fmt_value))
+
+    row_count = stats["row_count"]
+    if np.any(row_count != props.total_rows):
+        result["rows"] = _fill_missed(row_count.map(lambda n: f"{n:,}"))
+    if stats["null_count"].sum() > 0:
+        null_count = stats["null_count"]
+        nulls = pd.Series(
+            list(starmap(_fmt_count_percent, zip(null_count, row_count))), dtype=str, index=stats.index
+        )
+        result["nulls"] = _fill_missed(nulls)
+
+    return result
 
 
 def _join_catalog_uri(col_upath: str | None, path: str) -> str:
@@ -309,3 +449,30 @@ def _catalog_uris(properties: CollectionProperties, uri: str | None) -> dict[str
             for column in index_columns
         ],
     }
+
+
+def _get_example_frame(catalog: HealpixDataset, rng: np.random.Generator) -> npd.NestedFrame | None:
+    if (root := catalog.catalog_path) is None or not root.exists():
+        return None
+
+    if (thumbnail_path := get_data_thumbnail_pointer(root)).exists():
+        return read_parquet_file_to_pandas(thumbnail_path, is_dir=False)
+
+    healpix_pixels = catalog.get_healpix_pixels()
+    pixel = rng.choice(healpix_pixels)
+    return catalog.read_pixel_to_pandas(pixel)
+
+
+def _get_example_row(catalog: HealpixDataset) -> npd.NestedFrame | None:
+    """Returns a single-row nested frame with a random example row."""
+    # We want it to be pseudo-random but reproducible
+    random_seed = 42
+    rng = np.random.Generator(np.random.PCG64(random_seed))
+
+    example_nf = _get_example_frame(catalog, rng)
+
+    if example_nf is None:
+        return None
+
+    idx = rng.integers(len(example_nf))
+    return example_nf.iloc[idx : idx + 1]

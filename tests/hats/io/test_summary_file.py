@@ -3,6 +3,7 @@
 import re
 import shutil
 
+import jinja2
 import nested_pandas as npd
 import pandas as pd
 import pyarrow as pa
@@ -10,6 +11,7 @@ import pytest
 import yaml
 
 from hats.io.summary_file import (
+    _build_column_table,
     _gen_md_column_table,
     _gen_md_metadata_table,
     default_md_template,
@@ -157,9 +159,10 @@ def test_generate_markdown_collection_summary_with_huggingface(small_sky_collect
     assert "Test Description" in content
 
 
-def test_generate_hugging_face_yaml_metadata(small_sky_collection_dir):
+def test_generate_hugging_face_yaml_metadata(tmp_path, small_sky_collection_dir):
     """Test generating Hugging Face YAML metadata for a collection"""
-    collection_base_dir = small_sky_collection_dir
+    collection_base_dir = tmp_path / "collection"
+    shutil.copytree(small_sky_collection_dir, collection_base_dir)
 
     # Generate the summary file with Hugging Face metadata
     readme_path = write_collection_summary_file(
@@ -431,7 +434,7 @@ def test_gen_md_column_table_nested_columns():
 
     default_columns = ["id", "ra", "photometry.flux"]
 
-    column_table = _gen_md_column_table(nf, default_columns)
+    column_table = _build_column_table(nf, default_columns, fmt_value=lambda x: x)
 
     # Should have 5 rows: id, ra, dec, photometry.flux, photometry.mag
     assert len(column_table) == 5
@@ -449,7 +452,53 @@ def test_gen_md_column_table_nested_columns():
             ],
             "default": [True, True, False, True, False],
             "nested_into": [None, None, None, "photometry", "photometry"],
+            "example": pd.Series([1, 1.0, 3.0, [1.0], [20.0]], dtype=object),
         }
     )
 
-    pd.testing.assert_frame_equal(column_table.reset_index(drop=True), expected)
+    pd.testing.assert_frame_equal(column_table.reset_index(drop=False).reset_index(drop=True), expected)
+
+
+def test_gen_md_column_table_nested_catalog(small_sky_nested_dir):
+    """Test column table generation from a real nested catalog with nested columns"""
+    catalog = read_hats(small_sky_nested_dir)
+    column_table = _gen_md_column_table(catalog, empty_nf=None)
+
+    # The nested catalog has regular columns and lc.* nested columns
+    assert "nested_into" in column_table.columns
+
+    # Check that lc.* columns are marked as nested into "lc"
+    lc_columns = [col for col in column_table.index if col.startswith("lc.")]
+    assert len(lc_columns) > 0
+    for col in lc_columns:
+        assert column_table.loc[col, "nested_into"] == "lc"
+        assert column_table.loc[col, "dtype"].startswith("list[")
+
+    # Check that regular columns are not nested
+    for col in ["id", "ra", "dec"]:
+        assert pd.isna(column_table.loc[col, "nested_into"]) or column_table.loc[col, "nested_into"] is None
+
+    # Check that example values are present
+    assert "example" in column_table.columns
+
+    # Check that nested columns have list-type example values
+    for col in lc_columns:
+        example = column_table.loc[col, "example"]
+        assert isinstance(example, str)
+        assert example.startswith("[")
+
+    # Render the column table with the default template to verify it produces valid markdown
+    env = jinja2.Environment(undefined=jinja2.StrictUndefined)
+    # Render only the column table portion
+    column_template = (
+        '{% if "nested_into" in column_table %}'
+        "| **Nested?** |"
+        " {% for value in column_table.nested_into %}"
+        " {{ value or '\\u2014' }} |"
+        "{% endfor %}"
+        "{% endif %}"
+    )
+    template = env.from_string(column_template)
+    rendered = template.render(column_table=column_table)
+    assert "Nested?" in rendered
+    assert "lc" in rendered
