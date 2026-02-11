@@ -187,6 +187,19 @@ def generate_markdown_collection_summary(
 
     column_table = _gen_md_column_table(catalog, empty_nf)
 
+    if "example" in column_table:
+        ra = np.round(float(column_table.loc[cat_props.ra_column]["example"]))
+        if ra >= 360.0:
+            ra -= 360.0
+        dec = np.round(float(column_table.loc[cat_props.dec_column]["example"]))
+        if dec >= 90.0:
+            dec = 89.9
+        if dec <= -90.0:
+            dec = -89.9
+        cone_code_example = {"ra": ra, "dec": dec}
+    else:
+        cone_code_example = None
+
     return template.render(
         name=name,
         description=description,
@@ -194,6 +207,8 @@ def generate_markdown_collection_summary(
         cat_props=cat_props,
         uris=uris,
         has_partition_info=has_partition_info,
+        has_default_columns=bool(cat_props.default_columns),
+        cone_code_example=cone_code_example,
         margin_thresholds=margin_thresholds,
         uri=uri,
         huggingface_metadata=huggingface_metadata,
@@ -353,7 +368,7 @@ def _gen_md_column_table(
 
     stats = catalog.aggregate_column_statistics(exclude_hats_columns=False)
     if stats.empty:
-        return result.reset_index(drop=False)
+        return result
 
     index = result.index
     missed_columns = list(set(index) - set(stats.index))
@@ -376,7 +391,7 @@ def _gen_md_column_table(
         )
         result["nulls"] = _fill_missed(nulls)
 
-    return result.reset_index(drop=False)
+    return result
 
 
 def _join_catalog_uri(col_upath: str | None, path: str) -> str:

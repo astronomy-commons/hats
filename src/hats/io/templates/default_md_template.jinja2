@@ -30,7 +30,18 @@ The following code provides a minimal example of opening this catalog:
 ```python
 import lsdb
 
-catalog = lsdb.open_catalog("{{uris["collection"]}}")
+# Full sky coverage{% if has_default_columns %}, default columns only{% endif %}.
+catalog = lsdb.open_catalog("{{ uris["collection"] }}")
+{%- if cone_code_example %}
+# One-degree cone{% if has_default_columns %}, all columns{% endif %}.
+catalog = lsdb.open_catalog(
+    "{{ uris["collection"] }}",
+    search_filter=lsdb.ConeSearch(ra={{ cone_code_example["ra"] }}, dec={{ cone_code_example["dec"] }}, radius_arcsec=3600.0),
+    {%- if has_default_columns %}
+    columns="all",
+    {%- endif %}
+)
+{%- endif %}
 ```
 
 Each catalog in this collection is represented as a separate [Apache Parquet dataset](https://arrow.apache.org/docs/python/dataset.html) and can be accessed with a variety of tools, including `pandas`, `pyarrow`, `dask`, `Spark`, `DuckDB`.
@@ -75,8 +86,8 @@ Metadata of the main HATS catalog, excluding margins and indexes:
 
 The main HATS catalog contains the following columns:
 
-| **Name** | {% for col in column_table.column %} **`{{col}}`** |{% endfor %}
-| --- | {% for _ in column_table.column %} --- |{% endfor %}
+| **Name** | {% for col in column_table.index %} **`{{col}}`** |{% endfor %}
+| --- | {% for _ in column_table.index %} --- |{% endfor %}
 | **Data Type** | {% for value in column_table.dtype %} {{value}} |{% endfor %}
 {%- if "default" in column_table %}
 | **Default?** | {% for value in column_table.default %} {{ "Yes" if value else "No" }} |{% endfor %}
