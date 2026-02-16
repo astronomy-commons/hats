@@ -22,7 +22,7 @@ tags:
 
 ### Access the catalog
 
-We recommended the use of the [LSDB](https://lsdb.io) Python framework to access HATS catalogs.
+We recommend the use of the [LSDB](https://lsdb.io) Python framework to access HATS catalogs.
 LSDB can be installed via `pip install lsdb` or `conda install conda-forge::lsdb`,
 see more details [in the docs](https://docs.lsdb.io/).
 The following code provides a minimal example of opening this catalog:
@@ -30,7 +30,18 @@ The following code provides a minimal example of opening this catalog:
 ```python
 import lsdb
 
-catalog = lsdb.open_catalog("{{uris["collection"]}}")
+# Full sky coverage{% if has_default_columns %}, default columns only{% endif %}.
+catalog = lsdb.open_catalog("{{ uris["collection"] }}")
+{%- if cone_code_example %}
+# One-degree cone{% if has_default_columns %}, all columns{% endif %}.
+catalog = lsdb.open_catalog(
+    "{{ uris["collection"] }}",
+    search_filter=lsdb.ConeSearch(ra={{ cone_code_example["ra"] }}, dec={{ cone_code_example["dec"] }}, radius_arcsec=3600.0),
+    {%- if has_default_columns %}
+    columns="all",
+    {%- endif %}
+)
+{%- endif %}
 ```
 
 Each catalog in this collection is represented as a separate [Apache Parquet dataset](https://arrow.apache.org/docs/python/dataset.html) and can be accessed with a variety of tools, including `pandas`, `pyarrow`, `dask`, `Spark`, `DuckDB`.
@@ -50,7 +61,7 @@ This catalog is represented by the following files and directories:
   {%- if cat_props.skymap_order %}
   - [`skymap.fits`]({{uris["primary"]["uri"]}}/skymap.fits) — HEALPix skymap FITS file with row-counts per HEALPix tile of fixed order {{cat_props.skymap_order}}
   {%- for alt_order in (cat_props.skymap_alt_orders or []) %}
-  - [`skymap.{{alt_order}}.fits`]({{uris["primary"]["uri"]}}/skymap.{{alt_order}}.fits) — Same, but for order {{alt_order}}
+  - [`skymap.{{alt_order}}.fits`]({{uris["primary"]["uri"]}}/skymap.{{alt_order}}.fits) — HEALPix skymap FITS file at order {{alt_order}}
   {%- endfor %}
   {%- endif %}
 {%- for margin in uris["margins"] %}
@@ -75,22 +86,41 @@ Metadata of the main HATS catalog, excluding margins and indexes:
 
 The main HATS catalog contains the following columns:
 
-| **Name** | {% for col in column_table.column %} **`{{col}}`** |{% endfor %}
-| --- | {% for _ in column_table.column %} --- |{% endfor %}
-| **Data Type** | {% for value in column_table.dtype %} `{{value}}` |{% endfor %}
-{%- if has_default_columns %}
-| **Default?** | {%- for value in column_table.default %} {{ "Yes" if value else "No" }} |{%- endfor %}
+| **Name** | {% for col in column_table.index %} **`{{col}}`** |{% endfor %}
+| --- | {% for _ in column_table.index %} --- |{% endfor %}
+| **Data Type** | {% for value in column_table.dtype %} {{value}} |{% endfor %}
+{%- if "default" in column_table %}
+| **Default?** | {% for value in column_table.default %} {{ "Yes" if value else "No" }} |{% endfor %}
 {%- endif %}
-{% if has_nested_columns -%}
-| **Nested?** | {%- for value in column_table.nested_into %} {{ value or "-" }} |{%- endfor %}
+{%- if "nested_into" in column_table %}
+| **Nested?** | {% for value in column_table.nested_into %} {{ value or "—" }} |{% endfor %}
 {%- endif %}
-{%if has_default_columns %}
+{%- if "rows" in column_table %}
+| **Value count** | {% for value in column_table.rows %} {{ value }} |{% endfor %}
+{%- endif %}
+{%- if "nulls" in column_table %}
+| **Null count** | {% for value in column_table.nulls %} {{ value }} |{% endfor %}
+{%- endif %}
+{%- if "example" in column_table %}
+| **Example row** | {% for value in column_table.example %} {{ value }} |{% endfor %}
+{%- endif %}
+{%- if "min_value" in column_table %}
+| **Minimum value** | {% for value in column_table.min_value %} {{ value }} |{% endfor %}
+{%- endif %}
+{%- if "max_value" in column_table %}
+| **Maximum value** | {% for value in column_table.max_value %} {{ value }} |{% endfor %}
+{%- endif %}
+{% if "default" in column_table %}
 "Default" indicates whether the column is included when loading the catalog with `lsdb.open_catalog()`
 without specifying any columns to load.
 The list of default columns is available in the [`hats.properties`]({{uris["primary"]["uri"]}}/hats.properties) file.
 {% endif %}
-{%if has_nested_columns %}
+{% if "nested_into" in column_table %}
 "Nested" indicates whether the column is stored as a nested field inside another "struct" column.
+{% endif %}
+{% if "rows" in column_table %}
+"Value count" may be different from the total number of rows for nested columns: each nested element is counted as a single value.
+{% if "nulls" in column_table %} "Null count" also refers to "elementary" values, not to rows. {% endif %}
 {% endif %}
 
 {% endif %}
