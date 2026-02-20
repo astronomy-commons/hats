@@ -528,12 +528,12 @@ def pick_metadata_schema_file(catalog_base_dir: str | Path | UPath) -> UPath | N
         path to a parquet file containing metadata schema.
     """
     common_metadata_file = paths.get_common_metadata_pointer(catalog_base_dir)
-    common_metadata_exists = file_io.does_file_or_directory_exist(common_metadata_file)
+    if common_metadata_file.exists():
+        return common_metadata_file
     metadata_file = paths.get_parquet_metadata_pointer(catalog_base_dir)
-    metadata_exists = file_io.does_file_or_directory_exist(metadata_file)
-    if not (common_metadata_exists or metadata_exists):
-        return None
-    return common_metadata_file if common_metadata_exists else metadata_file
+    if metadata_file.exists():
+        return metadata_file
+    return None
 
 
 # pylint: disable=protected-access
