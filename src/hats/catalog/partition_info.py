@@ -107,9 +107,9 @@ class PartitionInfo:
             A `PartitionInfo` object with the data from the file
         """
         partition_info_file = paths.get_partition_info_pointer(catalog_base_dir)
-        if file_io.does_file_or_directory_exist(partition_info_file):
+        try:
             pixel_list = PartitionInfo._read_from_csv(partition_info_file)
-        else:
+        except FileNotFoundError:
             warnings.warn("Computing partitions from catalog parquet files. This may be slow.")
 
             # Read the dataset dir to get the list of files.
@@ -200,9 +200,7 @@ class PartitionInfo:
         PartitionInfo
             A `PartitionInfo` object with the data from the file
         """
-        if not file_io.does_file_or_directory_exist(partition_info_file):
-            raise FileNotFoundError(f"No partition info found where expected: {str(partition_info_file)}")
-
+        partition_info_file = file_io.get_upath(partition_info_file)
         data_frame = file_io.load_csv_to_pandas(partition_info_file)
 
         return [
