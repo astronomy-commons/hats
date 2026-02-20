@@ -22,7 +22,7 @@ class PartitionInfo:
     METADATA_PIXEL_COLUMN_NAME = "Npix"
 
     def __init__(self, pixel_list: list[HealpixPixel], catalog_base_dir: str = None) -> None:
-        self.pixel_list = pixel_list
+        self.pixel_list = list(sort_pixels(pixel_list))
         self.catalog_base_dir = catalog_base_dir
 
     def get_healpix_pixels(self) -> list[HealpixPixel]:
@@ -127,7 +127,7 @@ class PartitionInfo:
                 pixel = paths.get_healpix_from_path(str(file))
                 if pixel != INVALID_PIXEL:
                     pixel_list.append(pixel)
-            pixel_list = sort_pixels(list(set(pixel_list)))
+            pixel_list = list(set(pixel_list))
         return cls(pixel_list, catalog_base_dir)
 
     @classmethod
@@ -223,7 +223,8 @@ class PartitionInfo:
             PartitionInfo.METADATA_ORDER_COLUMN_NAME: [],
             PartitionInfo.METADATA_PIXEL_COLUMN_NAME: [],
         }
-        for pixel in self.pixel_list:
+        pixel_list = sort_pixels(self.pixel_list)
+        for pixel in pixel_list:
             partition_info_dict[PartitionInfo.METADATA_ORDER_COLUMN_NAME].append(pixel.order)
             partition_info_dict[PartitionInfo.METADATA_PIXEL_COLUMN_NAME].append(pixel.pixel)
         return pd.DataFrame.from_dict(partition_info_dict)

@@ -88,15 +88,21 @@ def test_write_to_file(tmp_path, small_sky_pixels):
     assert partition_info.get_healpix_pixels() == new_partition_info.get_healpix_pixels()
 
 
-def test_load_partition_info_from_dir_and_write(tmp_path, pixel_list_depth_first):
+def test_load_partition_info_from_dir_and_write(tmp_path, pixel_list_depth_first, pixel_list_breadth_first):
     partition_info = PartitionInfo.from_healpix(pixel_list_depth_first)
 
     ## Path arguments are required if the info was not created from a `read_from_dir` call
     with pytest.raises(ValueError):
         partition_info.write_to_file()
 
+    assert partition_info.get_healpix_pixels() == pixel_list_breadth_first
+
     partition_info.write_to_file(catalog_path=tmp_path)
+
+    assert PartitionInfo._read_from_csv(tmp_path / "partition_info.csv") == pixel_list_breadth_first
+
     info = PartitionInfo.read_from_dir(tmp_path)
+    assert info.get_healpix_pixels() == pixel_list_breadth_first
 
     ## Can write out the partition info CSV by providing:
     ##  - no arguments
@@ -115,7 +121,6 @@ def test_compute_partition_info_from_catalog(small_sky_dir, small_sky_source_dir
     partition_info = PartitionInfo.read_from_dir(small_sky_source_dir)
     expected_pixels = [
         HealpixPixel(0, 4),
-        HealpixPixel(1, 47),
         HealpixPixel(2, 176),
         HealpixPixel(2, 177),
         HealpixPixel(2, 178),
@@ -128,5 +133,6 @@ def test_compute_partition_info_from_catalog(small_sky_dir, small_sky_source_dir
         HealpixPixel(2, 185),
         HealpixPixel(2, 186),
         HealpixPixel(2, 187),
+        HealpixPixel(1, 47),
     ]
     assert partition_info.get_healpix_pixels() == expected_pixels
