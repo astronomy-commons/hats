@@ -38,6 +38,14 @@ def read_hats(
     ----------
     catalog_path : str | Path | UPath
         path to the root directory of the catalog
+    single_catalog: bool
+        If you happen to already know that the `catalog_path` points to a
+        single catalog, instead of a catalog collection, this flag can
+        save a few file read operations.
+    read_moc: bool
+        If you happen to know that your catalog does not have a MOC (or if
+        you know that your use case will not utilize a MOC), then you can
+        skip the file read and memory load of the MOC.
 
     Returns
     -------
@@ -52,8 +60,10 @@ def read_hats(
         catalog = hats.read_hats(UPath(..., anon=True))
     """
     path = file_io.get_upath(catalog_path)
-    if single_catalog is not None and single_catalog:
-        return _load_catalog(path, read_moc=read_moc)
+    if single_catalog is not None:
+        if single_catalog:
+            return _load_catalog(path, read_moc=read_moc)
+        return _load_collection(path, read_moc=read_moc)
     if (path / "hats.properties").exists() or (path / "properties").exists():
         return _load_catalog(path, read_moc=read_moc)
     if (path / "collection.properties").exists():
