@@ -213,8 +213,6 @@ class CollectionProperties(BaseModel):
             new object from the contents of a ``collection.properties`` file in the directory.
         """
         file_path = file_io.get_upath(catalog_dir) / "collection.properties"
-        if not file_path.exists():
-            raise FileNotFoundError(f"No properties file found where expected: {str(file_path)}")
         p = Properties()
         with file_path.open("rb") as f:
             p.load(f, "utf-8")
