@@ -127,7 +127,7 @@ def get_healpix_from_path(path: str) -> HealpixPixel:
     healpix_path_pattern = re.compile(r".*Norder=(\d*).*Npix=(\d*).*")
     match = healpix_path_pattern.match(path)
     if not match:
-        return INVALID_PIXEL
+        return None
     order, pixel = match.groups()
     return HealpixPixel(int(order), int(pixel))
 

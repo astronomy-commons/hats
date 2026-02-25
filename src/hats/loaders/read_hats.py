@@ -78,6 +78,7 @@ def _load_catalog(catalog_path: UPath) -> Dataset:
     }
     if _is_healpix_dataset(dataset_type):
         kwargs["pixels"] = PartitionInfo.read_from_dir(catalog_path)
+        kwargs["original_partition_info"] = kwargs["pixels"]
         kwargs["moc"] = _read_moc_from_point_map(catalog_path)
     return loader(**kwargs)
 
