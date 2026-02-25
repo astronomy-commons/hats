@@ -215,6 +215,8 @@ def test_cone_filter(small_sky_order1_catalog):
     dec = -66.443
     radius = 0.1
 
+    original_partition_info = small_sky_order1_catalog.partition_info
+
     filtered_catalog = small_sky_order1_catalog.filter_by_cone(ra, dec, radius)
     filtered_pixels = filtered_catalog.get_healpix_pixels()
 
@@ -233,6 +235,9 @@ def test_cone_filter(small_sky_order1_catalog):
     )
     assert filtered_catalog.moc == cone_moc.intersection(small_sky_order1_catalog.moc)
     assert filtered_catalog.original_schema is not None
+    assert filtered_catalog.original_partition_info is not None
+    assert filtered_catalog.original_partition_info == original_partition_info
+    assert not filtered_catalog.partition_info == filtered_catalog.original_partition_info
 
 
 def test_get_pixel_paths(small_sky_order1_catalog):
@@ -300,6 +305,7 @@ def test_cone_filter_invalid_cone_center(small_sky_order1_catalog):
 
 
 def test_polygonal_filter(small_sky_order1_catalog):
+    original_partition_info = small_sky_order1_catalog.partition_info
     polygon_vertices = [(282, -58), (282, -55), (272, -55), (272, -58)]
     filtered_catalog = small_sky_order1_catalog.filter_by_polygon(polygon_vertices)
     filtered_pixels = filtered_catalog.get_healpix_pixels()
@@ -316,6 +322,9 @@ def test_polygonal_filter(small_sky_order1_catalog):
     )
     assert filtered_catalog.moc == polygon_moc.intersection(small_sky_order1_catalog.moc)
     assert filtered_catalog.original_schema is not None
+    assert filtered_catalog.original_partition_info is not None
+    assert filtered_catalog.original_partition_info == original_partition_info
+    assert not filtered_catalog.partition_info == filtered_catalog.original_partition_info
 
 
 def test_polygonal_filter_invalid_coordinate_shape(small_sky_order1_catalog):
@@ -386,6 +395,7 @@ def test_polygonal_filter_invalid_polygon(small_sky_order1_catalog):
 
 def test_box_filter(small_sky_order1_catalog):
     # The catalog pixels are distributed around the [-90,0] degree range.
+    original_partition_info = small_sky_order1_catalog.partition_info
     filtered_catalog = small_sky_order1_catalog.filter_by_box(ra=(280, 300), dec=(-30, -20))
     filtered_pixels = filtered_catalog.get_healpix_pixels()
 
@@ -406,6 +416,9 @@ def test_box_filter(small_sky_order1_catalog):
         max_depth=small_sky_order1_catalog.get_max_coverage_order(),
     )
     assert filtered_catalog.moc == box_moc.intersection(small_sky_order1_catalog.moc)
+    assert filtered_catalog.original_partition_info is not None
+    assert filtered_catalog.original_partition_info == original_partition_info
+    assert not filtered_catalog.partition_info == filtered_catalog.original_partition_info
 
 
 def test_box_filter_wrapped_ra(small_sky_order1_catalog):

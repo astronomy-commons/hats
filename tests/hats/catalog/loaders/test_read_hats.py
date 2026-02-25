@@ -146,6 +146,12 @@ def test_read_hats_original_schema(small_sky_order1_dir):
     assert len(result) == 42
 
 
+def test_read_hats_original_partition_info(small_sky_order1_dir):
+    cat = hats.read_hats(small_sky_order1_dir)
+    assert cat.original_partition_info is not None
+    assert cat.partition_info == cat.original_partition_info
+
+
 def test_read_hats_empty_catalog(small_sky_order1_empty_margin_dir, small_sky_order1_catalog):
     cat = hats.read_hats(small_sky_order1_empty_margin_dir)
     assert cat.get_healpix_pixels() == []

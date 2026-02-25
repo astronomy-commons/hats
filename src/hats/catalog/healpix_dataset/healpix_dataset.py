@@ -43,6 +43,7 @@ class HealpixDataset(Dataset):
         moc: MOC | None = None,
         schema: pa.Schema | None = None,
         original_schema: pa.Schema | None = None,
+        original_partition_info: PartitionInfo | PixelTree | list[HealpixPixel] | None = None,
     ) -> None:
         """Initializes a Catalog
 
@@ -62,11 +63,15 @@ class HealpixDataset(Dataset):
             The pyarrow schema for the catalog. May be modified e.g. based on loaded columns
         original_schema : pa.Schema
             The original pyarrow schema for the catalog. May NOT be modified e.g. based on loaded columns
+        original_partition_info : PartitionInfo | PixelTree | list[HealpixPixel] | None
+            The original pixels contained in the catalog, before any modifications. May NOT be modified e.g.
+            based on filtered pixels.
         """
         super().__init__(
             catalog_info, catalog_path=catalog_path, schema=schema, original_schema=original_schema
         )
         self.partition_info = self._get_partition_info_from_pixels(pixels)
+        self.original_partition_info = self._get_partition_info_from_pixels(original_partition_info)
         self.pixel_tree = self._get_pixel_tree_from_pixels(pixels)
         self.moc = moc
 
@@ -234,6 +239,7 @@ class HealpixDataset(Dataset):
             moc=filtered_moc,
             schema=self.schema,
             original_schema=self.original_schema,
+            original_partition_info=self.original_partition_info,
         )
 
     def align(
