@@ -256,8 +256,12 @@ def test_get_pixel_paths(small_sky_order1_catalog):
 
 def test_get_pixel_paths_in_memory(in_memory_catalog):
     with pytest.warns(UserWarning, match="in-memory"):
-        gen_value = next(in_memory_catalog.get_pixel_paths())
-        assert gen_value is None
+        with pytest.raises(StopIteration):
+            next(in_memory_catalog.get_pixel_paths())
+
+    with pytest.warns(UserWarning, match="in-memory"):
+        for _ in in_memory_catalog.get_pixel_paths():
+            assert False, "Iterator should be empty."
 
 
 def test_cone_filter_big(small_sky_order1_catalog):

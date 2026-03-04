@@ -432,7 +432,7 @@ class HealpixDataset(Dataset):
         """
         if not self.on_disk:
             warnings.warn("Calling read_pixel_to_pandas on an in-memory catalog. No results.")
-            yield None
+            return
 
         for pixel in self.get_healpix_pixels():
             yield paths.pixel_catalog_file(
