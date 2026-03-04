@@ -125,10 +125,16 @@ def test_read_hats_nonstandard_npix_suffix(
     cat = read_hats(small_sky_npix_alt_suffix_dir)
     result = cat.read_pixel_to_pandas(cat.get_healpix_pixels()[0])
     assert len(result) == 131
+    for path in cat.get_pixel_paths():
+        assert path.exists()
+        assert str(path).endswith(".parq")
 
     cat = read_hats(small_sky_npix_as_dir_dir)
     result = cat.read_pixel_to_pandas(cat.get_healpix_pixels()[0])
     assert len(result) == 131
+    for path in cat.get_pixel_paths():
+        assert path.exists()
+        assert path.is_dir()
 
 
 def test_read_hats_original_schema(small_sky_order1_dir):

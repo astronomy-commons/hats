@@ -235,6 +235,35 @@ def test_cone_filter(small_sky_order1_catalog):
     assert filtered_catalog.original_schema is not None
 
 
+def test_get_pixel_paths(small_sky_order1_catalog):
+    generator_length = 0
+    for path in small_sky_order1_catalog.get_pixel_paths():
+        assert path.exists()
+        generator_length += 1
+    assert generator_length == 4
+
+    ra = 315
+    dec = -66.443
+    radius = 0.1
+
+    filtered_catalog = small_sky_order1_catalog.filter_by_cone(ra, dec, radius)
+    generator_length = 0
+    for path in filtered_catalog.get_pixel_paths():
+        assert path.exists()
+        generator_length += 1
+    assert generator_length == 1
+
+
+def test_get_pixel_paths_in_memory(in_memory_catalog):
+    with pytest.warns(UserWarning, match="in-memory"):
+        with pytest.raises(StopIteration):
+            next(in_memory_catalog.get_pixel_paths())
+
+    with pytest.warns(UserWarning, match="in-memory"):
+        for _ in in_memory_catalog.get_pixel_paths():
+            assert False, "Iterator should be empty."
+
+
 def test_cone_filter_big(small_sky_order1_catalog):
     filtered_catalog = small_sky_order1_catalog.filter_by_cone(315, -66.443, 30 * 3600)
     assert len(filtered_catalog.get_healpix_pixels()) == 4

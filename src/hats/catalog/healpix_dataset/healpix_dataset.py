@@ -418,6 +418,27 @@ class HealpixDataset(Dataset):
                 return True
         return False
 
+    def get_pixel_paths(self):
+        """Generate paths to all pixel files.
+
+        Pixels will be traversed in "breadth-first" healpix order. If any spatial filters
+        have been applied to this catalog, only those pixels that remain will be included.
+
+        Yields
+        ------
+        UPath
+            Universal Pathlib pointing to either an npix directory, or to a single
+            pixel partition data file.
+        """
+        if not self.on_disk:
+            warnings.warn("Calling read_pixel_to_pandas on an in-memory catalog. No results.")
+            return
+
+        for pixel in self.get_healpix_pixels():
+            yield paths.pixel_catalog_file(
+                self.catalog_base_dir, pixel, npix_suffix=self.catalog_info.npix_suffix
+            )
+
     def read_pixel_to_pandas(self, pixel: HealpixPixel, **kwargs) -> npd.NestedFrame:
         """Read the parquet file(s) for this pixel into a pandas dataframe.
 
