@@ -70,31 +70,20 @@ def read_skymap(catalog, order):
 
 
 def skymap_coverage(catalog, order=None):
-    """Compute the fractional sky coverage of a catalog based on its skymap.
-
-    This gives an estimate of sky coverage based on the fraction of HEALPix
-    pixels that contain at least one object, as recorded in the skymap file.
-    For most surveys this estimate will be closer to the actual coverage than
-    the partition-based estimate from
-    :meth:`~hats.catalog.partition_info.PartitionInfo.calculate_fractional_coverage`.
+    """Compute the fractional sky coverage of a catalog from its healpix skymap file.
 
     Parameters
     ----------
     catalog : Catalog
         Catalog object corresponding to an on-disk catalog with skymap files.
     order : int, optional
-        HEALPix order at which to read the skymap. If ``None``, the default
-        skymap order stored in the catalog properties is used.
+        healpix order to read the skymap at. If None, the order of the default
+        skymap will be used.
 
     Returns
     -------
     float
-        Fraction of the sky covered by the catalog, between 0.0 and 1.0.
-
-    Raises
-    ------
-    ValueError
-        If the catalog has no skymap information available.
+        fractional sky coverage between 0.0 and 1.0.
     """
     if (
         catalog.catalog_info.skymap_order is None
