@@ -195,3 +195,13 @@ def test_skymap_coverage_synthetic(tmp_path):
 
     coverage = skymap_coverage(catalog)
     assert coverage == pytest.approx(0.5)
+
+
+def test_skymap_coverage_changes_with_order(small_sky_source_dir):
+    """Test that coverage estimate changes when different orders are requested."""
+    catalog = read_hats(small_sky_source_dir)
+
+    coverage_default = skymap_coverage(catalog)
+    coverage_order4 = skymap_coverage(catalog, order=4)
+
+    assert coverage_default != coverage_order4
