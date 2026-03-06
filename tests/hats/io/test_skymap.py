@@ -166,13 +166,21 @@ def test_read_noalt_skymap(small_sky_source_dir, mocker):
 
 def test_skymap_coverage_no_skymap():
     """Test that skymap_coverage raises an error for catalogs without skymap files."""
-    catalog = type("MockCatalog", (), {
-        "catalog_base_dir": "/nonexistent",
-        "catalog_info": type("MockInfo", (), {
-            "skymap_order": None,
-            "skymap_alt_orders": None,
-        })(),
-    })()
+    catalog = type(
+        "MockCatalog",
+        (),
+        {
+            "catalog_base_dir": "/nonexistent",
+            "catalog_info": type(
+                "MockInfo",
+                (),
+                {
+                    "skymap_order": None,
+                    "skymap_alt_orders": None,
+                },
+            )(),
+        },
+    )()
     with pytest.raises(ValueError, match="does not have skymap information"):
         skymap_coverage(catalog)
 
@@ -185,13 +193,21 @@ def test_skymap_coverage_synthetic(tmp_path):
 
     write_skymap(histogram, tmp_path)
 
-    catalog = type("MockCatalog", (), {
-        "catalog_base_dir": tmp_path,
-        "catalog_info": type("MockInfo", (), {
-            "skymap_order": 2,
-            "skymap_alt_orders": None,
-        })(),
-    })()
+    catalog = type(
+        "MockCatalog",
+        (),
+        {
+            "catalog_base_dir": tmp_path,
+            "catalog_info": type(
+                "MockInfo",
+                (),
+                {
+                    "skymap_order": 2,
+                    "skymap_alt_orders": None,
+                },
+            )(),
+        },
+    )()
 
     coverage = skymap_coverage(catalog)
     assert coverage == pytest.approx(0.5)

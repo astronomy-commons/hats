@@ -85,14 +85,8 @@ def skymap_coverage(catalog, order=None):
     float
         fractional sky coverage between 0.0 and 1.0.
     """
-    if (
-        catalog.catalog_info.skymap_order is None
-        and catalog.catalog_info.skymap_alt_orders is None
-    ):
-        raise ValueError(
-            "Catalog does not have skymap information. "
-            "Cannot compute skymap-based coverage."
-        )
+    if catalog.catalog_info.skymap_order is None and catalog.catalog_info.skymap_alt_orders is None:
+        raise ValueError("Catalog does not have skymap information. Cannot compute skymap-based coverage.")
     skymap = read_skymap(catalog, order)
     return float(np.mean(skymap > 0))
 
