@@ -3,6 +3,7 @@
 import numpy as np
 
 import hats.pixel_math.healpix_shim as hp
+from hats.io import file_io
 
 
 class SparseHistogram:
@@ -48,7 +49,9 @@ class SparseHistogram:
         file_name : path-like
             intended file to save to
         """
-        np.savez(file_name, indexes=self.indexes, counts=self.counts, order=self.order)
+        file_name = file_io.get_upath(file_name)
+        with file_name.open("wb") as file_handle:
+            np.savez(file_handle, indexes=self.indexes, counts=self.counts, order=self.order)
 
     def to_dense_file(self, file_name):
         """Persist the DENSE array to disk as a numpy array.
@@ -58,7 +61,8 @@ class SparseHistogram:
         file_name : path-like
             intended file to save to
         """
-        with open(file_name, "wb+") as file_handle:
+        file_name = file_io.get_upath(file_name)
+        with file_name.open("wb") as file_handle:
             file_handle.write(self.to_array().data)
 
     @classmethod
@@ -75,8 +79,10 @@ class SparseHistogram:
         SparseHistogram
             new sparse histogram
         """
-        npzfile = np.load(file_name)
-        return cls(npzfile["indexes"], npzfile["counts"], npzfile["order"])
+        file_name = file_io.get_upath(file_name)
+        with file_name.open("rb") as file_handle:
+            npzfile = np.load(file_handle)
+            return cls(npzfile["indexes"], npzfile["counts"], npzfile["order"])
 
     def __eq__(self, value):
         if not isinstance(value, SparseHistogram):
