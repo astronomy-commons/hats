@@ -459,6 +459,28 @@ def test_gen_md_column_table_nested_columns():
     pd.testing.assert_frame_equal(column_table.reset_index(drop=False).reset_index(drop=True), expected)
 
 
+def test_gen_md_column_table_nested_columns_empty():
+    """Test column table generation with nested columns when the frame is empty (cell is None)"""
+    nf = npd.NestedFrame(
+        {
+            "id": pd.array([], dtype=pd.ArrowDtype(pa.int64())),
+            "ra": pd.array([], dtype=pd.ArrowDtype(pa.float64())),
+        }
+    )
+
+    nested = npd.NestedFrame(
+        {
+            "flux": pd.array([], dtype=pd.ArrowDtype(pa.float32())),
+        }
+    )
+    nf = nf.join_nested(nested, "photometry")
+
+    column_table = _build_column_table(nf, default_columns=[], fmt_value=lambda x: x)
+
+    assert list(column_table.index) == ["id", "ra", "photometry.flux"]
+    assert "example" not in column_table.columns
+
+
 def test_gen_md_column_table_nested_catalog(small_sky_nested_dir):
     """Test column table generation from a real nested catalog with nested columns"""
     catalog = read_hats(small_sky_nested_dir)
