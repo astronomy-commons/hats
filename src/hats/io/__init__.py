@@ -10,3 +10,4 @@ from .paths import (
     pixel_catalog_file,
     pixel_directory,
 )
+from .skymap import skymap_coverage
