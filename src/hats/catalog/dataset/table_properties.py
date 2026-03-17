@@ -296,6 +296,11 @@ class TableProperties(BaseModel):
         TableProperties
             object created from the contents of a ``hats.properties`` file in
             the given directory
+
+        Raises
+        ------
+        FileNotFoundError
+            if there is no properties or hats.properties file in the directory
         """
         catalog_path = file_io.get_upath(catalog_dir)
         file_path = catalog_path / "hats.properties"
