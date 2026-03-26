@@ -178,11 +178,15 @@ def test_alignment_small_sky_order2(drop_empty_siblings):
 def test_alignment_even_sky(drop_empty_siblings):
     """Create alignment from an even distribution at order 7"""
     initial_histogram = np.full(hp.order2npix(7), 40)
-    result = hist.generate_alignment(
-        initial_histogram, highest_order=7, threshold=1_000, drop_empty_siblings=drop_empty_siblings
+    lower_order_result = hist.generate_alignment(
+        initial_histogram,
+        highest_order=7,
+        threshold=1_000,
+        drop_empty_siblings=drop_empty_siblings,
+        use_lower_order=True,
     )
     # everything maps to order 5, given the density
-    for mapping in result:
+    for mapping in lower_order_result:
         assert mapping[0] == 5
 
     result = hist.generate_alignment(
@@ -195,6 +199,8 @@ def test_alignment_even_sky(drop_empty_siblings):
     # everything maps to order 7 (would be 5, but lowest of 7 is enforced)
     for mapping in result:
         assert mapping[0] == 7
+
+    assert len(lower_order_result) != len(result)
 
 
 def test_incremental_alignment():
@@ -289,7 +295,7 @@ def test_generate_alignment_mem_size():
         initial_row_count_histogram,
         highest_order=2,
         threshold=10_000,
-        mem_size_histogram=initial_mem_size_histogram,
+        supplemental_count_histogram=initial_mem_size_histogram,
     )
 
     expected = np.full(hp.order2npix(2), None)
@@ -349,7 +355,7 @@ def test_generate_alignment_mem_size_dropping_siblings():
         highest_order=2,
         threshold=10_000,
         drop_empty_siblings=True,
-        mem_size_histogram=initial_mem_size_histogram,
+        supplemental_count_histogram=initial_mem_size_histogram,
     )
 
     expected = np.full(hp.order2npix(2), None)
@@ -409,5 +415,5 @@ def test_generate_alignment_mem_size_exceeds_threshold():
             initial_row_count_histogram,
             highest_order=2,
             threshold=5_000,
-            mem_size_histogram=initial_mem_size_histogram,
+            supplemental_count_histogram=initial_mem_size_histogram,
         )

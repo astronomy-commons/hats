@@ -1,5 +1,6 @@
 """Utilities for generating and manipulating object count histograms"""
 
+import warnings
 from typing import Sequence
 
 import numpy as np
@@ -78,6 +79,8 @@ def generate_alignment(
     threshold=1_000_000,
     drop_empty_siblings=False,
     mem_size_histogram=None,
+    supplemental_count_histogram=None,
+    use_lower_order=False,
 ):
     """Generate alignment from high order pixels to those of equal or lower order
 
@@ -101,6 +104,8 @@ def generate_alignment(
     drop_empty_siblings : bool
         if 3 of 4 pixels are empty, keep only the non-empty pixel (Default value = False)
     mem_size_histogram : np.array or None
+        DEPRECATED: to be replaced by `supplemental_count_histogram`.
+    supplemental_count_histogram: np.array or None
         one-dimensional numpy array of long integers where the value at each index corresponds to
         the memory size (in bytes) of objects found at the healpix pixel. If provided, this will be
         used to determine the thresholding instead of the param `histogram`. (Default value = None)
@@ -122,37 +127,59 @@ def generate_alignment(
         if the histogram is the wrong size, or some initial histogram bins
         exceed threshold.
     """
+    if mem_size_histogram is not None:
+        warnings.warn(
+            "`mem_size_histogram` is deprecated, use `supplemental_count_histogram` instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        supplemental_count_histogram = mem_size_histogram
     # Validate inputs.
     _validate_alignment_arguments(
-        row_count_histogram, mem_size_histogram, highest_order, lowest_order, threshold
+        row_count_histogram, supplemental_count_histogram, highest_order, lowest_order, threshold
     )
 
     # Generate nested sums.
     nested_sums_row_count = _get_nested_sums(row_count_histogram, highest_order, lowest_order)
-    if mem_size_histogram is not None:
-        nested_sums_mem_size = _get_nested_sums(mem_size_histogram, highest_order, lowest_order)
+    if supplemental_count_histogram is not None:
+        nested_sums_supplement = _get_nested_sums(supplemental_count_histogram, highest_order, lowest_order)
     else:
-        nested_sums_mem_size = None
+        nested_sums_supplement = None
+
+    # Determine the "effective" highest order.
+    if use_lower_order:
+        test_sums = (
+            nested_sums_supplement if supplemental_count_histogram is not None else nested_sums_row_count
+        )
+        effective_highest_order = highest_order
+        for test_order in range(highest_order, lowest_order, -1):
+            max_bin = np.amax(test_sums[test_order])
+            if max_bin > threshold:
+                break
+            effective_highest_order = test_order
+        highest_order = effective_highest_order
 
     # Generate alignment.
     if drop_empty_siblings:
         return _get_alignment_dropping_siblings(
-            nested_sums_row_count, highest_order, lowest_order, threshold, nested_sums_mem_size
+            nested_sums_row_count, highest_order, lowest_order, threshold, nested_sums_supplement
         )
-    return _get_alignment(nested_sums_row_count, highest_order, lowest_order, threshold, nested_sums_mem_size)
+    return _get_alignment(
+        nested_sums_row_count, highest_order, lowest_order, threshold, nested_sums_supplement
+    )
 
 
 def _validate_alignment_arguments(
-    row_count_histogram, mem_size_histogram, highest_order, lowest_order, threshold
+    row_count_histogram, supplemental_count_histogram, highest_order, lowest_order, threshold
 ):
     if len(row_count_histogram) != hp.order2npix(highest_order):
         raise ValueError("histogram is not the right size")
     if lowest_order > highest_order:
         raise ValueError("lowest_order should be less than highest_order")
-    if mem_size_histogram is not None:
-        max_bin = np.amax(mem_size_histogram)
+    if supplemental_count_histogram is not None:
+        max_bin = np.amax(supplemental_count_histogram)
         if max_bin > threshold:
-            raise ValueError(f"single pixel mem_size {max_bin} exceeds threshold {threshold}")
+            raise ValueError(f"single pixel supplement {max_bin} exceeds threshold {threshold}")
     else:
         max_bin = np.amax(row_count_histogram)
         if max_bin > threshold:
@@ -177,13 +204,13 @@ def _get_nested_sums(histogram, highest_order, lowest_order):
     return nested_sums
 
 
-def _get_alignment(nested_sums_row_count, highest_order, lowest_order, threshold, nested_sums_mem_size):
+def _get_alignment(nested_sums_row_count, highest_order, lowest_order, threshold, nested_sums_supplement):
     """Method to aggregate pixels up to the threshold.
 
     Checks from low order (large areas), drilling down into higher orders (smaller areas) to
     find the appropriate order for an area of sky."""
-    if nested_sums_mem_size is not None:
-        nested_sums = nested_sums_mem_size
+    if nested_sums_supplement is not None:
+        nested_sums = nested_sums_supplement
     else:
         nested_sums = nested_sums_row_count
 
@@ -207,25 +234,25 @@ def _get_alignment(nested_sums_row_count, highest_order, lowest_order, threshold
                 continue
             elif nested_sums[read_order][index] <= threshold:
                 # For row_count mode, use tuple of (order, pixel, row_count)
-                if not nested_sums_mem_size:
+                if not nested_sums_supplement:
                     nested_alignment[read_order][index] = (
                         read_order,
                         index,
                         nested_sums[read_order][index],
                     )
-                # For mem_size mode, use tuple of (order, pixel, row_count, mem_size)
+                # For supplemental_size mode, use tuple of (order, pixel, row_count, supplemental_size)
                 else:
-                    mem_size = nested_sums_mem_size[read_order][index]
+                    supplemental_size = nested_sums_supplement[read_order][index]
                     row_count = nested_sums_row_count[read_order][index]
                     nested_alignment[read_order][index] = (
                         read_order,
                         index,
                         row_count,
-                        mem_size,
+                        supplemental_size,
                     )
 
-    # We no longer need to store mem_size sums once the alignment has been constructed.
-    if nested_sums_mem_size is not None:
+    # We no longer need to store supplemental_size sums once the alignment has been constructed.
+    if nested_sums_supplement is not None:
         nested_alignment[highest_order] = np.array(
             [
                 pixel_alignment[:3] if pixel_alignment else None
@@ -238,7 +265,7 @@ def _get_alignment(nested_sums_row_count, highest_order, lowest_order, threshold
 
 
 def _get_alignment_dropping_siblings(
-    nested_sum_row_count, highest_order, lowest_order, threshold, nested_sums_mem_size
+    nested_sum_row_count, highest_order, lowest_order, threshold, nested_sums_supplement
 ):
     """Method to aggregate pixels up to the threshold that collapses completely empty pixels away.
 
@@ -266,11 +293,11 @@ def _get_alignment_dropping_siblings(
     - total number in cell is greater than the threshold
     - only one subcell contains values
     """
-    # If nested_sums_mem_size is provided, we're in mem_size mode (and thresholding by memory size).
-    # This means we'll want to use the mem_size sums to generate our alignment, but still keep track
+    # If nested_sums_supplement is provided, we're in supplemental_size mode (and thresholding by memory size).
+    # This means we'll want to use the supplemental_size sums to generate our alignment, but still keep track
     # of the row counts for the output.
-    if nested_sums_mem_size is not None:
-        nested_sums = nested_sums_mem_size
+    if nested_sums_supplement is not None:
+        nested_sums = nested_sums_supplement
     else:
         nested_sums = nested_sum_row_count
 
@@ -303,8 +330,8 @@ def _get_alignment_dropping_siblings(
         )
         for pixel_high_index, intended_order in enumerate(order_map)
     ]
-    # In both row_count and mem_size mode, use tuple of (order, pixel, row_count)
-    # as mem_size is no longer needed now that alignment has been constructed.
+    # In both row_count and supplemental_size mode, use tuple of (order, pixel, row_count)
+    # as supplemental_size is no longer needed now that alignment has been constructed.
     nested_alignment = [
         (tup[0], tup[1], nested_sum_row_count[tup[0]][tup[1]]) if tup else None for tup in nested_alignment
     ]
@@ -319,6 +346,7 @@ def generate_incremental_alignment(
     lowest_order: int = 0,
     threshold: int = 1_000_000,
     mem_size_histogram: np.ndarray | None = None,
+    supplemental_count_histogram: np.ndarray | None = None,
 ):
     """Generate alignment for an incremental catalog.
 
@@ -345,6 +373,8 @@ def generate_incremental_alignment(
     threshold : int
         the maximum number of objects allowed in a single pixel (Default value = 1_000_000)
     mem_size_histogram : np.ndarray or None
+        DEPRECATED. To be replaced by `supplemental_count_histogram`.
+    supplemental_count_histogram : np.ndarray or None
         one-dimensional numpy array of long integers where the value at each index corresponds to
         the memory size (in bytes) of objects found at the healpix pixel. If provided, this will be
         used to determine the thresholding instead of the param `histogram`. (Default value = None)
@@ -360,8 +390,15 @@ def generate_incremental_alignment(
         - pixel number *at the above order*
         - the number of objects in the pixel
     """
+    if mem_size_histogram is not None:
+        warnings.warn(
+            "`mem_size_histogram` is deprecated, use `supplemental_count_histogram` instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        supplemental_count_histogram = mem_size_histogram
     _validate_alignment_arguments(
-        row_count_histogram, mem_size_histogram, highest_order, lowest_order, threshold
+        row_count_histogram, supplemental_count_histogram, highest_order, lowest_order, threshold
     )
 
     nested_sums = _get_nested_sums(row_count_histogram, highest_order, lowest_order)
