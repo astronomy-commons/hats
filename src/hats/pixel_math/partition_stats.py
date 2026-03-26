@@ -293,9 +293,10 @@ def _get_alignment_dropping_siblings(
     - total number in cell is greater than the threshold
     - only one subcell contains values
     """
-    # If nested_sums_supplement is provided, we're in supplemental_size mode (and thresholding by memory size).
-    # This means we'll want to use the supplemental_size sums to generate our alignment, but still keep track
-    # of the row counts for the output.
+    # If nested_sums_supplement is provided, we're in supplemental_size mode
+    # (and thresholding by something other than pure row count).
+    # This means we'll want to use the supplemental_size sums to generate our alignment,
+    # but still keep track of the row counts for the output.
     if nested_sums_supplement is not None:
         nested_sums = nested_sums_supplement
     else:
