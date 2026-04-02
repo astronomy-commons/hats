@@ -71,7 +71,11 @@ class HealpixDataset(Dataset):
             catalog_info, catalog_path=catalog_path, schema=schema, original_schema=original_schema
         )
         self.partition_info = self._get_partition_info_from_pixels(pixels)
-        self.original_partition_info = self._get_partition_info_from_pixels(original_partition_info)
+        self.original_partition_info = (
+            self._get_partition_info_from_pixels(original_partition_info)
+            if original_partition_info is not None
+            else None
+        )
         self.pixel_tree = self._get_pixel_tree_from_pixels(pixels)
         self.moc = moc
 
