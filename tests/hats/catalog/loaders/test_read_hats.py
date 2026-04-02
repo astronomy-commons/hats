@@ -144,16 +144,11 @@ def test_read_hats_snapshot(small_sky_order1_dir):
     assert cat.snapshot is not None
     assert cat.schema == cat.snapshot.schema
     assert cat.schema == cat.original_schema
+    assert cat.snapshot.catalog_info == cat.catalog_info
     assert cat.snapshot.partition_info is not None
     assert cat.partition_info == cat.snapshot.partition_info
     result = cat.read_pixel_to_pandas(cat.get_healpix_pixels()[0])
     assert len(result) == 42
-
-
-def test_read_hats_original_partition_info(small_sky_order1_dir):
-    cat = hats.read_hats(small_sky_order1_dir)
-    assert cat.original_partition_info is not None
-    assert cat.partition_info == cat.original_partition_info
 
 
 def test_read_hats_empty_catalog(small_sky_order1_empty_margin_dir, small_sky_order1_catalog):
