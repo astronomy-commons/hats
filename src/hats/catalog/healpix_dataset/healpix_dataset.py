@@ -69,15 +69,8 @@ class HealpixDataset(Dataset):
             If True and no snapshot is provided, automatically generate one from the current
             schema, catalog_info, and partition_info. Default False.
         """
-        super().__init__(
-            catalog_info, catalog_path=catalog_path, schema=schema, snapshot=snapshot
-        )
+        super().__init__(catalog_info, catalog_path=catalog_path, schema=schema, snapshot=snapshot)
         self.partition_info = self._get_partition_info_from_pixels(pixels)
-        self.original_partition_info = (
-            self._get_partition_info_from_pixels(original_partition_info)
-            if original_partition_info is not None
-            else None
-        )
         self.pixel_tree = self._get_pixel_tree_from_pixels(pixels)
         self.moc = moc
         if snapshot is None and generate_snapshot:
