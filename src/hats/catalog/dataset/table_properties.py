@@ -104,6 +104,9 @@ class TableProperties(BaseModel):
     hats_max_bytes: Optional[int] = Field(default=None, alias="hats_max_bytes")
     """Maximum number of bytes in any partition of the catalog."""
 
+    hats_estsize: Optional[int] = Field(default=None, alias="hats_estsize")
+    """Estimated size of the catalog on disk, in kilobytes."""
+
     moc_sky_fraction: Optional[float] = Field(default=None)
 
     ## Allow any extra keyword args to be stored on the properties object.

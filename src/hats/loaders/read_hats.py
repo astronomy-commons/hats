@@ -90,8 +90,8 @@ def _load_catalog(catalog_path: UPath, read_moc: bool = True) -> Dataset:
         "catalog_path": catalog_path,
         "catalog_info": properties,
         "schema": schema,
-        "original_schema": schema,
     }
+    kwargs["generate_snapshot"] = True
     if _is_healpix_dataset(dataset_type):
         kwargs["pixels"] = PartitionInfo.read_from_dir(catalog_path)
         kwargs["original_partition_info"] = kwargs["pixels"]

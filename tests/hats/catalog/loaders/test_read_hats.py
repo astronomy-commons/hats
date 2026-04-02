@@ -137,11 +137,15 @@ def test_read_hats_nonstandard_npix_suffix(
         assert path.is_dir()
 
 
-def test_read_hats_original_schema(small_sky_order1_dir):
+def test_read_hats_snapshot(small_sky_order1_dir):
     """Make sure we can open the catalog via `read_hats`, AND that we
     can read the contents of a single pixel data partition."""
     cat = hats.read_hats(small_sky_order1_dir)
+    assert cat.snapshot is not None
+    assert cat.schema == cat.snapshot.schema
     assert cat.schema == cat.original_schema
+    assert cat.snapshot.partition_info is not None
+    assert cat.partition_info == cat.snapshot.partition_info
     result = cat.read_pixel_to_pandas(cat.get_healpix_pixels()[0])
     assert len(result) == 42
 
