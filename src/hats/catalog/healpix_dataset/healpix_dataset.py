@@ -10,6 +10,7 @@ from mocpy import MOC
 from typing_extensions import Self
 from upath import UPath
 
+from hats.catalog.catalog_snapshot import CatalogSnapshot
 from hats.catalog.dataset import Dataset
 from hats.catalog.dataset.table_properties import TableProperties
 from hats.catalog.partition_info import PartitionInfo
@@ -42,7 +43,8 @@ class HealpixDataset(Dataset):
         catalog_path: str | Path | UPath | None = None,
         moc: MOC | None = None,
         schema: pa.Schema | None = None,
-        original_schema: pa.Schema | None = None,
+        snapshot: CatalogSnapshot | None = None,
+        generate_snapshot: bool = False,
     ) -> None:
         """Initializes a Catalog
 
@@ -60,15 +62,21 @@ class HealpixDataset(Dataset):
             MOC object representing the coverage of the catalog
         schema : pa.Schema
             The pyarrow schema for the catalog. May be modified e.g. based on loaded columns
-        original_schema : pa.Schema
-            The original pyarrow schema for the catalog. May NOT be modified e.g. based on loaded columns
+        snapshot : CatalogSnapshot
+            Immutable snapshot of the catalog's original on-disk schema and partition info.
+            May NOT be modified e.g. based on loaded columns or filtered pixels.
+        generate_snapshot : bool
+            If True and no snapshot is provided, automatically generate one from the current
+            schema, catalog_info, and partition_info. Default False.
         """
-        super().__init__(
-            catalog_info, catalog_path=catalog_path, schema=schema, original_schema=original_schema
-        )
+        super().__init__(catalog_info, catalog_path=catalog_path, schema=schema, snapshot=snapshot)
         self.partition_info = self._get_partition_info_from_pixels(pixels)
         self.pixel_tree = self._get_pixel_tree_from_pixels(pixels)
         self.moc = moc
+        if snapshot is None and generate_snapshot:
+            self.snapshot = CatalogSnapshot(
+                schema=schema, catalog_info=catalog_info, partition_info=self.partition_info
+            )
 
     def get_healpix_pixels(self) -> list[HealpixPixel]:
         """Get healpix pixel objects for all pixels contained in the catalog.
@@ -233,7 +241,7 @@ class HealpixDataset(Dataset):
             catalog_path=self.catalog_path,
             moc=filtered_moc,
             schema=self.schema,
-            original_schema=self.original_schema,
+            snapshot=self.snapshot,
         )
 
     def align(
