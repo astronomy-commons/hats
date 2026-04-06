@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from hats.catalog.dataset.table_properties import TableProperties
 
 
-@dataclass
+@dataclass(frozen=True)
 class CatalogSnapshot:
     """Immutable snapshot of a catalog's original on-disk state.
 
@@ -19,6 +19,6 @@ class CatalogSnapshot:
     the catalog was first loaded, before any column selection or spatial filtering.
     """
 
-    schema: pa.Schema
+    schema: pa.Schema | None
     catalog_info: TableProperties | None = None
     partition_info: PartitionInfo | None = None
