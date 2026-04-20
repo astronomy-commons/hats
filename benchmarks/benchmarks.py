@@ -23,7 +23,9 @@ BENCH_DATA_DIR = Path(__file__).parent / "data"
 def time_test_alignment_even_sky():
     """Create alignment from an even distribution at order 7"""
     initial_histogram = np.full(hp.order2npix(7), 40)
-    result = hist.generate_alignment(initial_histogram, highest_order=7, threshold=1_000)
+    result = hist.generate_alignment(
+        initial_histogram, highest_order=7, threshold=1_000, use_lower_order=True
+    )
     # everything maps to order 5, given the density
     for mapping in result:
         assert mapping[0] == 5
