@@ -105,7 +105,7 @@
         "warmup_time": -1
     },
     "benchmarks.time_test_alignment_even_sky": {
-        "code": "def time_test_alignment_even_sky():\n    \"\"\"Create alignment from an even distribution at order 7\"\"\"\n    initial_histogram = np.full(hp.order2npix(7), 40)\n    result = hist.generate_alignment(initial_histogram, highest_order=7, threshold=1_000)\n    # everything maps to order 5, given the density\n    for mapping in result:\n        assert mapping[0] == 5",
+        "code": "def time_test_alignment_even_sky():\n    \"\"\"Create alignment from an even distribution at order 7\"\"\"\n    initial_histogram = np.full(hp.order2npix(7), 40)\n    result = hist.generate_alignment(\n        initial_histogram, highest_order=7, threshold=1_000, use_lower_order=True\n    )\n    # everything maps to order 5, given the density\n    for mapping in result:\n        assert mapping[0] == 5",
         "min_run_count": 2,
         "name": "benchmarks.time_test_alignment_even_sky",
         "number": 0,
@@ -116,7 +116,7 @@
         "sample_time": 0.01,
         "type": "time",
         "unit": "seconds",
-        "version": "c4d4cd79963d85a8084022a7439520a28a2bd2b3f63e581aeb1604b2d4f3d2ac",
+        "version": "3b86f0110b8b45f301615952f0a94af4cf39ac847722a107ff8e499c49e648dd",
         "warmup_time": -1
     },
     "benchmarks.time_test_cone_filter_multiple_order": {
