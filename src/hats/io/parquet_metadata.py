@@ -23,7 +23,7 @@ from hats.pixel_math.healpix_pixel_function import get_pixel_argsort
 from hats.pixel_math.spatial_index import SPATIAL_INDEX_COLUMN
 
 
-# pylint: disable=too-many-locals
+# pylint: disable=too-many-locals,too-many-statements
 def write_parquet_metadata(
     catalog_path: str | Path | UPath,
     *,
@@ -516,6 +516,9 @@ def per_pixel_statistics_from_cache(
     pixel_list["_healpix_pixel"] = pixel_list.apply(
         lambda mini_frame: HealpixPixel(mini_frame["Norder"], mini_frame["Npix"]), axis=1
     )
+    if include_pixels:
+        # TODO
+        pass
 
     stat_col_names = ["stats.row_group_index"] + list(
         itertools.chain.from_iterable(
@@ -533,6 +536,7 @@ def per_pixel_statistics_from_cache(
 
     if not per_row_group:
 
+        # pylint: disable=unused-variable, unused-argument
         def aggregator(row):
             ## TODO - This is kinda the last thing.
             pass
@@ -542,6 +546,9 @@ def per_pixel_statistics_from_cache(
         )
         nf = nf.map_rows()
         print(nf)
+    if multi_index:
+        # TODO
+        pass
 
     frame.set_index(pixel_list["_healpix_pixel"])
 
@@ -733,7 +740,7 @@ def write_per_pixel_statistics_from_metadata(catalog_base_dir: str | Path | UPat
     total_metadata = file_io.read_parquet_metadata(metadata_file)
     num_row_groups = total_metadata.num_row_groups
     if num_row_groups == 0:
-        return pd.DataFrame()
+        return
     first_row_group = total_metadata.row_group(0)
 
     good_column_indexes, column_names = _pick_columns(
@@ -741,7 +748,7 @@ def write_per_pixel_statistics_from_metadata(catalog_base_dir: str | Path | UPat
         exclude_hats_columns=False,
     )
     if not good_column_indexes:
-        return pd.DataFrame()
+        return
 
     all_stats = ["min_value", "max_value", "null_count", "row_count", "disk_bytes", "memory_bytes"]
 
