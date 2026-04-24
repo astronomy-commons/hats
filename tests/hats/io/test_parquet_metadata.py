@@ -18,6 +18,7 @@ from hats.io.parquet_metadata import (
     aggregate_column_statistics,
     nested_frame_to_vo_schema,
     per_pixel_statistics,
+    per_pixel_statistics_from_cache,
     write_parquet_metadata,
     write_voparquet_in_common_metadata,
 )
@@ -121,8 +122,22 @@ def test_write_parquet_metadata_nested(tmp_path, small_sky_nested_dir):
 
     data = pq.read_table((temp_path / "per_pixel_statistics.parquet"))
     assert len(data) == 13
-    assert np.sum(data["id::row_count"]) == 131
-    assert np.sum(data["lc.source_id::row_count"]) == 16135
+    assert np.sum(data["stats.id::row_count"]) == 131
+    assert np.sum(data["stats.lc.source_id::row_count"]) == 16135
+
+    # result = per_pixel_statistics_from_cache("/home/delucchi/git/fruits/hats/benchmarks/data/large_catalog/per_pixel_statistics.parquet")
+    # print("num_statistics", len(result))
+    # # per_pixel_statistics_from_cache((temp_path / "per_pixel_statistics.parquet"))
+
+    import hats
+
+    catalog = hats.read_hats(small_sky_nested_dir)
+    catalog = catalog.filter_by_cone(315, 66.443, 600)
+    result = catalog.per_pixel_statistics(include_stats=["disk_bytes"])
+    print("num_row_groups", len(result))
+    print("num_statistics", len(result.columns))
+    print("statistics", result.columns)
+    print(result.head(3))
 
 
 def test_write_parquet_metadata_sorted(
@@ -383,6 +398,54 @@ def test_per_pixel_statistics_nested(small_sky_nested_dir):
     result_frame = per_pixel_statistics(partition_info_file, exclude_columns=["lc.source_ra"])
     # 72 = (5 base columns + 7 nested sub-columns) * 6 stats
     assert result_frame.shape == (13, 72)
+
+
+@pytest.mark.xfail(reason="Chicken and egg with import")
+def test_per_pixel_statistics_cache_nested(small_sky_nested_dir):
+    # 13 = 13 pixels
+    partition_info_file = small_sky_nested_dir / "per_pixel_statistics.parquet"
+
+    result_frame = per_pixel_statistics_from_cache(partition_info_file)
+    # 78 = (5 base columns + 8 nested sub-columns) * 6 stats
+    assert result_frame.shape == (13, 78)
+
+    result_frame = per_pixel_statistics_from_cache(partition_info_file, include_columns=["lc", "ra"])
+    # 54 = (8 nested sub-columns + "ra") * 6 stats
+    assert result_frame.shape == (13, 54)
+
+    result_frame = per_pixel_statistics_from_cache(
+        partition_info_file, include_columns=["lc.source_ra", "ra"]
+    )
+    # 12 = ("lc.source_ra" + "ra") * 6 stats
+    assert result_frame.shape == (13, 12)
+
+    result_frame = per_pixel_statistics_from_cache(partition_info_file, exclude_columns=["lc"])
+    # 30 = 5 base columns * 6 stats
+    assert result_frame.shape == (13, 30)
+
+    result_frame = per_pixel_statistics_from_cache(partition_info_file, exclude_columns=["lc.source_ra"])
+    # 72 = (5 base columns + 7 nested sub-columns) * 6 stats
+    assert result_frame.shape == (13, 72)
+
+
+@pytest.mark.xfail(reason="Chicken and egg with import")
+def test_per_pixel_statistics_cache_with_rowgroups_aggregated(small_sky_source_dir):
+    partition_info_file = small_sky_source_dir / "per_pixel_statistics.parquet"
+
+    result_frame = per_pixel_statistics_from_cache(partition_info_file)
+    ## 14 = number of partitions in this catalog
+    assert len(result_frame) == 14
+    assert result_frame["object_dec: row_count"].sum() == 17161
+
+    single_pixel = HealpixPixel(1, 47)
+    result_frame = per_pixel_statistics_from_cache(
+        partition_info_file, include_pixels=[single_pixel], multi_index=True
+    )
+    ## 9 = number of columns
+    assert len(result_frame) == 9
+    assert_column_stat_as_floats(
+        result_frame, (single_pixel, "object_dec"), min_value=-36.5, max_value=-25.5, row_count=2395
+    )
 
 
 def test_per_pixel_statistics_multi_index(small_sky_order1_dir):
