@@ -211,7 +211,7 @@ def read_parquet_metadata(file_pointer: str | Path | UPath, **kwargs) -> pq.File
         parqeut file metadata (includes schema)
     """
     file_pointer = get_upath(file_pointer)
-    if file_pointer is None or not file_pointer.exists():
+    if file_pointer is None:
         raise FileNotFoundError("Parquet file does not exist")
     if _parquet_precache_all_bytes(file_pointer):  # pragma: no cover
         return pq.read_metadata(BytesIO(file_pointer.read_bytes()), **kwargs)

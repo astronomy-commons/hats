@@ -29,13 +29,23 @@ DATASET_TYPE_TO_CLASS = {
 }
 
 
-def read_hats(catalog_path: str | Path | UPath) -> CatalogCollection | Dataset:
+def read_hats(
+    catalog_path: str | Path | UPath, *, single_catalog: bool | None = None, read_moc: bool = True
+) -> CatalogCollection | Dataset:
     """Reads a HATS Catalog from a HATS directory
 
     Parameters
     ----------
     catalog_path : str | Path | UPath
         path to the root directory of the catalog
+    single_catalog: bool
+        If you happen to already know that the `catalog_path` points to a
+        single catalog, instead of a catalog collection, this flag can
+        save a few file read operations.
+    read_moc: bool
+        If you happen to know that your catalog does not have a MOC (or if
+        you know that your use case will not utilize a MOC), then you can
+        skip the file read and memory load of the MOC.
 
     Returns
     -------
@@ -50,20 +60,26 @@ def read_hats(catalog_path: str | Path | UPath) -> CatalogCollection | Dataset:
         catalog = hats.read_hats(UPath(..., anon=True))
     """
     path = file_io.get_upath(catalog_path)
+    if single_catalog is not None:
+        if single_catalog:
+            return _load_catalog(path, read_moc=read_moc)
+        return _load_collection(path, read_moc=read_moc)
     if (path / "hats.properties").exists() or (path / "properties").exists():
-        return _load_catalog(path)
+        return _load_catalog(path, read_moc=read_moc)
     if (path / "collection.properties").exists():
-        return _load_collection(path)
+        return _load_collection(path, read_moc=read_moc)
     raise FileNotFoundError(f"Failed to read HATS at location {catalog_path}")
 
 
-def _load_collection(collection_path: UPath) -> CatalogCollection:
+def _load_collection(collection_path: UPath, read_moc: bool = True) -> CatalogCollection:
     collection_properties = CollectionProperties.read_from_dir(collection_path)
-    main_catalog = _load_catalog(collection_path / collection_properties.hats_primary_table_url)
+    main_catalog = _load_catalog(
+        collection_path / collection_properties.hats_primary_table_url, read_moc=read_moc
+    )
     return CatalogCollection(collection_path, collection_properties, main_catalog)
 
 
-def _load_catalog(catalog_path: UPath) -> Dataset:
+def _load_catalog(catalog_path: UPath, read_moc: bool = True) -> Dataset:
     properties = TableProperties.read_from_dir(catalog_path)
     dataset_type = properties.catalog_type
     if dataset_type not in DATASET_TYPE_TO_CLASS:
@@ -74,11 +90,12 @@ def _load_catalog(catalog_path: UPath) -> Dataset:
         "catalog_path": catalog_path,
         "catalog_info": properties,
         "schema": schema,
-        "original_schema": schema,
+        "generate_snapshot": True,
     }
     if _is_healpix_dataset(dataset_type):
         kwargs["pixels"] = PartitionInfo.read_from_dir(catalog_path)
-        kwargs["moc"] = _read_moc_from_point_map(catalog_path)
+        if read_moc:
+            kwargs["moc"] = _read_moc_from_point_map(catalog_path)
     return loader(**kwargs)
 
 
@@ -95,7 +112,7 @@ def _is_healpix_dataset(dataset_type):
 def _read_moc_from_point_map(catalog_base_dir: str | Path | UPath) -> MOC | None:
     """Reads a MOC object from the `point_map.fits` file if it exists in the catalog directory"""
     point_map_path = paths.get_point_map_file_pointer(catalog_base_dir)
-    if not file_io.does_file_or_directory_exist(point_map_path):
+    if not point_map_path.exists():
         return None
     fits_image = file_io.read_fits_image(point_map_path)
     order = hp.npix2order(len(fits_image))

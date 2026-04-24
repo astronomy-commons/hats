@@ -99,6 +99,12 @@ class CollectionProperties(BaseModel):
         -------
         dict[str, str]
             a python dict of strings
+
+        Raises
+        ------
+        ValueError
+            if the string list has an odd number of elements (and so is not pairs of
+            field and index name)
         """
         if str_value is None:
             return None
@@ -213,8 +219,6 @@ class CollectionProperties(BaseModel):
             new object from the contents of a ``collection.properties`` file in the directory.
         """
         file_path = file_io.get_upath(catalog_dir) / "collection.properties"
-        if not file_io.does_file_or_directory_exist(file_path):
-            raise FileNotFoundError(f"No properties file found where expected: {str(file_path)}")
         p = Properties()
         with file_path.open("rb") as f:
             p.load(f, "utf-8")

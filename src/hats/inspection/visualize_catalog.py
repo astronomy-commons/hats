@@ -45,6 +45,13 @@ def plot_density(catalog: Catalog, *, plot_title: str | None = None, order=None,
         Unit to show for the angle for angular density. (Default value = None)
     **kwargs
         Additional args to pass to `plot_healpix_map`
+
+    Raises
+    ------
+    ImportError
+        if matplotlib is not installed in the current environment.
+    ValueError
+        if an in-memory-only catalog is provided.
     """
     try:
         from matplotlib import pyplot as plt
@@ -117,6 +124,11 @@ def plot_pixel_list(
         Whether to color the pixels by their order. True by default.
     **kwargs
         Additional args to pass to `plot_healpix_map`
+
+    Raises
+    ------
+    ImportError
+        if matplotlib is not installed in the current environment.
     """
     try:
         from matplotlib import pyplot as plt
@@ -199,6 +211,10 @@ def plot_moc(
     Tuple[Figure, WCSAxes]
         The figure and axes used to plot the healpix map
 
+    Raises
+    ------
+    ImportError
+        if matplotlib is not installed in the current environment.
     """
     try:
         from matplotlib import pyplot as plt
@@ -310,6 +326,11 @@ def plot_healpix_map(
     -------
     Tuple[Figure, WCSAxes]
         The figure and axes used to plot the healpix map
+
+    Raises
+    ------
+    ImportError
+        if matplotlib is not installed in the current environment.
     """
     try:
         from matplotlib import pyplot as plt

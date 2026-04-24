@@ -7,6 +7,7 @@ import pandas as pd
 import pyarrow as pa
 from upath import UPath
 
+from hats.catalog.catalog_snapshot import CatalogSnapshot
 from hats.catalog.dataset.table_properties import TableProperties
 from hats.io import file_io
 from hats.io.parquet_metadata import aggregate_column_statistics, per_pixel_statistics
@@ -21,7 +22,8 @@ class Dataset:
         catalog_info: TableProperties,
         catalog_path: str | Path | UPath | None = None,
         schema: pa.Schema | None = None,
-        original_schema: pa.Schema | None = None,
+        snapshot: CatalogSnapshot | None = None,
+        generate_snapshot: bool = False,
     ) -> None:
         """Initializes a Dataset
 
@@ -34,8 +36,12 @@ class Dataset:
             Does not load the catalog from this path, only store as metadata
         schema : pa.Schema
             The pyarrow schema for the catalog. May be modified e.g. based on loaded columns
-        original_schema : pa.Schema
-            The original pyarrow schema for the catalog. May NOT be modified e.g. based on loaded columns
+        snapshot : CatalogSnapshot
+            Immutable snapshot of the catalog's original on-disk schema and partition info.
+            May NOT be modified e.g. based on loaded columns or filtered pixels.
+        generate_snapshot : bool
+            If True and no snapshot is provided, automatically generate one from the current
+            schema and catalog_info. Default False.
         """
         self.catalog_info = catalog_info
         self.catalog_name = self.catalog_info.catalog_name
@@ -43,7 +49,14 @@ class Dataset:
         self.catalog_path = catalog_path
         self.catalog_base_dir = file_io.get_upath(self.catalog_path)
         self.schema = schema
-        self.original_schema = original_schema
+        if snapshot is None and generate_snapshot:
+            snapshot = CatalogSnapshot(schema=schema, catalog_info=catalog_info)
+        self.snapshot = snapshot
+
+    @property
+    def original_schema(self) -> pa.Schema | None:
+        """The original on-disk schema, before any column selection."""
+        return self.snapshot.schema if self.snapshot is not None else None
 
     @property
     def on_disk(self) -> bool:

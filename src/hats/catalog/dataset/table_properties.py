@@ -104,6 +104,9 @@ class TableProperties(BaseModel):
     hats_max_bytes: Optional[int] = Field(default=None, alias="hats_max_bytes")
     """Maximum number of bytes in any partition of the catalog."""
 
+    hats_estsize: Optional[int] = Field(default=None, alias="hats_estsize")
+    """Estimated size of the catalog on disk, in kilobytes."""
+
     moc_sky_fraction: Optional[float] = Field(default=None)
 
     ## Allow any extra keyword args to be stored on the properties object.
@@ -296,12 +299,17 @@ class TableProperties(BaseModel):
         TableProperties
             object created from the contents of a ``hats.properties`` file in
             the given directory
+
+        Raises
+        ------
+        FileNotFoundError
+            if there is no properties or hats.properties file in the directory
         """
         catalog_path = file_io.get_upath(catalog_dir)
         file_path = catalog_path / "hats.properties"
-        if not file_io.does_file_or_directory_exist(file_path):
+        if not file_path.exists():
             file_path = catalog_path / "properties"
-            if not file_io.does_file_or_directory_exist(file_path):
+            if not file_path.exists():
                 raise FileNotFoundError(f"No properties file found where expected: {str(file_path)}")
         p = Properties()
         with file_path.open("rb") as f:
