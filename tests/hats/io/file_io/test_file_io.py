@@ -18,20 +18,19 @@ from hats.io.file_io import (
     write_string_to_file,
 )
 from hats.io.file_io.file_io import _parquet_precache_all_bytes
-from hats.io.file_io.file_pointer import does_file_or_directory_exist
 
 
 def test_make_directory(tmp_path):
     test_dir_path = tmp_path / "test_path"
-    assert not does_file_or_directory_exist(test_dir_path)
+    assert not test_dir_path.exists()
     make_directory(test_dir_path)
-    assert does_file_or_directory_exist(test_dir_path)
+    assert test_dir_path.exists()
 
 
 def test_make_existing_directory_raises(tmp_path):
     test_dir_path = tmp_path / "test_path"
     make_directory(test_dir_path)
-    assert does_file_or_directory_exist(test_dir_path)
+    assert test_dir_path.exists()
     with pytest.raises(OSError):
         make_directory(test_dir_path)
 
@@ -41,22 +40,22 @@ def test_make_existing_directory_existok(tmp_path):
     make_directory(test_dir_path)
     test_inner_dir_path = test_dir_path / "test_inner"
     make_directory(test_inner_dir_path)
-    assert does_file_or_directory_exist(test_dir_path)
-    assert does_file_or_directory_exist(test_inner_dir_path)
+    assert test_dir_path.exists()
+    assert test_inner_dir_path.exists()
     make_directory(test_dir_path, exist_ok=True)
-    assert does_file_or_directory_exist(test_dir_path)
-    assert does_file_or_directory_exist(test_inner_dir_path)
+    assert test_dir_path.exists()
+    assert test_inner_dir_path.exists()
 
 
 def test_make_and_remove_directory(tmp_path):
     test_dir_path = tmp_path / "test_path"
-    assert not does_file_or_directory_exist(test_dir_path)
+    assert not test_dir_path.exists()
     make_directory(test_dir_path)
     make_directory(test_dir_path / "subdirectory")
     (test_dir_path / "subdirectory" / "file").touch()
-    assert does_file_or_directory_exist(test_dir_path)
+    assert test_dir_path.exists()
     remove_directory(test_dir_path)
-    assert not does_file_or_directory_exist(test_dir_path)
+    assert not test_dir_path.exists()
 
     ## Directory no longer exists to be deleted.
     with pytest.raises(FileNotFoundError):
@@ -64,7 +63,7 @@ def test_make_and_remove_directory(tmp_path):
 
     ## Directory doesn't exist, but shouldn't throw an error.
     remove_directory(test_dir_path, ignore_errors=True)
-    assert not does_file_or_directory_exist(test_dir_path)
+    assert not test_dir_path.exists()
 
 
 def test_write_string_to_file(tmp_path):
@@ -75,7 +74,7 @@ def test_write_string_to_file(tmp_path):
         data = file.read()
         assert data == test_string
     delete_file(test_file_path)
-    assert not does_file_or_directory_exist(test_file_path)
+    assert not test_file_path.exists()
 
 
 def test_load_csv_to_pandas(small_sky_source_dir):

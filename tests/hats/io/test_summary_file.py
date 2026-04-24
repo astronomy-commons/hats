@@ -3,10 +3,21 @@
 import re
 import shutil
 
+import jinja2
+import nested_pandas as npd
+import pandas as pd
+import pyarrow as pa
 import pytest
 import yaml
 
-from hats.io.summary_file import generate_markdown_collection_summary, write_collection_summary_file
+from hats.io.summary_file import (
+    _build_column_table,
+    _gen_md_column_table,
+    _gen_md_metadata_table,
+    default_md_template,
+    generate_markdown_collection_summary,
+    write_collection_summary_file,
+)
 from hats.loaders import read_hats
 
 
@@ -43,8 +54,8 @@ def test_write_collection_summary_file_markdown(tmp_path, small_sky_collection_d
 
     # Check that the file has basic content
     content = output_path.read_text()
-    assert "small_sky_o1_collection HATS catalog" in content
-    assert "This is the `small_sky_o1_collection` HATS collection." in content
+    assert "small_sky_o1_collection HATS Catalog" in content
+    assert "This is the collection of HATS catalogs representing small_sky_o1_collection" in content
 
 
 def test_write_collection_summary_file_custom_filename(tmp_path, small_sky_collection_dir):
@@ -63,23 +74,23 @@ def test_write_collection_summary_file_custom_filename(tmp_path, small_sky_colle
     assert output_path.parent == collection_base_dir
 
 
-def test_write_collection_summary_file_custom_title_description(tmp_path, small_sky_collection_dir):
+def test_write_collection_summary_file_custom_name_description(tmp_path, small_sky_collection_dir):
     """Test writing a summary file with custom title and description"""
     collection_base_dir = tmp_path / "collection"
     shutil.copytree(small_sky_collection_dir, collection_base_dir)
 
-    custom_title = "My Custom Title"
+    custom_name = "My Custom Title"
     custom_description = "This is a custom description for the catalog."
 
     output_path = write_collection_summary_file(
         collection_base_dir,
         fmt="markdown",
-        title=custom_title,
+        name=custom_name,
         description=custom_description,
     )
 
     content = output_path.read_text()
-    assert custom_title in content
+    assert custom_name in content
     assert custom_description in content
 
 
@@ -102,18 +113,6 @@ def test_write_collection_summary_file_with_huggingface_metadata(tmp_path, small
     assert "astronomy" in content
 
 
-def test_write_collection_summary_file_invalid_format(tmp_path, small_sky_collection_dir):
-    """Test that invalid format raises an error"""
-    collection_base_dir = tmp_path / "collection"
-    shutil.copytree(small_sky_collection_dir, collection_base_dir)
-
-    with pytest.raises(ValueError, match="Unsupported format"):
-        write_collection_summary_file(
-            collection_base_dir,
-            fmt="xml",  # Not supported
-        )
-
-
 def test_write_collection_summary_file_unsupported_fits_format(tmp_path, small_sky_collection_dir):
     """Test that fits format raises an error for unsupported format"""
     collection_base_dir = tmp_path / "collection"
@@ -132,14 +131,15 @@ def test_generate_markdown_collection_summary_basic(small_sky_collection_dir):
 
     content = generate_markdown_collection_summary(
         collection=collection,
-        title="Test Title",
+        name="Test Title",
         description="Test Description",
+        uri=None,
         huggingface_metadata=False,
     )
 
     assert "# Test Title" in content
     assert "Test Description" in content
-    assert "---" not in content  # No YAML frontmatter
+    assert "config_name" not in content  # No YAML frontmatter
 
 
 def test_generate_markdown_collection_summary_with_huggingface(small_sky_collection_dir):
@@ -148,8 +148,9 @@ def test_generate_markdown_collection_summary_with_huggingface(small_sky_collect
 
     content = generate_markdown_collection_summary(
         collection=collection,
-        title="Test Title",
+        name="Test Title",
         description="Test Description",
+        uri=None,
         huggingface_metadata=True,
     )
 
@@ -158,9 +159,10 @@ def test_generate_markdown_collection_summary_with_huggingface(small_sky_collect
     assert "Test Description" in content
 
 
-def test_generate_hugging_face_yaml_metadata(small_sky_collection_dir):
+def test_generate_hugging_face_yaml_metadata(tmp_path, small_sky_collection_dir):
     """Test generating Hugging Face YAML metadata for a collection"""
-    collection_base_dir = small_sky_collection_dir
+    collection_base_dir = tmp_path / "collection"
+    shutil.copytree(small_sky_collection_dir, collection_base_dir)
 
     # Generate the summary file with Hugging Face metadata
     readme_path = write_collection_summary_file(
@@ -327,3 +329,198 @@ def test_load_hats_collection_with_huggingface_datasets(tmp_path, small_sky_coll
     # Load index catalog and verify exact row count
     index_catalog = read_hats(collection_base_dir / index_dir)
     assert len(dataset_index["train"]) == index_catalog.catalog_info.total_rows
+
+
+def test_write_collection_summary_file_custom_output_dir(tmp_path, small_sky_collection_dir):
+    """Test writing a summary file to a custom output directory"""
+    collection_base_dir = tmp_path / "collection"
+    shutil.copytree(small_sky_collection_dir, collection_base_dir)
+
+    output_dir = tmp_path / "custom_output"
+
+    output_path = write_collection_summary_file(
+        collection_base_dir,
+        fmt="markdown",
+        output_dir=output_dir,
+    )
+
+    assert output_path.exists()
+    assert output_path.parent == output_dir
+    assert output_path.name == "README.md"
+
+
+def test_write_collection_summary_file_custom_uri(tmp_path, small_sky_collection_dir):
+    """Test writing a summary file with a custom URI"""
+    collection_base_dir = tmp_path / "collection"
+    shutil.copytree(small_sky_collection_dir, collection_base_dir)
+
+    custom_uri = "s3://my-bucket/my-catalog"
+
+    output_path = write_collection_summary_file(
+        collection_base_dir,
+        fmt="markdown",
+        uri=custom_uri,
+    )
+
+    content = output_path.read_text()
+    assert custom_uri in content
+
+
+def test_write_collection_summary_file_custom_jinja2_template(tmp_path, small_sky_collection_dir):
+    """Test writing a summary file with a custom jinja2 template"""
+    collection_base_dir = tmp_path / "collection"
+    shutil.copytree(small_sky_collection_dir, collection_base_dir)
+
+    custom_name = "Test Catalog Name"
+    custom_description = "Test catalog description."
+    custom_template = "Name: {{ name }}\nDescription: {{ description }}"
+
+    output_path = write_collection_summary_file(
+        collection_base_dir,
+        fmt="markdown",
+        name=custom_name,
+        description=custom_description,
+        jinja2_template=custom_template,
+    )
+
+    content = output_path.read_text()
+    assert content == "Name: Test Catalog Name\nDescription: Test catalog description."
+
+
+def test_default_md_template():
+    """Test that default_md_template returns a valid jinja2 template string"""
+    template = default_md_template()
+    assert isinstance(template, str)
+    assert len(template) > 0
+
+
+def test_gen_md_metadata_table(small_sky_collection_dir):
+    """Test metadata table generation with proper formatting"""
+    collection = read_hats(small_sky_collection_dir)
+    catalog = collection.main_catalog
+
+    # Test with total_columns=6 (includes healpix column)
+    metadata_table = _gen_md_metadata_table(catalog, total_columns=6)
+
+    # Check exact row count
+    assert metadata_table["Number of rows"] == "131"
+
+    # Check exact partition count
+    assert metadata_table["Number of partitions"] == "4"
+
+    # Column count should exclude healpix column (6 - 1 = 5)
+    assert metadata_table["Number of columns"] == "5"
+
+
+def test_gen_md_column_table_nested_columns():
+    """Test column table generation with nested and regular columns"""
+    # Create a custom nested frame with regular and nested columns
+    nf = npd.NestedFrame(
+        {
+            "id": pd.array([1, 2], dtype=pd.ArrowDtype(pa.int64())),
+            "ra": pd.array([1.0, 2.0], dtype=pd.ArrowDtype(pa.float64())),
+            "dec": pd.array([3.0, 4.0], dtype=pd.ArrowDtype(pa.float64())),
+        }
+    )
+
+    # Add a nested column with subcolumns
+    nested = npd.NestedFrame(
+        {
+            "flux": pd.array([1.0, 2.0], dtype=pd.ArrowDtype(pa.float32())),
+            "mag": pd.array([20.0, 21.0], dtype=pd.ArrowDtype(pa.float32())),
+        }
+    )
+    nf = nf.join_nested(nested, "photometry")
+
+    default_columns = ["id", "ra", "photometry.flux"]
+
+    column_table = _build_column_table(nf, default_columns, fmt_value=lambda x: x)
+
+    # Should have 5 rows: id, ra, dec, photometry.flux, photometry.mag
+    assert len(column_table) == 5
+
+    # Verify exact structure
+    expected = pd.DataFrame(
+        {
+            "column": ["id", "ra", "dec", "photometry.flux", "photometry.mag"],
+            "dtype": [
+                "int64",
+                "double",
+                "double",
+                "list[float]",
+                "list[float]",
+            ],
+            "default": [True, True, False, True, False],
+            "nested_into": [None, None, None, "photometry", "photometry"],
+            "example": pd.Series([1, 1.0, 3.0, [1.0], [20.0]], dtype=object),
+        }
+    )
+
+    pd.testing.assert_frame_equal(column_table.reset_index(drop=False).reset_index(drop=True), expected)
+
+
+def test_gen_md_column_table_nested_columns_empty():
+    """Test column table generation with nested columns when the frame is empty (cell is None)"""
+    nf = npd.NestedFrame(
+        {
+            "id": pd.array([], dtype=pd.ArrowDtype(pa.int64())),
+            "ra": pd.array([], dtype=pd.ArrowDtype(pa.float64())),
+        }
+    )
+
+    nested = npd.NestedFrame(
+        {
+            "flux": pd.array([], dtype=pd.ArrowDtype(pa.float32())),
+        }
+    )
+    nf = nf.join_nested(nested, "photometry")
+
+    column_table = _build_column_table(nf, default_columns=[], fmt_value=lambda x: x)
+
+    assert list(column_table.index) == ["id", "ra", "photometry.flux"]
+    assert "example" not in column_table.columns
+
+
+def test_gen_md_column_table_nested_catalog(small_sky_nested_dir):
+    """Test column table generation from a real nested catalog with nested columns"""
+    catalog = read_hats(small_sky_nested_dir)
+    column_table = _gen_md_column_table(catalog, empty_nf=None)
+
+    # The nested catalog has regular columns and lc.* nested columns
+    assert "nested_into" in column_table.columns
+
+    # Check that lc.* columns are marked as nested into "lc"
+    lc_columns = [col for col in column_table.index if col.startswith("lc.")]
+    assert len(lc_columns) > 0
+    for col in lc_columns:
+        assert column_table.loc[col, "nested_into"] == "lc"
+        assert column_table.loc[col, "dtype"].startswith("list[")
+
+    # Check that regular columns are not nested
+    for col in ["id", "ra", "dec"]:
+        assert pd.isna(column_table.loc[col, "nested_into"]) or column_table.loc[col, "nested_into"] is None
+
+    # Check that example values are present
+    assert "example" in column_table.columns
+
+    # Check that nested columns have list-type example values
+    for col in lc_columns:
+        example = column_table.loc[col, "example"]
+        assert isinstance(example, str)
+        assert example.startswith("[")
+
+    # Render the column table with the default template to verify it produces valid markdown
+    env = jinja2.Environment(undefined=jinja2.StrictUndefined)
+    # Render only the column table portion
+    column_template = (
+        '{% if "nested_into" in column_table %}'
+        "| **Nested?** |"
+        " {% for value in column_table.nested_into %}"
+        " {{ value or '\\u2014' }} |"
+        "{% endfor %}"
+        "{% endif %}"
+    )
+    template = env.from_string(column_template)
+    rendered = template.render(column_table=column_table)
+    assert "Nested?" in rendered
+    assert "lc" in rendered

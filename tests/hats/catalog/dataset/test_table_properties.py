@@ -156,7 +156,6 @@ def test_read_from_dir_branches(
 def test_extra_dict():
     extra_properties = {
         "hats_copyright": "LINCC Frameworks 2024",
-        "hats_estsize": 10_000_000,
     }
     table_properties = TableProperties(
         catalog_name="foo",

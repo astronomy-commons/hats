@@ -30,6 +30,19 @@ def test_catalog_load(catalog_info, catalog_pixels):
         assert hp_pixel in catalog.pixel_tree
 
 
+def test_catalog_snapshot_not_generated_by_default(catalog_info, catalog_pixels):
+    catalog = Catalog(catalog_info, catalog_pixels)
+    assert catalog.snapshot is None
+    assert catalog.original_schema is None
+
+
+def test_catalog_generate_snapshot(catalog_info, catalog_pixels):
+    catalog = Catalog(catalog_info, catalog_pixels, generate_snapshot=True)
+    assert catalog.snapshot is not None
+    assert catalog.snapshot.catalog_info == catalog_info
+    assert catalog.snapshot.partition_info == catalog.partition_info
+
+
 def test_partition_info_pixel_input_types(catalog_info, catalog_pixels):
     partition_info = PartitionInfo.from_healpix(catalog_pixels)
     catalog = Catalog(catalog_info, partition_info)
@@ -232,7 +245,40 @@ def test_cone_filter(small_sky_order1_catalog):
         max_depth=small_sky_order1_catalog.get_max_coverage_order(),
     )
     assert filtered_catalog.moc == cone_moc.intersection(small_sky_order1_catalog.moc)
-    assert filtered_catalog.original_schema is not None
+    assert filtered_catalog.snapshot is not None
+    assert filtered_catalog.snapshot.schema is not None
+    assert filtered_catalog.snapshot.catalog_info == small_sky_order1_catalog.catalog_info
+    assert filtered_catalog.snapshot.partition_info == small_sky_order1_catalog.partition_info
+    assert filtered_catalog.partition_info != filtered_catalog.snapshot.partition_info
+
+
+def test_get_pixel_paths(small_sky_order1_catalog):
+    generator_length = 0
+    for path in small_sky_order1_catalog.get_pixel_paths():
+        assert path.exists()
+        generator_length += 1
+    assert generator_length == 4
+
+    ra = 315
+    dec = -66.443
+    radius = 0.1
+
+    filtered_catalog = small_sky_order1_catalog.filter_by_cone(ra, dec, radius)
+    generator_length = 0
+    for path in filtered_catalog.get_pixel_paths():
+        assert path.exists()
+        generator_length += 1
+    assert generator_length == 1
+
+
+def test_get_pixel_paths_in_memory(in_memory_catalog):
+    with pytest.warns(UserWarning, match="in-memory"):
+        with pytest.raises(StopIteration):
+            next(in_memory_catalog.get_pixel_paths())
+
+    with pytest.warns(UserWarning, match="in-memory"):
+        for _ in in_memory_catalog.get_pixel_paths():
+            assert False, "Iterator should be empty."
 
 
 def test_cone_filter_big(small_sky_order1_catalog):
@@ -286,7 +332,11 @@ def test_polygonal_filter(small_sky_order1_catalog):
         max_depth=small_sky_order1_catalog.get_max_coverage_order(),
     )
     assert filtered_catalog.moc == polygon_moc.intersection(small_sky_order1_catalog.moc)
-    assert filtered_catalog.original_schema is not None
+    assert filtered_catalog.snapshot is not None
+    assert filtered_catalog.snapshot.schema is not None
+    assert filtered_catalog.snapshot.catalog_info == small_sky_order1_catalog.catalog_info
+    assert filtered_catalog.snapshot.partition_info == small_sky_order1_catalog.partition_info
+    assert filtered_catalog.partition_info != filtered_catalog.snapshot.partition_info
 
 
 def test_polygonal_filter_invalid_coordinate_shape(small_sky_order1_catalog):
@@ -377,6 +427,10 @@ def test_box_filter(small_sky_order1_catalog):
         max_depth=small_sky_order1_catalog.get_max_coverage_order(),
     )
     assert filtered_catalog.moc == box_moc.intersection(small_sky_order1_catalog.moc)
+    assert filtered_catalog.snapshot is not None
+    assert filtered_catalog.snapshot.catalog_info == small_sky_order1_catalog.catalog_info
+    assert filtered_catalog.snapshot.partition_info == small_sky_order1_catalog.partition_info
+    assert filtered_catalog.partition_info != filtered_catalog.snapshot.partition_info
 
 
 def test_box_filter_wrapped_ra(small_sky_order1_catalog):
@@ -600,7 +654,7 @@ def test_catalog_len_is_undetermined(small_sky_order1_catalog):
 
 def test_has_healpix_column(small_sky_order1_dir, test_data_dir):
     cat = read_hats(small_sky_order1_dir)
-    assert cat.schema == cat.original_schema
+    assert cat.schema == cat.snapshot.schema
     assert cat.has_healpix_column()
     assert cat.catalog_info.healpix_column == "_healpix_29"
     assert cat.catalog_info.healpix_order == 29
@@ -610,7 +664,7 @@ def test_has_healpix_column(small_sky_order1_dir, test_data_dir):
     assert cat.has_healpix_column()
 
     cat = read_hats(test_data_dir / "small_sky_healpix13")
-    assert cat.schema == cat.original_schema
+    assert cat.schema == cat.snapshot.schema
     assert cat.has_healpix_column()
     assert cat.catalog_info.healpix_column == "healpix13"
     assert cat.catalog_info.healpix_order == 13

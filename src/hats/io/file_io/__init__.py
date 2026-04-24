@@ -17,11 +17,7 @@ from .file_io import (
     write_string_to_file,
 )
 from .file_pointer import (
-    append_paths_to_pointer,
     directory_has_contents,
-    does_file_or_directory_exist,
-    find_files_matching_path,
     get_upath,
     get_upath_for_protocol,
-    is_regular_file,
 )
