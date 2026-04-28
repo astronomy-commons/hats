@@ -13,7 +13,6 @@ from astropy.io.misc.parquet import read_parquet_votable
 from pandas.api.types import is_numeric_dtype
 from pyarrow.parquet import ParquetFile
 
-import hats
 from hats.io import file_io, paths
 from hats.io.parquet_metadata import (
     aggregate_column_statistics,
@@ -126,10 +125,8 @@ def test_write_parquet_metadata_nested(tmp_path, small_sky_nested_dir):
     assert np.sum(data["stats.id::row_count"]) == 131
     assert np.sum(data["stats.lc.source_id::row_count"]) == 16135
 
-    catalog = hats.read_hats(small_sky_nested_dir)
-    catalog = catalog.filter_by_cone(315, 66.443, 600)
-    _ = catalog.per_pixel_statistics(include_stats=["disk_bytes"])
-    # TODO - add more asserts.
+    # 17 cols * 6 stats + (norder, npix, row_group_index) == 105
+    assert len(data.columns) == 105
 
 
 def test_write_parquet_metadata_sorted(

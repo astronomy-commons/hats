@@ -18,7 +18,7 @@ from upath import UPath
 
 from hats.io import file_io, paths
 from hats.io.file_io.file_pointer import get_upath
-from hats.pixel_math.healpix_pixel import INVALID_PIXEL, HealpixPixel
+from hats.pixel_math.healpix_pixel import HealpixPixel
 from hats.pixel_math.healpix_pixel_function import get_pixel_argsort
 from hats.pixel_math.spatial_index import SPATIAL_INDEX_COLUMN
 
@@ -118,7 +118,6 @@ def write_parquet_metadata(
         # Create set for O(1) lookups in the loop that follows
         pq_file_list = set(random.sample(dataset.files, row_limit))
 
-    pixels = []
     leaf_stats = []
     single_metadata = None
 
@@ -129,22 +128,16 @@ def write_parquet_metadata(
         single_metadata = file.metadata
         total_rows += single_metadata.num_rows
 
+        healpix_pixel = paths.get_healpix_from_path(relative_path)
         if create_metadata:
             # Users must set the file path of each chunk before combining the metadata.
             single_metadata.set_file_path(relative_path)
             if order_by_healpix:
-                healpix_pixel = paths.get_healpix_from_path(relative_path)
                 healpix_pixels.append(healpix_pixel)
             metadata_collector.append(single_metadata)
         if create_per_pixel_stats:
-            healpix_pixel = paths.get_healpix_from_path(relative_path)
-
             for row_group_index in range(0, single_metadata.num_row_groups):
                 row_group = single_metadata.row_group(row_group_index)
-                if healpix_pixel == INVALID_PIXEL:
-                    healpix_pixel = HealpixPixel(
-                        row_group.column(0).statistics.min, row_group.column(2).statistics.min
-                    )
                 row_stats = [
                     (
                         [
@@ -196,16 +189,14 @@ def write_parquet_metadata(
             write_statistics=True,
         )
     if create_per_pixel_stats and single_metadata is not None:
-        print("I'm going to make a per-pixel-stats with ", len(leaf_stats), "rows")
         all_stats = ["min_value", "max_value", "null_count", "row_count", "disk_bytes", "memory_bytes"]
         _, column_names = _pick_columns(single_metadata.row_group(0), exclude_hats_columns=False)
         mod_col_names = [[f"stats.{col_name}::{stat}" for stat in all_stats] for col_name in column_names]
         mod_col_names = ["Norder", "Npix", "stats.row_group_index"] + list(
             itertools.chain.from_iterable(mod_col_names)
         )
-        transposed_lists = [list(row) for row in zip(*pixels)] + [list(row) for row in zip(*leaf_stats)]
+        transposed_lists = [list(row) for row in zip(*leaf_stats)]
         table = pa.Table.from_arrays(transposed_lists, names=mod_col_names)
-        print(table.column_names)
         output_file = catalog_base_dir / "per_pixel_statistics.parquet"
         pq.write_table(table, output_file.path, filesystem=output_file.fs)
 
