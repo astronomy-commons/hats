@@ -41,7 +41,7 @@ def test_write_parquet_metadata(tmp_path, small_sky_dir, small_sky_schema, check
         small_sky_schema,
         0,
     )
-    assert (catalog_base_dir / "dataset" / "data_thumbnail.parquet").exists()
+    assert (catalog_base_dir / "data_thumbnail.parquet").exists()
 
     ## Re-write - should still have the same properties.
     total_rows = write_parquet_metadata(catalog_base_dir)
@@ -65,7 +65,7 @@ def test_skip_parquet_metadata_creation(tmp_path, small_sky_dir):
 
     # Remove existing files to ensure they are (or are not) re-created.
     metadata_file = catalog_base_dir / "dataset" / "_metadata"
-    thumbnail_file = catalog_base_dir / "dataset" / "data_thumbnail.parquet"
+    thumbnail_file = catalog_base_dir / "data_thumbnail.parquet"
 
     metadata_file.unlink(missing_ok=True)
     thumbnail_file.unlink(missing_ok=True)
@@ -75,14 +75,14 @@ def test_skip_parquet_metadata_creation(tmp_path, small_sky_dir):
     assert total_rows == 131
     assert not (catalog_base_dir / "dataset" / "_metadata").exists()
     assert (catalog_base_dir / "dataset" / "_common_metadata").exists()
-    assert not (catalog_base_dir / "dataset" / "data_thumbnail.parquet").exists()
+    assert not (catalog_base_dir / "data_thumbnail.parquet").exists()
 
     # Now create only the thumbnail, but make sure _metadata still is not created.
     total_rows = write_parquet_metadata(catalog_base_dir, create_metadata=False, create_thumbnail=True)
     assert total_rows == 131
     assert not (catalog_base_dir / "dataset" / "_metadata").exists()
     assert (catalog_base_dir / "dataset" / "_common_metadata").exists()
-    assert (catalog_base_dir / "dataset" / "data_thumbnail.parquet").exists()
+    assert (catalog_base_dir / "data_thumbnail.parquet").exists()
 
 
 def test_write_parquet_metadata_order1(
@@ -111,7 +111,7 @@ def test_write_parquet_metadata_order1(
     )
     ## the data thumbnail has 1 row group and a total of 4 rows
     ## corresponding to the number of partitions
-    data_thumbnail_path = temp_path / "dataset" / "data_thumbnail.parquet"
+    data_thumbnail_path = temp_path / "data_thumbnail.parquet"
     assert data_thumbnail_path.exists()
     thumbnail = ParquetFile(data_thumbnail_path)
     data_thumbnail = thumbnail.read()
@@ -149,7 +149,7 @@ def test_write_parquet_metadata_sorted(
     )
     ## the data thumbnail has 1 row group and a total of 2 rows
     ## because that is what the pixel threshold specified
-    data_thumbnail_path = temp_path / "dataset" / "data_thumbnail.parquet"
+    data_thumbnail_path = temp_path / "data_thumbnail.parquet"
     assert data_thumbnail_path.exists()
     thumbnail = ParquetFile(data_thumbnail_path)
     data_thumbnail = thumbnail.read()
