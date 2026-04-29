@@ -123,6 +123,8 @@ class Dataset:
         multi_index=False,
         per_row_group: bool = False,
     ):
+        """Read footer statistics in parquet metadata, and report on statistics about
+        each pixel partition."""
         return self.per_partition_statistics(
             exclude_hats_columns=exclude_hats_columns,
             exclude_columns=exclude_columns,
