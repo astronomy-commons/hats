@@ -59,6 +59,24 @@
         "version": "76c0cb3b7af2250f83e1c2776004130b91d1ce71867e9fcff69c89068bf13bf9",
         "warmup_time": -1
     },
+    "benchmarks.peakmem_per_pixel_statistics": {
+        "code": "def peakmem_per_pixel_statistics():\n    return read_hats(BENCH_DATA_DIR / \"large_catalog\").per_pixel_statistics()",
+        "name": "benchmarks.peakmem_per_pixel_statistics",
+        "param_names": [],
+        "params": [],
+        "type": "peakmemory",
+        "unit": "bytes",
+        "version": "cfcd2084f1466537081586d7410e712ff09e78d2d11076ff0d7887c3c168407c"
+    },
+    "benchmarks.peakmem_per_pixel_statistics_filter": {
+        "code": "def peakmem_per_pixel_statistics_filter():\n    catalog = read_hats(BENCH_DATA_DIR / \"large_catalog\")\n    catalog = catalog.filter_by_cone(315, -66.443, 1)\n    catalog.per_pixel_statistics(include_stats=[\"disk_bytes\"])",
+        "name": "benchmarks.peakmem_per_pixel_statistics_filter",
+        "param_names": [],
+        "params": [],
+        "type": "peakmemory",
+        "unit": "bytes",
+        "version": "002b3ebcb88dd0eabfc2184669643222616a1be191c98549b0ce35a6d58d1e66"
+    },
     "benchmarks.time_open_large_catalog": {
         "code": "def time_open_large_catalog():\n    return read_hats(BENCH_DATA_DIR / \"large_catalog\")",
         "min_run_count": 2,
@@ -87,6 +105,36 @@
         "type": "time",
         "unit": "seconds",
         "version": "9c788461f730a853037a4f81270c05bd73e17251c5499ced935736c0ab38eb9c",
+        "warmup_time": -1
+    },
+    "benchmarks.time_per_pixel_statistics": {
+        "code": "def time_per_pixel_statistics():\n    return read_hats(BENCH_DATA_DIR / \"large_catalog\").per_pixel_statistics()",
+        "min_run_count": 2,
+        "name": "benchmarks.time_per_pixel_statistics",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "875b17f827ba502c1d40d65cfa4ab34b552c80bc8248c2c808bf671d87e9c6e4",
+        "warmup_time": -1
+    },
+    "benchmarks.time_per_pixel_statistics_filter": {
+        "code": "def time_per_pixel_statistics_filter():\n    catalog = read_hats(BENCH_DATA_DIR / \"large_catalog\")\n    catalog = catalog.filter_by_cone(315, -66.443, 1)\n    catalog.per_pixel_statistics(include_stats=[\"disk_bytes\"])",
+        "min_run_count": 2,
+        "name": "benchmarks.time_per_pixel_statistics_filter",
+        "number": 0,
+        "param_names": [],
+        "params": [],
+        "repeat": 0,
+        "rounds": 2,
+        "sample_time": 0.01,
+        "type": "time",
+        "unit": "seconds",
+        "version": "92da281477d8a97a8490de0c78d5a1e08d6c1ffc0042910b7ace58afae01b5e0",
         "warmup_time": -1
     },
     "benchmarks.time_small_cone_large_catalog": {
