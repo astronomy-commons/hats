@@ -32,19 +32,19 @@ def write_parquet_metadata(
     create_thumbnail: bool = False,
     thumbnail_threshold: int = 1_000_000,
     create_metadata: bool = True,
-    create_per_pixel_stats: bool = False,
+    create_per_partition_stats: bool = False,
 ):
     """Write Parquet dataset-level metadata files (and optional thumbnail) for a catalog.
 
     Creates files::
 
         catalog/
-        ├── per_pixel_statistics.parquet  (only if create_per_pixel_stats=True)
+        ├── data_thumbnail.parquet           (only if create_thumbnail=True)
+        ├── per_partition_statistics.parquet (only if create_per_partition_stats=True)
         ├── ...
-        ├── data_thumbnail.parquet        (only if create_thumbnail=True)
         └── dataset/
-            ├── _common_metadata          (always written)
-            ├── _metadata                 (only if create_metadata=True)
+            ├── _common_metadata             (always written)
+            ├── _metadata                    (only if create_metadata=True)
             └──  ...
 
     ``dataset/_common_metadata`` contains the full schema of the dataset. This file
@@ -59,6 +59,9 @@ def write_parquet_metadata(
     ``data_thumbnail.parquet`` gives the user a quick overview of the whole dataset.
     It is a compact file containing one row from each data partition, up to a maximum
     of ``thumbnail_threshold`` rows.
+
+    ``per_partition_statistics.parquet`` contains summary statistics from all columns
+    in data partition files, e.g. column min/max values, count of null values, etc.
 
     Notes
     -----
@@ -86,6 +89,9 @@ def write_parquet_metadata(
         thumbnail_threshold exceeds the number of files). One row per partition.
     create_metadata : bool, default=True
         If True, writes ``dataset/_metadata`` combining row group footers.
+    create_per_partition_stats : bool, default=False
+        If True, writes ``per_partition_statistics.parquet`` containing summary
+        statistics from all columns in data partition files.
 
     Returns
     -------
@@ -135,7 +141,7 @@ def write_parquet_metadata(
             if order_by_healpix:
                 healpix_pixels.append(healpix_pixel)
             metadata_collector.append(single_metadata)
-        if create_per_pixel_stats:
+        if create_per_partition_stats:
             for row_group_index in range(0, single_metadata.num_row_groups):
                 row_group = single_metadata.row_group(row_group_index)
                 row_stats = [
@@ -188,7 +194,7 @@ def write_parquet_metadata(
             metadata_collector=metadata_collector,
             write_statistics=True,
         )
-    if create_per_pixel_stats and single_metadata is not None:
+    if create_per_partition_stats and single_metadata is not None:
         all_stats = ["min_value", "max_value", "null_count", "row_count", "disk_bytes", "memory_bytes"]
         _, column_names = _pick_columns(single_metadata.row_group(0), exclude_hats_columns=False)
         mod_col_names = [[f"stats.{col_name}::{stat}" for stat in all_stats] for col_name in column_names]
@@ -197,7 +203,7 @@ def write_parquet_metadata(
         )
         transposed_lists = [list(row) for row in zip(*leaf_stats)]
         table = pa.Table.from_arrays(transposed_lists, names=mod_col_names)
-        output_file = catalog_base_dir / "per_pixel_statistics.parquet"
+        output_file = catalog_base_dir / "per_partition_statistics.parquet"
         pq.write_table(table, output_file.path, filesystem=output_file.fs)
 
     # Write out the _common_metadata file.
@@ -395,7 +401,7 @@ def aggregate_column_statistics(
 
 
 # pylint: disable=too-many-positional-arguments,too-many-statements
-def per_pixel_statistics_from_cache(
+def per_partition_statistics_from_cache(
     metadata_file: str | Path | UPath,
     *,
     exclude_hats_columns: bool = True,
@@ -547,7 +553,7 @@ def per_pixel_statistics_from_cache(
 
 
 # pylint: disable=too-many-positional-arguments,too-many-statements
-def per_pixel_statistics(
+def per_partition_statistics(
     metadata_file: str | Path | UPath,
     *,
     exclude_hats_columns: bool = True,
@@ -715,9 +721,9 @@ def per_pixel_statistics(
     return frame
 
 
-def write_per_pixel_statistics_from_metadata(catalog_base_dir: str | Path | UPath):
+def write_per_partition_statistics_from_metadata(catalog_base_dir: str | Path | UPath):
     """Reads the footer statistics from `dataset/_metadata` file, collects the per-pixel-statistics,
-    and writes out at `per_pixel_statistics.parquet`
+    and writes out at `per_partition_statistics.parquet`
 
     Parameters
     ----------
@@ -779,7 +785,7 @@ def write_per_pixel_statistics_from_metadata(catalog_base_dir: str | Path | UPat
     mod_col_names = ["Norder", "Npix", "row_group_index"] + list(itertools.chain.from_iterable(mod_col_names))
     transposed_lists = [list(row) for row in zip(*leaf_stats)]
     table = pa.Table.from_arrays(transposed_lists, names=mod_col_names)
-    output_file = catalog_base_dir / "per_pixel_statistics.parquet"
+    output_file = catalog_base_dir / "per_partition_statistics.parquet"
     pq.write_table(table, output_file.path, filesystem=output_file.fs)
 
 

@@ -80,24 +80,24 @@ def time_open_large_catalog():
     return read_hats(BENCH_DATA_DIR / "large_catalog")
 
 
-def time_per_pixel_statistics():
-    return read_hats(BENCH_DATA_DIR / "large_catalog").per_pixel_statistics()
+def time_per_partition_statistics():
+    return read_hats(BENCH_DATA_DIR / "large_catalog").per_partition_statistics()
 
 
-def time_per_pixel_statistics_filter():
+def time_per_partition_statistics_filter():
     catalog = read_hats(BENCH_DATA_DIR / "large_catalog")
     catalog = catalog.filter_by_cone(315, -66.443, 1)
-    catalog.per_pixel_statistics(include_stats=["disk_bytes"])
+    catalog.per_partition_statistics(include_stats=["disk_bytes"])
 
 
-def peakmem_per_pixel_statistics():
-    return read_hats(BENCH_DATA_DIR / "large_catalog").per_pixel_statistics()
+def peakmem_per_partition_statistics():
+    return read_hats(BENCH_DATA_DIR / "large_catalog").per_partition_statistics()
 
 
-def peakmem_per_pixel_statistics_filter():
+def peakmem_per_partition_statistics_filter():
     catalog = read_hats(BENCH_DATA_DIR / "large_catalog")
     catalog = catalog.filter_by_cone(315, -66.443, 1)
-    catalog.per_pixel_statistics(include_stats=["disk_bytes"])
+    catalog.per_partition_statistics(include_stats=["disk_bytes"])
 
 
 def time_small_cone_large_catalog():
