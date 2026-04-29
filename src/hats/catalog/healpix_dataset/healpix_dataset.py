@@ -6,6 +6,7 @@ from pathlib import Path
 import nested_pandas as npd
 import pandas as pd
 import pyarrow as pa
+from deprecated import deprecated  # type: ignore
 from mocpy import MOC
 from typing_extensions import Self
 from upath import UPath
@@ -19,8 +20,8 @@ from hats.inspection.visualize_catalog import plot_moc
 from hats.io import file_io, paths
 from hats.io.parquet_metadata import (
     aggregate_column_statistics,
-    per_pixel_statistics,
-    per_pixel_statistics_from_cache,
+    per_partition_statistics,
+    per_partition_statistics_from_cache,
 )
 from hats.pixel_math import HealpixPixel
 from hats.pixel_math.region_to_moc import box_to_moc, cone_to_moc, pixel_list_to_moc, polygon_to_moc
@@ -351,7 +352,35 @@ class HealpixDataset(Dataset):
             include_pixels=include_pixels,
         )
 
+    @deprecated(
+        version="0.9.1",
+        reason="`per_pixel_statistics` will be removed in the future, "
+        "use `per_partition_statistics` instead.",
+    )
     def per_pixel_statistics(
+        self,
+        *,
+        exclude_hats_columns: bool = True,
+        exclude_columns: list[str] | None = None,
+        include_columns: list[str] | None = None,
+        only_numeric_columns: bool = False,
+        include_stats: list[str] | None = None,
+        multi_index=False,
+        include_pixels: list[HealpixPixel] | None = None,
+        per_row_group: bool = False,
+    ):
+        return self.per_partition_statistics(
+            exclude_hats_columns=exclude_hats_columns,
+            exclude_columns=exclude_columns,
+            include_columns=include_columns,
+            only_numeric_columns=only_numeric_columns,
+            include_stats=include_stats,
+            multi_index=multi_index,
+            include_pixels=include_pixels,
+            per_row_group=per_row_group,
+        )
+
+    def per_partition_statistics(
         self,
         *,
         exclude_hats_columns: bool = True,
@@ -392,16 +421,18 @@ class HealpixDataset(Dataset):
             granular statistics
         """
         if not self.on_disk:
-            warnings.warn("Calling per_pixel_statistics on an in-memory catalog. No results.")
+            warnings.warn("Calling per_partition_statistics on an in-memory catalog. No results.")
             return pd.DataFrame()
         if not self.unmodified:
-            warnings.warn("Calling per_pixel_statistics on a modified catalog. Results may be inaccurate.")
+            warnings.warn(
+                "Calling per_partition_statistics on a modified catalog. Results may be inaccurate."
+            )
 
         if include_pixels is None:
             include_pixels = self.get_healpix_pixels()
-        if (self.catalog_base_dir / "per_pixel_statistics.parquet").exists():
-            return per_pixel_statistics_from_cache(
-                self.catalog_base_dir / "per_pixel_statistics.parquet",
+        if (self.catalog_base_dir / "per_partition_statistics.parquet").exists():
+            return per_partition_statistics_from_cache(
+                self.catalog_base_dir / "per_partition_statistics.parquet",
                 exclude_hats_columns=exclude_hats_columns,
                 exclude_columns=exclude_columns,
                 include_columns=include_columns,
@@ -412,7 +443,7 @@ class HealpixDataset(Dataset):
                 per_row_group=per_row_group,
             )
 
-        return per_pixel_statistics(
+        return per_partition_statistics(
             self.catalog_base_dir / "dataset" / "_metadata",
             exclude_hats_columns=exclude_hats_columns,
             exclude_columns=exclude_columns,

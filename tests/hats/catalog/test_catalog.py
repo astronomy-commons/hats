@@ -134,17 +134,17 @@ def test_catalog_statistics(small_sky_order1_dir):
     assert len(result_frame) == 5
     assert_column_stat_as_floats(result_frame, "dec", min_value=-69.5, max_value=-47.5, row_count=42)
 
-    result_frame = cat.per_pixel_statistics()
+    result_frame = cat.per_partition_statistics()
     # 4 = 4 pixels
     # 30 = 5 columns * 6 stats per-column
     assert result_frame.shape == (4, 30)
 
-    result_frame = cat.per_pixel_statistics(exclude_hats_columns=False)
+    result_frame = cat.per_partition_statistics(exclude_hats_columns=False)
     # 4 = 4 pixels
     # 36 = 6 columns * 6 stats per-column
     assert result_frame.shape == (4, 36)
 
-    result_frame = cat.per_pixel_statistics(
+    result_frame = cat.per_partition_statistics(
         include_columns=["ra", "dec"], include_stats=["min_value", "max_value"]
     )
     # 4 = 4 pixels
@@ -152,7 +152,7 @@ def test_catalog_statistics(small_sky_order1_dir):
     assert result_frame.shape == (4, 4)
 
     with pytest.warns(UserWarning, match="modified catalog"):
-        result_frame = filtered_catalog.per_pixel_statistics()
+        result_frame = filtered_catalog.per_partition_statistics()
     # 1 = 1 pixel (the filtered catalog has only one pixel)
     # 30 = 5 columns * 6 stats per-column
     assert result_frame.shape == (1, 30)
@@ -164,7 +164,7 @@ def test_catalog_statistics_in_memory(in_memory_catalog):
     assert len(result_frame) == 0
 
     with pytest.warns(UserWarning, match="in-memory"):
-        result_frame = in_memory_catalog.per_pixel_statistics(include_columns=["ra", "dec"])
+        result_frame = in_memory_catalog.per_partition_statistics(include_columns=["ra", "dec"])
     assert len(result_frame) == 0
 
 
