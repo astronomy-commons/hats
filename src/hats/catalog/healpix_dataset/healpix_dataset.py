@@ -17,7 +17,11 @@ from hats.catalog.partition_info import PartitionInfo
 from hats.inspection import plot_pixels
 from hats.inspection.visualize_catalog import plot_moc
 from hats.io import file_io, paths
-from hats.io.parquet_metadata import aggregate_column_statistics, per_pixel_statistics
+from hats.io.parquet_metadata import (
+    aggregate_column_statistics,
+    per_pixel_statistics,
+    per_pixel_statistics_from_cache,
+)
 from hats.pixel_math import HealpixPixel
 from hats.pixel_math.region_to_moc import box_to_moc, cone_to_moc, pixel_list_to_moc, polygon_to_moc
 from hats.pixel_math.spatial_index import SPATIAL_INDEX_COLUMN, SPATIAL_INDEX_ORDER
@@ -349,12 +353,15 @@ class HealpixDataset(Dataset):
 
     def per_pixel_statistics(
         self,
+        *,
         exclude_hats_columns: bool = True,
         exclude_columns: list[str] | None = None,
         include_columns: list[str] | None = None,
+        only_numeric_columns: bool = False,
         include_stats: list[str] | None = None,
         multi_index=False,
         include_pixels: list[HealpixPixel] | None = None,
+        per_row_group: bool = False,
     ):
         """Read footer statistics in parquet metadata, and report on statistics about
         each pixel partition.
@@ -392,14 +399,29 @@ class HealpixDataset(Dataset):
 
         if include_pixels is None:
             include_pixels = self.get_healpix_pixels()
+        if (self.catalog_base_dir / "per_pixel_statistics.parquet").exists():
+            return per_pixel_statistics_from_cache(
+                self.catalog_base_dir / "per_pixel_statistics.parquet",
+                exclude_hats_columns=exclude_hats_columns,
+                exclude_columns=exclude_columns,
+                include_columns=include_columns,
+                only_numeric_columns=only_numeric_columns,
+                include_stats=include_stats,
+                multi_index=multi_index,
+                include_pixels=include_pixels,
+                per_row_group=per_row_group,
+            )
+
         return per_pixel_statistics(
             self.catalog_base_dir / "dataset" / "_metadata",
             exclude_hats_columns=exclude_hats_columns,
             exclude_columns=exclude_columns,
             include_columns=include_columns,
+            only_numeric_columns=only_numeric_columns,
             include_stats=include_stats,
             multi_index=multi_index,
             include_pixels=include_pixels,
+            per_row_group=per_row_group,
         )
 
     def has_healpix_column(self):
