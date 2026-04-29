@@ -108,11 +108,14 @@ class Dataset:
 
     def per_pixel_statistics(
         self,
+        *,
         exclude_hats_columns: bool = True,
         exclude_columns: list[str] = None,
         include_columns: list[str] = None,
+        only_numeric_columns: bool = False,
         include_stats: list[str] = None,
         multi_index=False,
+        per_row_group: bool = False,
     ):
         """Read footer statistics in parquet metadata, and report on statistics about
         each pixel partition.
@@ -150,6 +153,8 @@ class Dataset:
             exclude_hats_columns=exclude_hats_columns,
             exclude_columns=exclude_columns,
             include_columns=include_columns,
+            only_numeric_columns=only_numeric_columns,
             include_stats=include_stats,
             multi_index=multi_index,
+            per_row_group=per_row_group,
         )

@@ -4,6 +4,7 @@ import shutil
 
 import astropy.units as u
 import nested_pandas as npd
+import numpy as np
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -17,6 +18,7 @@ from hats.io.parquet_metadata import (
     aggregate_column_statistics,
     nested_frame_to_vo_schema,
     per_pixel_statistics,
+    per_pixel_statistics_from_cache,
     write_parquet_metadata,
     write_voparquet_in_common_metadata,
 )
@@ -27,10 +29,7 @@ from hats.pixel_math.spatial_index import SPATIAL_INDEX_COLUMN
 def test_write_parquet_metadata(tmp_path, small_sky_dir, small_sky_schema, check_parquet_schema):
     """Copy existing catalog and create new metadata files for it"""
     catalog_base_dir = tmp_path / "catalog"
-    shutil.copytree(
-        small_sky_dir,
-        catalog_base_dir,
-    )
+    shutil.copytree(small_sky_dir, catalog_base_dir)
 
     total_rows = write_parquet_metadata(catalog_base_dir, create_thumbnail=True)
     assert total_rows == 131
@@ -58,10 +57,7 @@ def test_write_parquet_metadata(tmp_path, small_sky_dir, small_sky_schema, check
 def test_skip_parquet_metadata_creation(tmp_path, small_sky_dir):
     """Copy existing catalog and skip metadata file creation"""
     catalog_base_dir = tmp_path / "catalog"
-    shutil.copytree(
-        small_sky_dir,
-        catalog_base_dir,
-    )
+    shutil.copytree(small_sky_dir, catalog_base_dir)
 
     # Remove existing files to ensure they are (or are not) re-created.
     metadata_file = catalog_base_dir / "dataset" / "_metadata"
@@ -91,24 +87,13 @@ def test_write_parquet_metadata_order1(
     """Copy existing catalog and create new metadata files for it,
     using a catalog with multiple files."""
     temp_path = tmp_path / "catalog"
-    shutil.copytree(
-        small_sky_order1_dir,
-        temp_path,
-    )
+    shutil.copytree(small_sky_order1_dir, temp_path)
     total_rows = write_parquet_metadata(temp_path, create_thumbnail=True)
     assert total_rows == 131
     ## 4 row groups for 4 partitioned parquet files
-    check_parquet_schema(
-        temp_path / "dataset" / "_metadata",
-        small_sky_schema,
-        4,
-    )
+    check_parquet_schema(temp_path / "dataset" / "_metadata", small_sky_schema, 4)
     ## _common_metadata has 0 row groups
-    check_parquet_schema(
-        temp_path / "dataset" / "_common_metadata",
-        small_sky_schema,
-        0,
-    )
+    check_parquet_schema(temp_path / "dataset" / "_common_metadata", small_sky_schema, 0)
     ## the data thumbnail has 1 row group and a total of 4 rows
     ## corresponding to the number of partitions
     data_thumbnail_path = temp_path / "data_thumbnail.parquet"
@@ -121,32 +106,44 @@ def test_write_parquet_metadata_order1(
     assert data_thumbnail.equals(data_thumbnail.sort_by(SPATIAL_INDEX_COLUMN))
 
 
+def test_write_parquet_metadata_nested(tmp_path, small_sky_nested_dir):
+    """Copy existing catalog and create new metadata files for it,
+    using a catalog with multiple files."""
+    temp_path = tmp_path / "catalog"
+    shutil.copytree(small_sky_nested_dir, temp_path, ignore=shutil.ignore_patterns("*_metadata"))
+    total_rows = write_parquet_metadata(
+        temp_path, create_thumbnail=False, create_metadata=False, create_per_pixel_stats=True
+    )
+    assert total_rows == 131
+    assert not (temp_path / "dataset" / "data_thumbnail.parquet").exists()
+    assert not (temp_path / "dataset" / "_metadata").exists()
+
+    assert (temp_path / "per_pixel_statistics.parquet").exists()
+
+    data = pq.read_table((temp_path / "per_pixel_statistics.parquet"))
+    assert len(data) == 13
+    assert np.sum(data["stats.id::row_count"]) == 131
+    assert np.sum(data["stats.lc.source_id::row_count"]) == 16135
+
+    # 17 cols * 6 stats + (norder, npix, row_group_index) == 105
+    assert len(data.columns) == 105
+
+
 def test_write_parquet_metadata_sorted(
     tmp_path, small_sky_order1_dir, small_sky_schema, check_parquet_schema
 ):
     """Copy existing catalog and create new metadata files for it,
     using a catalog with multiple files."""
     temp_path = tmp_path / "catalog"
-    shutil.copytree(
-        small_sky_order1_dir,
-        temp_path,
-    )
+    shutil.copytree(small_sky_order1_dir, temp_path)
     ## Sneak in a test for the data thumbnail generation, specifying a
     ## thumbnail threshold that is smaller than the number of partitions
     total_rows = write_parquet_metadata(temp_path, create_thumbnail=True, thumbnail_threshold=2)
     assert total_rows == 131
     ## 4 row groups for 4 partitioned parquet files
-    check_parquet_schema(
-        temp_path / "dataset" / "_metadata",
-        small_sky_schema,
-        4,
-    )
+    check_parquet_schema(temp_path / "dataset" / "_metadata", small_sky_schema, 4)
     ## _common_metadata has 0 row groups
-    check_parquet_schema(
-        temp_path / "dataset" / "_common_metadata",
-        small_sky_schema,
-        0,
-    )
+    check_parquet_schema(temp_path / "dataset" / "_common_metadata", small_sky_schema, 0)
     ## the data thumbnail has 1 row group and a total of 2 rows
     ## because that is what the pixel threshold specified
     data_thumbnail_path = temp_path / "data_thumbnail.parquet"
@@ -169,10 +166,7 @@ def test_write_index_parquet_metadata(tmp_path, check_parquet_schema):
     file_io.write_dataframe_to_parquet(basic_index, index_parquet_path)
 
     index_catalog_parquet_metadata = pa.schema(
-        [
-            pa.field("_healpix_29", pa.int64()),
-            pa.field("ps1_objid", pa.int64()),
-        ]
+        [pa.field("_healpix_29", pa.int64()), pa.field("ps1_objid", pa.int64())]
     )
 
     total_rows = write_parquet_metadata(temp_path, order_by_healpix=False)
@@ -181,9 +175,7 @@ def test_write_index_parquet_metadata(tmp_path, check_parquet_schema):
     check_parquet_schema(tmp_path / "index" / "dataset" / "_metadata", index_catalog_parquet_metadata)
     ## _common_metadata has 0 row groups
     check_parquet_schema(
-        tmp_path / "index" / "dataset" / "_common_metadata",
-        index_catalog_parquet_metadata,
-        0,
+        tmp_path / "index" / "dataset" / "_common_metadata", index_catalog_parquet_metadata, 0
     )
 
 
@@ -395,6 +387,54 @@ def test_per_pixel_statistics_nested(small_sky_nested_dir):
     result_frame = per_pixel_statistics(partition_info_file, exclude_columns=["lc.source_ra"])
     # 72 = (5 base columns + 7 nested sub-columns) * 6 stats
     assert result_frame.shape == (13, 72)
+
+
+@pytest.mark.xfail(reason="Chicken and egg with import")
+def test_per_pixel_statistics_cache_nested(small_sky_nested_dir):
+    # 13 = 13 pixels
+    partition_info_file = small_sky_nested_dir / "per_pixel_statistics.parquet"
+
+    result_frame = per_pixel_statistics_from_cache(partition_info_file)
+    # 78 = (5 base columns + 8 nested sub-columns) * 6 stats
+    assert result_frame.shape == (13, 78)
+
+    result_frame = per_pixel_statistics_from_cache(partition_info_file, include_columns=["lc", "ra"])
+    # 54 = (8 nested sub-columns + "ra") * 6 stats
+    assert result_frame.shape == (13, 54)
+
+    result_frame = per_pixel_statistics_from_cache(
+        partition_info_file, include_columns=["lc.source_ra", "ra"]
+    )
+    # 12 = ("lc.source_ra" + "ra") * 6 stats
+    assert result_frame.shape == (13, 12)
+
+    result_frame = per_pixel_statistics_from_cache(partition_info_file, exclude_columns=["lc"])
+    # 30 = 5 base columns * 6 stats
+    assert result_frame.shape == (13, 30)
+
+    result_frame = per_pixel_statistics_from_cache(partition_info_file, exclude_columns=["lc.source_ra"])
+    # 72 = (5 base columns + 7 nested sub-columns) * 6 stats
+    assert result_frame.shape == (13, 72)
+
+
+@pytest.mark.xfail(reason="Chicken and egg with import")
+def test_per_pixel_statistics_cache_with_rowgroups_aggregated(small_sky_source_dir):
+    partition_info_file = small_sky_source_dir / "per_pixel_statistics.parquet"
+
+    result_frame = per_pixel_statistics_from_cache(partition_info_file)
+    ## 14 = number of partitions in this catalog
+    assert len(result_frame) == 14
+    assert result_frame["object_dec: row_count"].sum() == 17161
+
+    single_pixel = HealpixPixel(1, 47)
+    result_frame = per_pixel_statistics_from_cache(
+        partition_info_file, include_pixels=[single_pixel], multi_index=True
+    )
+    ## 9 = number of columns
+    assert len(result_frame) == 9
+    assert_column_stat_as_floats(
+        result_frame, (single_pixel, "object_dec"), min_value=-36.5, max_value=-25.5, row_count=2395
+    )
 
 
 def test_per_pixel_statistics_multi_index(small_sky_order1_dir):
