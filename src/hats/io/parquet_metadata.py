@@ -541,7 +541,6 @@ def per_partition_statistics_from_cache(
         nf = npd.NestedFrame.from_flat(
             frame, on="_healpix_pixel", base_columns=["Norder", "Npix"], nested_columns=stat_col_names
         )
-        nf = nf.map_rows()
         print(nf)
     if multi_index:
         # TODO
