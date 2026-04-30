@@ -1,5 +1,7 @@
 """Utility functions for handling parquet metadata files"""
 
+# pylint: disable=too-many-lines
+
 from __future__ import annotations
 
 import io
@@ -532,14 +534,14 @@ def per_partition_statistics_from_cache(
         frame = frame.loc[include_pixels]
 
     if not per_row_group:
-        # pylint: disable=unused-variable, unused-argument
+
         def aggregator(row):
             ## TODO - This sucks but it works.
             returns = {}
             for col_name in stat_col_names:
                 if col_name == "row_group_index":
                     continue
-                elif "min_value" in col_name:
+                if "min_value" in col_name:
                     single_value = np.min(row[f"stats.{col_name}"])
                 elif "max_value" in col_name:
                     single_value = np.max(row[f"stats.{col_name}"])
