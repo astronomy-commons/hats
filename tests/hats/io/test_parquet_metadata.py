@@ -122,8 +122,8 @@ def test_write_parquet_metadata_nested(tmp_path, small_sky_nested_dir):
 
     data = pq.read_table((temp_path / "per_partition_statistics.parquet"))
     assert len(data) == 13
-    assert np.sum(data["stats.id::row_count"]) == 131
-    assert np.sum(data["stats.lc.source_id::row_count"]) == 16135
+    assert np.sum(data["id::row_count"]) == 131
+    assert np.sum(data["lc.source_id::row_count"]) == 16135
 
     # 17 cols * 6 stats + (norder, npix, row_group_index) == 105
     assert len(data.columns) == 105
@@ -417,7 +417,6 @@ def test_per_partition_statistics_cache_nested(small_sky_nested_dir):
     assert result_frame.shape == (13, 72)
 
 
-@pytest.mark.xfail(reason="Chicken and egg with import")
 def test_per_partition_statistics_cache_with_rowgroups_aggregated(small_sky_source_dir):
     partition_info_file = small_sky_source_dir / "per_partition_statistics.parquet"
 
