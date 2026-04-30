@@ -1,5 +1,7 @@
 """Utility functions for handling parquet metadata files"""
 
+# pylint: disable=too-many-lines
+
 from __future__ import annotations
 
 import io
@@ -197,8 +199,8 @@ def write_parquet_metadata(
     if create_per_partition_stats and single_metadata is not None:
         all_stats = ["min_value", "max_value", "null_count", "row_count", "disk_bytes", "memory_bytes"]
         _, column_names = _pick_columns(single_metadata.row_group(0), exclude_hats_columns=False)
-        mod_col_names = [[f"stats.{col_name}::{stat}" for stat in all_stats] for col_name in column_names]
-        mod_col_names = ["Norder", "Npix", "stats.row_group_index"] + list(
+        mod_col_names = [[f"{col_name}::{stat}" for stat in all_stats] for col_name in column_names]
+        mod_col_names = ["Norder", "Npix", "row_group_index"] + list(
             itertools.chain.from_iterable(mod_col_names)
         )
         transposed_lists = [list(row) for row in zip(*leaf_stats)]
@@ -503,7 +505,7 @@ def per_partition_statistics_from_cache(
                 raise ValueError(f"include_stats must be from list {all_stats} (found {stat})")
         include_stats = [stat for stat in all_stats if stat in include_stats]
 
-    table_cols = ["Norder", "Npix", "stats.row_group_index"] + list(
+    table_cols = ["Norder", "Npix", "row_group_index"] + list(
         itertools.chain.from_iterable(
             [[f"{col_name}::{stat}" for stat in include_stats] for col_name in column_names]
         )
@@ -513,11 +515,8 @@ def per_partition_statistics_from_cache(
     pixel_list["_healpix_pixel"] = pixel_list.apply(
         lambda mini_frame: HealpixPixel(mini_frame["Norder"], mini_frame["Npix"]), axis=1
     )
-    if include_pixels:
-        # TODO
-        pass
 
-    stat_col_names = ["stats.row_group_index"] + list(
+    stat_col_names = ["row_group_index"] + list(
         itertools.chain.from_iterable(
             [[f"{col_name}: {stat}" for stat in include_stats] for col_name in column_names]
         )
@@ -530,24 +529,48 @@ def per_partition_statistics_from_cache(
         "_healpix_pixel": pixel_list["_healpix_pixel"]
     }
     frame = pd.DataFrame(dicts, columns=mod_col_names + ["_healpix_pixel"])
+    frame = frame.set_index(pixel_list["_healpix_pixel"])
+    if include_pixels:
+        frame = frame.loc[include_pixels]
 
     if not per_row_group:
 
-        # pylint: disable=unused-variable, unused-argument
         def aggregator(row):
-            ## TODO - This is kinda the last thing.
-            pass
+            ## TODO - This sucks but it works.
+            returns = {}
+            for col_name in stat_col_names:
+                if col_name == "row_group_index":
+                    continue
+                if "min_value" in col_name:
+                    single_value = np.min(row[f"stats.{col_name}"])
+                elif "max_value" in col_name:
+                    single_value = np.max(row[f"stats.{col_name}"])
+                else:
+                    single_value = np.sum(row[f"stats.{col_name}"])
+                returns |= {col_name: single_value}
+            return returns
 
-        nf = npd.NestedFrame.from_flat(
-            frame, on="_healpix_pixel", base_columns=["Norder", "Npix"], nested_columns=stat_col_names
+        frame = npd.NestedFrame.from_flat(
+            frame,
+            on="_healpix_pixel",
+            base_columns=["Norder", "Npix"],
+            nested_columns=stat_col_names,
+            name="stats",
         )
-        nf = nf.map_rows()
-        print(nf)
-    if multi_index:
-        # TODO
-        pass
+        frame = frame.map_rows(aggregator)
 
-    frame.set_index(pixel_list["_healpix_pixel"])
+        if multi_index:
+            stats_lists = frame.to_numpy().reshape(len(frame) * len(column_names), 6)
+            actual_pixels = np.unique(frame.index)
+
+            frame = pd.DataFrame(
+                stats_lists,
+                index=pd.MultiIndex.from_product([actual_pixels, column_names], names=["pixel", "column"]),
+                columns=include_stats,
+            )  # .astype({stat_name: int for stat_name in int_stats})
+    elif multi_index:
+        ## TODO - should this include the row group index in the multi-index? probably yes?
+        pass
 
     return frame
 
