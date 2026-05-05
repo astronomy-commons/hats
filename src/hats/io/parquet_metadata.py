@@ -560,7 +560,7 @@ def per_partition_statistics_from_cache(
         frame = frame.map_rows(aggregator)
 
         if multi_index:
-            stats_lists = frame.to_numpy().reshape(len(frame) * len(column_names), 6)
+            stats_lists = frame.to_numpy().reshape(len(frame) * len(column_names), len(include_stats))
             actual_pixels = np.unique(frame.index)
 
             frame = pd.DataFrame(
