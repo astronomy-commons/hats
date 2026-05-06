@@ -530,7 +530,8 @@ def per_partition_statistics_from_cache(
     }
     frame = pd.DataFrame(dicts, columns=mod_col_names + ["_healpix_pixel"])
     frame = frame.set_index(pixel_list["_healpix_pixel"])
-    if include_pixels:
+    if include_pixels is not None and len(include_pixels) > 0:
+        # TODO - check if all includepixels in pixel list
         frame = frame.loc[include_pixels]
 
     if not per_row_group:

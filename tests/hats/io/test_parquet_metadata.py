@@ -435,6 +435,15 @@ def test_per_partition_statistics_cache_with_rowgroups_aggregated(small_sky_sour
         result_frame, (single_pixel, "object_dec"), min_value=-36.5, max_value=-25.5, row_count=2395
     )
 
+    result_frame = per_partition_statistics_from_cache(
+        partition_info_file, include_pixels=np.array([single_pixel, HealpixPixel(2, 176)]), multi_index=True
+    )
+    ## 9 = number of columns
+    assert len(result_frame) == 9
+    assert_column_stat_as_floats(
+        result_frame, (single_pixel, "object_dec"), min_value=-36.5, max_value=-25.5, row_count=2395
+    )
+
 
 def test_per_partition_statistics_multi_index(small_sky_order1_dir):
     partition_info_file = paths.get_parquet_metadata_pointer(small_sky_order1_dir)
