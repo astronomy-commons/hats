@@ -16,6 +16,7 @@ from pyarrow.parquet import ParquetFile
 from hats.io import file_io, paths
 from hats.io.parquet_metadata import (
     aggregate_column_statistics,
+    aggregate_column_statistics_from_cache,
     nested_frame_to_vo_schema,
     per_partition_statistics,
     per_partition_statistics_from_cache,
@@ -122,8 +123,8 @@ def test_write_parquet_metadata_nested(tmp_path, small_sky_nested_dir):
 
     data = pq.read_table((temp_path / "per_partition_statistics.parquet"))
     assert len(data) == 13
-    assert np.sum(data["stats.id::row_count"]) == 131
-    assert np.sum(data["stats.lc.source_id::row_count"]) == 16135
+    assert np.sum(data["id::row_count"]) == 131
+    assert np.sum(data["lc.source_id::row_count"]) == 16135
 
     # 17 cols * 6 stats + (norder, npix, row_group_index) == 105
     assert len(data.columns) == 105
@@ -179,41 +180,55 @@ def test_write_index_parquet_metadata(tmp_path, check_parquet_schema):
     )
 
 
-def test_aggregate_column_statistics(small_sky_order1_dir):
-    partition_info_file = paths.get_parquet_metadata_pointer(small_sky_order1_dir)
+@pytest.mark.parametrize(
+    "method, file",
+    [
+        (aggregate_column_statistics, "dataset/_metadata"),
+        (aggregate_column_statistics_from_cache, "per_partition_statistics.parquet"),
+    ],
+)
+def test_aggregate_column_statistics(small_sky_order1_dir, method, file):
+    partition_info_file = small_sky_order1_dir / file
 
-    result_frame = aggregate_column_statistics(partition_info_file)
+    result_frame = method(partition_info_file)
     assert len(result_frame) == 5
 
-    result_frame = aggregate_column_statistics(partition_info_file, exclude_hats_columns=False)
+    result_frame = method(partition_info_file, exclude_hats_columns=False)
     assert len(result_frame) == 6
 
-    result_frame = aggregate_column_statistics(partition_info_file, include_columns=["ra", "dec"])
+    result_frame = method(partition_info_file, include_columns=["ra", "dec"])
     assert len(result_frame) == 2
 
-    result_frame = aggregate_column_statistics(partition_info_file, include_columns=["does", "not", "exist"])
+    result_frame = method(partition_info_file, include_columns=["does", "not", "exist"])
     assert len(result_frame) == 0
 
 
-def test_aggregate_column_statistics_nested(small_sky_nested_dir):
-    partition_info_file = paths.get_parquet_metadata_pointer(small_sky_nested_dir)
+@pytest.mark.parametrize(
+    "method, file",
+    [
+        (aggregate_column_statistics, "dataset/_metadata"),
+        (aggregate_column_statistics_from_cache, "per_partition_statistics.parquet"),
+    ],
+)
+def test_aggregate_column_statistics_nested(small_sky_nested_dir, method, file):
+    partition_info_file = small_sky_nested_dir / file
 
-    result_frame = aggregate_column_statistics(partition_info_file)
+    result_frame = method(partition_info_file)
     assert len(result_frame) == 13
 
-    result_frame = aggregate_column_statistics(partition_info_file, include_columns=["ra", "lc"])
+    result_frame = method(partition_info_file, include_columns=["ra", "lc"])
     # 9 = 1 base column + 8 nested sub-columns
     assert len(result_frame) == 9
 
-    result_frame = aggregate_column_statistics(partition_info_file, include_columns=["ra", "lc.source_ra"])
+    result_frame = method(partition_info_file, include_columns=["ra", "lc.source_ra"])
     # 2 = 1 base column + 1 nested sub-column
     assert len(result_frame) == 2
 
-    result_frame = aggregate_column_statistics(partition_info_file, exclude_columns=["lc"])
+    result_frame = method(partition_info_file, exclude_columns=["lc"])
     # 5 base columns
     assert len(result_frame) == 5
 
-    result_frame = aggregate_column_statistics(partition_info_file, exclude_columns=["lc.source_dec"])
+    result_frame = method(partition_info_file, exclude_columns=["lc.source_dec"])
     # 12 = 5 base columns + 7 nested sub-columns
     assert len(result_frame) == 12
 
@@ -229,61 +244,78 @@ def assert_column_stat_as_floats(
     assert data_stats["row_count"] == row_count
 
 
-def test_aggregate_column_statistics_with_pixel(small_sky_order1_dir):
-    partition_info_file = paths.get_parquet_metadata_pointer(small_sky_order1_dir)
+@pytest.mark.parametrize(
+    "method, file",
+    [
+        (aggregate_column_statistics, "dataset/_metadata"),
+        (aggregate_column_statistics_from_cache, "per_partition_statistics.parquet"),
+    ],
+)
+def test_aggregate_column_statistics_with_pixel(small_sky_order1_dir, method, file):
+    partition_info_file = small_sky_order1_dir / file
 
-    result_frame = aggregate_column_statistics(partition_info_file)
+    result_frame = method(partition_info_file)
     assert len(result_frame) == 5
     assert_column_stat_as_floats(result_frame, "dec", min_value=-69.5, max_value=-25.5, row_count=131)
 
-    result_frame = aggregate_column_statistics(partition_info_file, include_pixels=[HealpixPixel(1, 45)])
+    result_frame = method(partition_info_file, include_pixels=[HealpixPixel(1, 45)])
     assert len(result_frame) == 5
     assert_column_stat_as_floats(result_frame, "dec", min_value=-60.5, max_value=-25.5, row_count=29)
 
-    result_frame = aggregate_column_statistics(partition_info_file, include_pixels=[HealpixPixel(1, 47)])
+    result_frame = method(partition_info_file, include_pixels=[HealpixPixel(1, 47)])
     assert len(result_frame) == 5
     assert_column_stat_as_floats(result_frame, "dec", min_value=-36.5, max_value=-25.5, row_count=18)
 
-    result_frame = aggregate_column_statistics(
-        partition_info_file, include_pixels=[HealpixPixel(1, 45), HealpixPixel(1, 47)]
-    )
+    result_frame = method(partition_info_file, include_pixels=[HealpixPixel(1, 45), HealpixPixel(1, 47)])
     assert len(result_frame) == 5
     assert_column_stat_as_floats(result_frame, "dec", min_value=-60.5, max_value=-25.5, row_count=47)
 
-    result_frame = aggregate_column_statistics(partition_info_file, include_pixels=[HealpixPixel(1, 4)])
+    result_frame = method(partition_info_file, include_pixels=[HealpixPixel(1, 4)])
     assert len(result_frame) == 0
 
 
-def test_aggregate_column_statistics_with_rowgroups(small_sky_source_dir):
-    partition_info_file = paths.get_parquet_metadata_pointer(small_sky_source_dir)
+@pytest.mark.parametrize(
+    "method, file",
+    [
+        (aggregate_column_statistics, "dataset/_metadata"),
+        (aggregate_column_statistics_from_cache, "per_partition_statistics.parquet"),
+    ],
+)
+def test_aggregate_column_statistics_with_rowgroups(small_sky_source_dir, method, file):
+    partition_info_file = small_sky_source_dir / file
 
-    result_frame = aggregate_column_statistics(partition_info_file)
+    result_frame = method(partition_info_file)
     assert len(result_frame) == 9
     assert_column_stat_as_floats(
         result_frame, "object_dec", min_value=-69.5, max_value=-25.5, row_count=17161
     )
 
-    result_frame = aggregate_column_statistics(partition_info_file, include_pixels=[HealpixPixel(1, 47)])
+    result_frame = method(partition_info_file, include_pixels=[HealpixPixel(1, 47)])
     assert len(result_frame) == 9
     assert_column_stat_as_floats(result_frame, "object_dec", min_value=-36.5, max_value=-25.5, row_count=2395)
 
-    result_frame = aggregate_column_statistics(
-        partition_info_file, include_pixels=[HealpixPixel(1, 45), HealpixPixel(1, 47)]
-    )
+    result_frame = method(partition_info_file, include_pixels=[HealpixPixel(1, 45), HealpixPixel(1, 47)])
     assert len(result_frame) == 9
     assert_column_stat_as_floats(result_frame, "object_dec", min_value=-60.5, max_value=-25.5, row_count=2395)
 
-    result_frame = aggregate_column_statistics(partition_info_file, include_pixels=[HealpixPixel(1, 4)])
+    result_frame = method(partition_info_file, include_pixels=[HealpixPixel(1, 4)])
     assert len(result_frame) == 0
 
 
-def test_aggregate_column_statistics_with_nested(small_sky_nested_dir):
-    partition_info_file = paths.get_parquet_metadata_pointer(small_sky_nested_dir)
+@pytest.mark.parametrize(
+    "method, file",
+    [
+        (aggregate_column_statistics, "dataset/_metadata"),
+        (aggregate_column_statistics_from_cache, "per_partition_statistics.parquet"),
+    ],
+)
+def test_aggregate_column_statistics_with_nested(small_sky_nested_dir, method, file):
+    partition_info_file = small_sky_nested_dir / file
 
     ## Will have 13 returned columns (5 object and 8 light curve)
     ## Since object_dec is copied from object.dec, the min/max are the same,
     ## but there are MANY more rows of light curve dec values.
-    result_frame = aggregate_column_statistics(partition_info_file)
+    result_frame = method(partition_info_file)
     assert len(result_frame) == 13
     assert_column_stat_as_floats(result_frame, "dec", min_value=-69.5, max_value=-25.5, row_count=131)
     assert_column_stat_as_floats(
@@ -292,7 +324,7 @@ def test_aggregate_column_statistics_with_nested(small_sky_nested_dir):
 
     ## Only peeking at a single pixel, we should see the same dec min/max as
     ## we see above for the flat object table.
-    result_frame = aggregate_column_statistics(partition_info_file, include_pixels=[HealpixPixel(1, 47)])
+    result_frame = method(partition_info_file, include_pixels=[HealpixPixel(1, 47)])
     assert len(result_frame) == 13
     assert_column_stat_as_floats(result_frame, "dec", min_value=-36.5, max_value=-25.5, row_count=18)
     assert_column_stat_as_floats(
@@ -302,7 +334,7 @@ def test_aggregate_column_statistics_with_nested(small_sky_nested_dir):
 
     ## Test that we can request light curve columns, using the shorter name
     ## e.g. full path in the file is "lc.source_id.list.element"
-    result_frame = aggregate_column_statistics(
+    result_frame = method(
         partition_info_file, include_columns=["ra", "dec", "lc.source_ra", "lc.source_dec", "lc.mag"]
     )
     assert len(result_frame) == 5
@@ -417,7 +449,6 @@ def test_per_partition_statistics_cache_nested(small_sky_nested_dir):
     assert result_frame.shape == (13, 72)
 
 
-@pytest.mark.xfail(reason="Chicken and egg with import")
 def test_per_partition_statistics_cache_with_rowgroups_aggregated(small_sky_source_dir):
     partition_info_file = small_sky_source_dir / "per_partition_statistics.parquet"
 
@@ -432,6 +463,15 @@ def test_per_partition_statistics_cache_with_rowgroups_aggregated(small_sky_sour
     )
     ## 9 = number of columns
     assert len(result_frame) == 9
+    assert_column_stat_as_floats(
+        result_frame, (single_pixel, "object_dec"), min_value=-36.5, max_value=-25.5, row_count=2395
+    )
+
+    result_frame = per_partition_statistics_from_cache(
+        partition_info_file, include_pixels=np.array([single_pixel, HealpixPixel(2, 176)]), multi_index=True
+    )
+    ## 9 = number of columns
+    assert len(result_frame) == 18
     assert_column_stat_as_floats(
         result_frame, (single_pixel, "object_dec"), min_value=-36.5, max_value=-25.5, row_count=2395
     )

@@ -1,5 +1,7 @@
 """Utility functions for handling parquet metadata files"""
 
+# pylint: disable=too-many-lines
+
 from __future__ import annotations
 
 import io
@@ -197,8 +199,8 @@ def write_parquet_metadata(
     if create_per_partition_stats and single_metadata is not None:
         all_stats = ["min_value", "max_value", "null_count", "row_count", "disk_bytes", "memory_bytes"]
         _, column_names = _pick_columns(single_metadata.row_group(0), exclude_hats_columns=False)
-        mod_col_names = [[f"stats.{col_name}::{stat}" for stat in all_stats] for col_name in column_names]
-        mod_col_names = ["Norder", "Npix", "stats.row_group_index"] + list(
+        mod_col_names = [[f"{col_name}::{stat}" for stat in all_stats] for col_name in column_names]
+        mod_col_names = ["Norder", "Npix", "row_group_index"] + list(
             itertools.chain.from_iterable(mod_col_names)
         )
         transposed_lists = [list(row) for row in zip(*leaf_stats)]
@@ -400,6 +402,110 @@ def aggregate_column_statistics(
     return frame
 
 
+def aggregate_column_statistics_from_cache(
+    metadata_file: str | Path | UPath,
+    *,
+    exclude_hats_columns: bool = True,
+    exclude_columns: list[str] = None,
+    include_columns: list[str] = None,
+    only_numeric_columns: bool = False,
+    include_pixels: list[HealpixPixel] = None,
+):
+    """Using cached footer statistics in parquet metadata, and report on global min/max values.
+
+    Parameters
+    ----------
+    metadata_file : str | Path | UPath
+        path to `_metadata` file
+    exclude_hats_columns : bool
+        exclude HATS spatial and partitioning fields
+        from the statistics. Defaults to True.
+    exclude_columns : list[str]
+        additional columns to exclude from the statistics.
+    include_columns : list[str]
+        if specified, only return statistics for the column
+        names provided. Defaults to None, and returns all non-hats columns.
+    only_numeric_columns : bool
+        only include columns that are numeric (integer or floating point) in the
+        statistics. If True, the entire frame should be numeric.
+        (Default value = False)
+    include_pixels : list[HealpixPixel]
+        if specified, only return statistics
+        for the pixels indicated. Defaults to none, and returns all pixels.
+
+    Returns
+    -------
+    pd.Dataframe
+        Pandas dataframe with global summary statistics
+    """
+    frame = npd.read_parquet(metadata_file)
+
+    if len(frame) == 0:
+        return pd.DataFrame()
+
+    if include_columns is None:
+        include_columns = []
+
+    if exclude_columns is None:
+        exclude_columns = []
+    if exclude_hats_columns:
+        exclude_columns.extend(["Norder", "Dir", "Npix", "_healpix_29"])
+
+    # Pick one stat to extract column names.
+    column_names = [name[:-11] for name in frame.columns if name.endswith("::min_value")]
+
+    column_names = [name.removesuffix(".list.element") for name in column_names]
+
+    good_column_indexes = []
+    for index, name in enumerate(column_names):
+        base_name = name.split(".")[0]
+        included = len(include_columns) == 0 or name in include_columns or base_name in include_columns
+        excluded = len(exclude_columns) > 0 and (name in exclude_columns or base_name in exclude_columns)
+        ## TODO - we don't have types on the original columns, just types on the new stat columns.
+        numeric_ok = not only_numeric_columns
+        if included and not excluded and numeric_ok:
+            good_column_indexes.append(index)
+    column_names = [column_names[i] for i in good_column_indexes]
+
+    if not good_column_indexes:
+        return pd.DataFrame()
+
+    frame["_healpix_pixel"] = frame[["Norder", "Npix"]].apply(
+        lambda mini_frame: HealpixPixel(mini_frame["Norder"], mini_frame["Npix"]), axis=1
+    )
+    frame = frame.set_index("_healpix_pixel")
+    if include_pixels is not None and len(include_pixels) > 0:
+        good_pixels = frame.index.intersection(include_pixels)
+        if len(good_pixels) == 0:
+            return pd.DataFrame()
+        frame = frame.loc[good_pixels]
+
+    all_min = []
+    all_max = []
+    all_null_count = []
+    all_row_count = []
+    for column in column_names:
+        all_min.append(frame[f"{column}::min_value"].min())
+        all_max.append(frame[f"{column}::max_value"].max())
+        all_null_count.append(frame[f"{column}::null_count"].sum())
+        all_row_count.append(frame[f"{column}::row_count"].sum())
+
+    result_frame = (
+        pd.DataFrame(
+            {
+                "column_names": column_names,
+                "min_value": all_min,
+                "max_value": all_max,
+                "null_count": all_null_count,
+                "row_count": all_row_count,
+            }
+        )
+        .set_index("column_names")
+        .astype({"null_count": int, "row_count": int})
+    )
+    return result_frame
+
+
 # pylint: disable=too-many-positional-arguments,too-many-statements
 def per_partition_statistics_from_cache(
     metadata_file: str | Path | UPath,
@@ -464,9 +570,9 @@ def per_partition_statistics_from_cache(
     pd.Dataframe
         Pandas dataframe with granular per-pixel statistics
     """
-    table = pq.read_table(metadata_file)
+    frame = npd.read_parquet(metadata_file)
 
-    if len(table) == 0:
+    if len(frame) == 0:
         return pd.DataFrame()
 
     if include_columns is None:
@@ -478,7 +584,7 @@ def per_partition_statistics_from_cache(
         exclude_columns.extend(["Norder", "Dir", "Npix", "_healpix_29"])
 
     # Pick one stat to extract column names.
-    column_names = [name[:-11] for name in table.column_names if name.endswith("::min_value")]
+    column_names = [name[:-11] for name in frame.columns if name.endswith("::min_value")]
 
     column_names = [name.removesuffix(".list.element") for name in column_names]
 
@@ -503,21 +609,13 @@ def per_partition_statistics_from_cache(
                 raise ValueError(f"include_stats must be from list {all_stats} (found {stat})")
         include_stats = [stat for stat in all_stats if stat in include_stats]
 
-    table_cols = ["Norder", "Npix", "stats.row_group_index"] + list(
+    table_cols = ["Norder", "Npix", "row_group_index"] + list(
         itertools.chain.from_iterable(
             [[f"{col_name}::{stat}" for stat in include_stats] for col_name in column_names]
         )
     )
 
-    pixel_list = table.select(["Norder", "Npix"]).to_pandas()
-    pixel_list["_healpix_pixel"] = pixel_list.apply(
-        lambda mini_frame: HealpixPixel(mini_frame["Norder"], mini_frame["Npix"]), axis=1
-    )
-    if include_pixels:
-        # TODO
-        pass
-
-    stat_col_names = ["stats.row_group_index"] + list(
+    stat_col_names = ["row_group_index"] + list(
         itertools.chain.from_iterable(
             [[f"{col_name}: {stat}" for stat in include_stats] for col_name in column_names]
         )
@@ -525,29 +623,57 @@ def per_partition_statistics_from_cache(
     mod_col_names = ["Norder", "Npix"] + stat_col_names
     renamer = dict(zip(table_cols, mod_col_names))
 
-    dicts = table.select(table_cols).to_pydict()
-    dicts = {renamer.get(k, k): v for k, v in dicts.items()} | {
-        "_healpix_pixel": pixel_list["_healpix_pixel"]
-    }
-    frame = pd.DataFrame(dicts, columns=mod_col_names + ["_healpix_pixel"])
+    frame["_healpix_pixel"] = frame[["Norder", "Npix"]].apply(
+        lambda mini_frame: HealpixPixel(mini_frame["Norder"], mini_frame["Npix"]), axis=1
+    )
+    frame = frame.set_index(frame["_healpix_pixel"])
+
+    frame = frame.rename(columns=renamer)
+    if include_pixels is not None and len(include_pixels) > 0:
+        good_pixels = frame.index.intersection(include_pixels)
+        if len(good_pixels) == 0:
+            return pd.DataFrame()
+        frame = frame.loc[good_pixels]
 
     if not per_row_group:
 
-        # pylint: disable=unused-variable, unused-argument
         def aggregator(row):
-            ## TODO - This is kinda the last thing.
-            pass
+            ## TODO - This sucks but it works.
+            returns = {}
+            for col_name in stat_col_names:
+                if col_name == "row_group_index":
+                    continue
+                if "min_value" in col_name:
+                    single_value = np.min(row[f"stats.{col_name}"])
+                elif "max_value" in col_name:
+                    single_value = np.max(row[f"stats.{col_name}"])
+                else:
+                    single_value = np.sum(row[f"stats.{col_name}"])
+                returns |= {col_name: single_value}
+            return returns
 
-        nf = npd.NestedFrame.from_flat(
-            frame, on="_healpix_pixel", base_columns=["Norder", "Npix"], nested_columns=stat_col_names
+        frame = npd.NestedFrame.from_flat(
+            frame,
+            on="_healpix_pixel",
+            base_columns=["Norder", "Npix"],
+            nested_columns=stat_col_names,
+            name="stats",
         )
-        nf = nf.map_rows()
-        print(nf)
-    if multi_index:
-        # TODO
-        pass
+        frame = frame.map_rows(aggregator)
+        frame = frame.rename_axis(None)
 
-    frame.set_index(pixel_list["_healpix_pixel"])
+        if multi_index:
+            stats_lists = frame.to_numpy().reshape(len(frame) * len(column_names), len(include_stats))
+            actual_pixels = np.unique(frame.index)
+
+            frame = pd.DataFrame(
+                stats_lists,
+                index=pd.MultiIndex.from_product([actual_pixels, column_names], names=["pixel", "column"]),
+                columns=include_stats,
+            )  # .astype({stat_name: int for stat_name in int_stats})
+    elif multi_index:
+        ## TODO - should this include the row group index in the multi-index? probably yes?
+        pass
 
     return frame
 
