@@ -302,7 +302,7 @@ class HealpixDataset(Dataset):
         **kwargs
             Additional args to pass to `hats.inspection.visualize_catalog.plot_moc`
         """
-        default_title = f"Coverage MOC of {self.catalog_name}"
+        default_title = f"Coverage of {self.catalog_name}"
         plot_args = {"title": default_title}
         plot_args.update(kwargs)
         return plot_moc(self.moc, **plot_args)
