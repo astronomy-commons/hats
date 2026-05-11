@@ -6,17 +6,23 @@ from pathlib import Path
 import nested_pandas as npd
 import pandas as pd
 import pyarrow as pa
+from deprecated import deprecated  # type: ignore
 from mocpy import MOC
 from typing_extensions import Self
 from upath import UPath
 
+from hats.catalog.catalog_snapshot import CatalogSnapshot
 from hats.catalog.dataset import Dataset
 from hats.catalog.dataset.table_properties import TableProperties
 from hats.catalog.partition_info import PartitionInfo
 from hats.inspection import plot_pixels
 from hats.inspection.visualize_catalog import plot_moc
 from hats.io import file_io, paths
-from hats.io.parquet_metadata import aggregate_column_statistics, per_pixel_statistics
+from hats.io.parquet_metadata import (
+    aggregate_column_statistics,
+    per_partition_statistics,
+    per_partition_statistics_from_cache,
+)
 from hats.pixel_math import HealpixPixel
 from hats.pixel_math.region_to_moc import box_to_moc, cone_to_moc, pixel_list_to_moc, polygon_to_moc
 from hats.pixel_math.spatial_index import SPATIAL_INDEX_COLUMN, SPATIAL_INDEX_ORDER
@@ -42,7 +48,8 @@ class HealpixDataset(Dataset):
         catalog_path: str | Path | UPath | None = None,
         moc: MOC | None = None,
         schema: pa.Schema | None = None,
-        original_schema: pa.Schema | None = None,
+        snapshot: CatalogSnapshot | None = None,
+        generate_snapshot: bool = False,
     ) -> None:
         """Initializes a Catalog
 
@@ -60,15 +67,21 @@ class HealpixDataset(Dataset):
             MOC object representing the coverage of the catalog
         schema : pa.Schema
             The pyarrow schema for the catalog. May be modified e.g. based on loaded columns
-        original_schema : pa.Schema
-            The original pyarrow schema for the catalog. May NOT be modified e.g. based on loaded columns
+        snapshot : CatalogSnapshot
+            Immutable snapshot of the catalog's original on-disk schema and partition info.
+            May NOT be modified e.g. based on loaded columns or filtered pixels.
+        generate_snapshot : bool
+            If True and no snapshot is provided, automatically generate one from the current
+            schema, catalog_info, and partition_info. Default False.
         """
-        super().__init__(
-            catalog_info, catalog_path=catalog_path, schema=schema, original_schema=original_schema
-        )
+        super().__init__(catalog_info, catalog_path=catalog_path, schema=schema, snapshot=snapshot)
         self.partition_info = self._get_partition_info_from_pixels(pixels)
         self.pixel_tree = self._get_pixel_tree_from_pixels(pixels)
         self.moc = moc
+        if snapshot is None and generate_snapshot:
+            self.snapshot = CatalogSnapshot(
+                schema=schema, catalog_info=catalog_info, partition_info=self.partition_info
+            )
 
     def get_healpix_pixels(self) -> list[HealpixPixel]:
         """Get healpix pixel objects for all pixels contained in the catalog.
@@ -233,7 +246,7 @@ class HealpixDataset(Dataset):
             catalog_path=self.catalog_path,
             moc=filtered_moc,
             schema=self.schema,
-            original_schema=self.original_schema,
+            snapshot=self.snapshot,
         )
 
     def align(
@@ -339,14 +352,45 @@ class HealpixDataset(Dataset):
             include_pixels=include_pixels,
         )
 
+    @deprecated(
+        version="0.9.1",
+        reason="`per_pixel_statistics` will be removed in the future, "
+        "use `per_partition_statistics` instead.",
+    )
     def per_pixel_statistics(
         self,
+        *,
         exclude_hats_columns: bool = True,
         exclude_columns: list[str] | None = None,
         include_columns: list[str] | None = None,
+        only_numeric_columns: bool = False,
         include_stats: list[str] | None = None,
         multi_index=False,
         include_pixels: list[HealpixPixel] | None = None,
+        per_row_group: bool = False,
+    ):
+        return self.per_partition_statistics(
+            exclude_hats_columns=exclude_hats_columns,
+            exclude_columns=exclude_columns,
+            include_columns=include_columns,
+            only_numeric_columns=only_numeric_columns,
+            include_stats=include_stats,
+            multi_index=multi_index,
+            include_pixels=include_pixels,
+            per_row_group=per_row_group,
+        )
+
+    def per_partition_statistics(
+        self,
+        *,
+        exclude_hats_columns: bool = True,
+        exclude_columns: list[str] | None = None,
+        include_columns: list[str] | None = None,
+        only_numeric_columns: bool = False,
+        include_stats: list[str] | None = None,
+        multi_index=False,
+        include_pixels: list[HealpixPixel] | None = None,
+        per_row_group: bool = False,
     ):
         """Read footer statistics in parquet metadata, and report on statistics about
         each pixel partition.
@@ -377,21 +421,38 @@ class HealpixDataset(Dataset):
             granular statistics
         """
         if not self.on_disk:
-            warnings.warn("Calling per_pixel_statistics on an in-memory catalog. No results.")
+            warnings.warn("Calling per_partition_statistics on an in-memory catalog. No results.")
             return pd.DataFrame()
         if not self.unmodified:
-            warnings.warn("Calling per_pixel_statistics on a modified catalog. Results may be inaccurate.")
+            warnings.warn(
+                "Calling per_partition_statistics on a modified catalog. Results may be inaccurate."
+            )
 
         if include_pixels is None:
             include_pixels = self.get_healpix_pixels()
-        return per_pixel_statistics(
+        if (self.catalog_base_dir / "per_partition_statistics.parquet").exists():
+            return per_partition_statistics_from_cache(
+                self.catalog_base_dir / "per_partition_statistics.parquet",
+                exclude_hats_columns=exclude_hats_columns,
+                exclude_columns=exclude_columns,
+                include_columns=include_columns,
+                only_numeric_columns=only_numeric_columns,
+                include_stats=include_stats,
+                multi_index=multi_index,
+                include_pixels=include_pixels,
+                per_row_group=per_row_group,
+            )
+
+        return per_partition_statistics(
             self.catalog_base_dir / "dataset" / "_metadata",
             exclude_hats_columns=exclude_hats_columns,
             exclude_columns=exclude_columns,
             include_columns=include_columns,
+            only_numeric_columns=only_numeric_columns,
             include_stats=include_stats,
             multi_index=multi_index,
             include_pixels=include_pixels,
+            per_row_group=per_row_group,
         )
 
     def has_healpix_column(self):

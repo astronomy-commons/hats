@@ -23,7 +23,9 @@ BENCH_DATA_DIR = Path(__file__).parent / "data"
 def time_test_alignment_even_sky():
     """Create alignment from an even distribution at order 7"""
     initial_histogram = np.full(hp.order2npix(7), 40)
-    result = hist.generate_alignment(initial_histogram, highest_order=7, threshold=1_000)
+    result = hist.generate_alignment(
+        initial_histogram, highest_order=7, threshold=1_000, use_lower_order=True
+    )
     # everything maps to order 5, given the density
     for mapping in result:
         assert mapping[0] == 5
@@ -76,6 +78,26 @@ def time_open_midsize_catalog():
 
 def time_open_large_catalog():
     return read_hats(BENCH_DATA_DIR / "large_catalog")
+
+
+def time_per_partition_statistics():
+    return read_hats(BENCH_DATA_DIR / "large_catalog").per_partition_statistics()
+
+
+def time_per_partition_statistics_filter():
+    catalog = read_hats(BENCH_DATA_DIR / "large_catalog")
+    catalog = catalog.filter_by_cone(315, -66.443, 1)
+    catalog.per_partition_statistics(include_stats=["disk_bytes"])
+
+
+def peakmem_per_partition_statistics():
+    return read_hats(BENCH_DATA_DIR / "large_catalog").per_partition_statistics()
+
+
+def peakmem_per_partition_statistics_filter():
+    catalog = read_hats(BENCH_DATA_DIR / "large_catalog")
+    catalog = catalog.filter_by_cone(315, -66.443, 1)
+    catalog.per_partition_statistics(include_stats=["disk_bytes"])
 
 
 def time_small_cone_large_catalog():

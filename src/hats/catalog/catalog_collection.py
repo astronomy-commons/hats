@@ -100,6 +100,11 @@ class CatalogCollection:
         -------
         dict[str, float]
             A dictionary mapping margin catalog names to their threshold values.
+
+        Raises
+        ------
+        ValueError
+            if a catalog listed as a margin catalog is not configured as a margin catalog.
         """
         if self.all_margins is None:
             return {}

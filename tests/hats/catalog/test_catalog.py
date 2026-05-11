@@ -30,6 +30,19 @@ def test_catalog_load(catalog_info, catalog_pixels):
         assert hp_pixel in catalog.pixel_tree
 
 
+def test_catalog_snapshot_not_generated_by_default(catalog_info, catalog_pixels):
+    catalog = Catalog(catalog_info, catalog_pixels)
+    assert catalog.snapshot is None
+    assert catalog.original_schema is None
+
+
+def test_catalog_generate_snapshot(catalog_info, catalog_pixels):
+    catalog = Catalog(catalog_info, catalog_pixels, generate_snapshot=True)
+    assert catalog.snapshot is not None
+    assert catalog.snapshot.catalog_info == catalog_info
+    assert catalog.snapshot.partition_info == catalog.partition_info
+
+
 def test_partition_info_pixel_input_types(catalog_info, catalog_pixels):
     partition_info = PartitionInfo.from_healpix(catalog_pixels)
     catalog = Catalog(catalog_info, partition_info)
@@ -121,17 +134,17 @@ def test_catalog_statistics(small_sky_order1_dir):
     assert len(result_frame) == 5
     assert_column_stat_as_floats(result_frame, "dec", min_value=-69.5, max_value=-47.5, row_count=42)
 
-    result_frame = cat.per_pixel_statistics()
+    result_frame = cat.per_partition_statistics()
     # 4 = 4 pixels
     # 30 = 5 columns * 6 stats per-column
     assert result_frame.shape == (4, 30)
 
-    result_frame = cat.per_pixel_statistics(exclude_hats_columns=False)
+    result_frame = cat.per_partition_statistics(exclude_hats_columns=False)
     # 4 = 4 pixels
     # 36 = 6 columns * 6 stats per-column
     assert result_frame.shape == (4, 36)
 
-    result_frame = cat.per_pixel_statistics(
+    result_frame = cat.per_partition_statistics(
         include_columns=["ra", "dec"], include_stats=["min_value", "max_value"]
     )
     # 4 = 4 pixels
@@ -139,7 +152,7 @@ def test_catalog_statistics(small_sky_order1_dir):
     assert result_frame.shape == (4, 4)
 
     with pytest.warns(UserWarning, match="modified catalog"):
-        result_frame = filtered_catalog.per_pixel_statistics()
+        result_frame = filtered_catalog.per_partition_statistics()
     # 1 = 1 pixel (the filtered catalog has only one pixel)
     # 30 = 5 columns * 6 stats per-column
     assert result_frame.shape == (1, 30)
@@ -151,7 +164,7 @@ def test_catalog_statistics_in_memory(in_memory_catalog):
     assert len(result_frame) == 0
 
     with pytest.warns(UserWarning, match="in-memory"):
-        result_frame = in_memory_catalog.per_pixel_statistics(include_columns=["ra", "dec"])
+        result_frame = in_memory_catalog.per_partition_statistics(include_columns=["ra", "dec"])
     assert len(result_frame) == 0
 
 
@@ -232,7 +245,11 @@ def test_cone_filter(small_sky_order1_catalog):
         max_depth=small_sky_order1_catalog.get_max_coverage_order(),
     )
     assert filtered_catalog.moc == cone_moc.intersection(small_sky_order1_catalog.moc)
-    assert filtered_catalog.original_schema is not None
+    assert filtered_catalog.snapshot is not None
+    assert filtered_catalog.snapshot.schema is not None
+    assert filtered_catalog.snapshot.catalog_info == small_sky_order1_catalog.catalog_info
+    assert filtered_catalog.snapshot.partition_info == small_sky_order1_catalog.partition_info
+    assert filtered_catalog.partition_info != filtered_catalog.snapshot.partition_info
 
 
 def test_get_pixel_paths(small_sky_order1_catalog):
@@ -315,7 +332,11 @@ def test_polygonal_filter(small_sky_order1_catalog):
         max_depth=small_sky_order1_catalog.get_max_coverage_order(),
     )
     assert filtered_catalog.moc == polygon_moc.intersection(small_sky_order1_catalog.moc)
-    assert filtered_catalog.original_schema is not None
+    assert filtered_catalog.snapshot is not None
+    assert filtered_catalog.snapshot.schema is not None
+    assert filtered_catalog.snapshot.catalog_info == small_sky_order1_catalog.catalog_info
+    assert filtered_catalog.snapshot.partition_info == small_sky_order1_catalog.partition_info
+    assert filtered_catalog.partition_info != filtered_catalog.snapshot.partition_info
 
 
 def test_polygonal_filter_invalid_coordinate_shape(small_sky_order1_catalog):
@@ -406,6 +427,10 @@ def test_box_filter(small_sky_order1_catalog):
         max_depth=small_sky_order1_catalog.get_max_coverage_order(),
     )
     assert filtered_catalog.moc == box_moc.intersection(small_sky_order1_catalog.moc)
+    assert filtered_catalog.snapshot is not None
+    assert filtered_catalog.snapshot.catalog_info == small_sky_order1_catalog.catalog_info
+    assert filtered_catalog.snapshot.partition_info == small_sky_order1_catalog.partition_info
+    assert filtered_catalog.partition_info != filtered_catalog.snapshot.partition_info
 
 
 def test_box_filter_wrapped_ra(small_sky_order1_catalog):
@@ -629,7 +654,7 @@ def test_catalog_len_is_undetermined(small_sky_order1_catalog):
 
 def test_has_healpix_column(small_sky_order1_dir, test_data_dir):
     cat = read_hats(small_sky_order1_dir)
-    assert cat.schema == cat.original_schema
+    assert cat.schema == cat.snapshot.schema
     assert cat.has_healpix_column()
     assert cat.catalog_info.healpix_column == "_healpix_29"
     assert cat.catalog_info.healpix_order == 29
@@ -639,7 +664,7 @@ def test_has_healpix_column(small_sky_order1_dir, test_data_dir):
     assert cat.has_healpix_column()
 
     cat = read_hats(test_data_dir / "small_sky_healpix13")
-    assert cat.schema == cat.original_schema
+    assert cat.schema == cat.snapshot.schema
     assert cat.has_healpix_column()
     assert cat.catalog_info.healpix_column == "healpix13"
     assert cat.catalog_info.healpix_order == 13

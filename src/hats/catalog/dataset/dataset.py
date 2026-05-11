@@ -5,11 +5,13 @@ from pathlib import Path
 
 import pandas as pd
 import pyarrow as pa
+from deprecated import deprecated  # type: ignore
 from upath import UPath
 
+from hats.catalog.catalog_snapshot import CatalogSnapshot
 from hats.catalog.dataset.table_properties import TableProperties
 from hats.io import file_io
-from hats.io.parquet_metadata import aggregate_column_statistics, per_pixel_statistics
+from hats.io.parquet_metadata import aggregate_column_statistics, per_partition_statistics
 
 
 # pylint: disable=too-few-public-methods
@@ -21,7 +23,8 @@ class Dataset:
         catalog_info: TableProperties,
         catalog_path: str | Path | UPath | None = None,
         schema: pa.Schema | None = None,
-        original_schema: pa.Schema | None = None,
+        snapshot: CatalogSnapshot | None = None,
+        generate_snapshot: bool = False,
     ) -> None:
         """Initializes a Dataset
 
@@ -34,8 +37,12 @@ class Dataset:
             Does not load the catalog from this path, only store as metadata
         schema : pa.Schema
             The pyarrow schema for the catalog. May be modified e.g. based on loaded columns
-        original_schema : pa.Schema
-            The original pyarrow schema for the catalog. May NOT be modified e.g. based on loaded columns
+        snapshot : CatalogSnapshot
+            Immutable snapshot of the catalog's original on-disk schema and partition info.
+            May NOT be modified e.g. based on loaded columns or filtered pixels.
+        generate_snapshot : bool
+            If True and no snapshot is provided, automatically generate one from the current
+            schema and catalog_info. Default False.
         """
         self.catalog_info = catalog_info
         self.catalog_name = self.catalog_info.catalog_name
@@ -43,7 +50,14 @@ class Dataset:
         self.catalog_path = catalog_path
         self.catalog_base_dir = file_io.get_upath(self.catalog_path)
         self.schema = schema
-        self.original_schema = original_schema
+        if snapshot is None and generate_snapshot:
+            snapshot = CatalogSnapshot(schema=schema, catalog_info=catalog_info)
+        self.snapshot = snapshot
+
+    @property
+    def original_schema(self) -> pa.Schema | None:
+        """The original on-disk schema, before any column selection."""
+        return self.snapshot.schema if self.snapshot is not None else None
 
     @property
     def on_disk(self) -> bool:
@@ -93,13 +107,44 @@ class Dataset:
             include_columns=include_columns,
         )
 
+    @deprecated(
+        version="0.9.1",
+        reason="`per_pixel_statistics` will be removed in the future, "
+        "use `per_partition_statistics` instead.",
+    )
     def per_pixel_statistics(
         self,
+        *,
+        exclude_hats_columns: bool = True,
+        exclude_columns: list[str] | None = None,
+        include_columns: list[str] | None = None,
+        only_numeric_columns: bool = False,
+        include_stats: list[str] | None = None,
+        multi_index=False,
+        per_row_group: bool = False,
+    ):
+        """Read footer statistics in parquet metadata, and report on statistics about
+        each pixel partition."""
+        return self.per_partition_statistics(
+            exclude_hats_columns=exclude_hats_columns,
+            exclude_columns=exclude_columns,
+            include_columns=include_columns,
+            only_numeric_columns=only_numeric_columns,
+            include_stats=include_stats,
+            multi_index=multi_index,
+            per_row_group=per_row_group,
+        )
+
+    def per_partition_statistics(
+        self,
+        *,
         exclude_hats_columns: bool = True,
         exclude_columns: list[str] = None,
         include_columns: list[str] = None,
+        only_numeric_columns: bool = False,
         include_stats: list[str] = None,
         multi_index=False,
+        per_row_group: bool = False,
     ):
         """Read footer statistics in parquet metadata, and report on statistics about
         each pixel partition.
@@ -128,15 +173,19 @@ class Dataset:
             all statistics.
         """
         if not self.on_disk:
-            warnings.warn("Calling per_pixel_statistics on an in-memory catalog. No results.")
+            warnings.warn("Calling per_partition_statistics on an in-memory catalog. No results.")
             return pd.DataFrame()
         if not self.unmodified:
-            warnings.warn("Calling per_pixel_statistics on a modified catalog. Results may be inaccurate.")
-        return per_pixel_statistics(
+            warnings.warn(
+                "Calling per_partition_statistics on a modified catalog. Results may be inaccurate."
+            )
+        return per_partition_statistics(
             self.catalog_base_dir / "dataset" / "_metadata",
             exclude_hats_columns=exclude_hats_columns,
             exclude_columns=exclude_columns,
             include_columns=include_columns,
+            only_numeric_columns=only_numeric_columns,
             include_stats=include_stats,
             multi_index=multi_index,
+            per_row_group=per_row_group,
         )

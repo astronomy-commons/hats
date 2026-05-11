@@ -99,6 +99,12 @@ class CollectionProperties(BaseModel):
         -------
         dict[str, str]
             a python dict of strings
+
+        Raises
+        ------
+        ValueError
+            if the string list has an odd number of elements (and so is not pairs of
+            field and index name)
         """
         if str_value is None:
             return None

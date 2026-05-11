@@ -350,7 +350,7 @@ def get_data_thumbnail_pointer(catalog_base_dir: str | Path | UPath) -> UPath:
     UPath
         File Pointer to the catalog's `data_thumbnail` file
     """
-    return get_upath(catalog_base_dir) / DATASET_DIR / DATA_THUMBNAIL_FILENAME
+    return get_upath(catalog_base_dir) / DATA_THUMBNAIL_FILENAME
 
 
 def get_point_map_file_pointer(catalog_base_dir: str | Path | UPath) -> UPath:

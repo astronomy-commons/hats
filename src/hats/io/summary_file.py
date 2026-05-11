@@ -325,7 +325,12 @@ def _build_column_table(
             if default is not None:
                 default.extend(name in default_columns or sc in default_columns for sc in subcolumns)
             nested_into.extend([name] * len(subcolumns))
-            example.extend(fmt_value(series.to_list()) for _, series in cell.items())
+            if example is not None:
+                if cell is None:
+                    example_value = (fmt_value(None) for _ in subcolumns)
+                else:
+                    example_value = (fmt_value(series.to_list()) for _, series in cell.items())
+                example.extend(example_value)
         else:
             column.append(name)
             dtype.append(str(dt.pyarrow_dtype))
