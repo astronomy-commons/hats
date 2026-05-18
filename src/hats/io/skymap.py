@@ -69,6 +69,28 @@ def read_skymap(catalog, order):
     return point_map.reshape(hp.order2npix(order), -1).sum(axis=1)
 
 
+def skymap_coverage(catalog, order=None):
+    """Compute the fractional sky coverage of a catalog from its healpix skymap file.
+
+    Parameters
+    ----------
+    catalog : Catalog
+        Catalog object corresponding to an on-disk catalog with skymap files.
+    order : int, optional
+        healpix order to read the skymap at. If None, the order of the default
+        skymap will be used.
+
+    Returns
+    -------
+    float
+        fractional sky coverage between 0.0 and 1.0.
+    """
+    if catalog.catalog_info.skymap_order is None and catalog.catalog_info.skymap_alt_orders is None:
+        raise ValueError("Catalog does not have skymap information. Cannot compute skymap-based coverage.")
+    skymap = read_skymap(catalog, order)
+    return float(np.mean(skymap > 0))
+
+
 def write_skymap(histogram: np.ndarray, catalog_dir: str | Path | UPath, orders: list | int | None = None):
     """Write the object spatial distribution information to a healpix SKYMAP FITS file.
 
