@@ -4,3 +4,4 @@ dataproduct_type=object
 hats_nrows=30000
 hats_col_ra=
 hats_col_dec=
+hats_npix_suffix=.parquet

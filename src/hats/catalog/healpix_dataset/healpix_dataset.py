@@ -20,6 +20,7 @@ from hats.inspection.visualize_catalog import plot_moc
 from hats.io import file_io, paths
 from hats.io.parquet_metadata import (
     aggregate_column_statistics,
+    aggregate_column_statistics_from_cache,
     per_partition_statistics,
     per_partition_statistics_from_cache,
 )
@@ -312,6 +313,7 @@ class HealpixDataset(Dataset):
         exclude_hats_columns: bool = True,
         exclude_columns: list[str] | None = None,
         include_columns: list[str] | None = None,
+        only_numeric_columns: bool = False,
         include_pixels: list[HealpixPixel] | None = None,
     ):
         """Read footer statistics in parquet metadata, and report on global min/max values.
@@ -326,6 +328,10 @@ class HealpixDataset(Dataset):
         include_columns : list[str] | None
             if specified, only return statistics for the column
             names provided. Defaults to None, and returns all non-hats columns.
+        only_numeric_columns : bool
+            only include columns that are numeric (integer or floating point) in the
+            statistics. If True, the entire frame should be numeric.
+            (Default value = False)
         include_pixels: list[HealpixPixel] | None
             (Default value = None)
 
@@ -344,11 +350,22 @@ class HealpixDataset(Dataset):
 
         if include_pixels is None:
             include_pixels = self.get_healpix_pixels()
+        if (self.catalog_base_dir / "per_partition_statistics.parquet").exists():
+            return aggregate_column_statistics_from_cache(
+                self.catalog_base_dir / "per_partition_statistics.parquet",
+                exclude_hats_columns=exclude_hats_columns,
+                exclude_columns=exclude_columns,
+                include_columns=include_columns,
+                only_numeric_columns=only_numeric_columns,
+                include_pixels=include_pixels,
+            )
+
         return aggregate_column_statistics(
             self.catalog_base_dir / "dataset" / "_metadata",
             exclude_hats_columns=exclude_hats_columns,
             exclude_columns=exclude_columns,
             include_columns=include_columns,
+            only_numeric_columns=only_numeric_columns,
             include_pixels=include_pixels,
         )
 
