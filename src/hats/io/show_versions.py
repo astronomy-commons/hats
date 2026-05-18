@@ -81,12 +81,13 @@ def print_versions(package_name, extra_deps):
 
 def show_versions():
     """Print runtime versions and system info, useful for bug reports."""
-    print_versions("hats",
+    print_versions(
+        "hats",
         [
             "nested-pandas",
             "pandas",
             "numpy",
             "pyarrow",
             "fsspec",
-        ]
+        ],
     )
