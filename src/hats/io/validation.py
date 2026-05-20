@@ -215,7 +215,7 @@ def _is_valid_catalog_strict(pointer, handle_error, verbose):
     if not isinstance(catalog, HealpixDataset):
         if not _is_metadata_valid(pointer):
             handle_error("_metadata file does not exist.")
-            is_valid = False
+            return (False, catalog)
 
         ## Load as parquet dataset. Allow errors, and check pixel set against _metadata
         # As a side effect, this confirms that we can load the directory as a valid dataset.

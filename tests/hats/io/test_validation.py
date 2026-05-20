@@ -197,6 +197,11 @@ def test_is_valid_catalog_fail_with_missing_partitions(small_sky_source_dir, tmp
         assert not is_valid_catalog(tmp_path / "copy", **flags)
 
 
+def test_is_valid_catalog_fail_index_missing_metadata(small_sky_source_object_index_dir, tmp_path):
+    shutil.copytree(small_sky_source_object_index_dir, tmp_path / "copy", ignore=lambda _, f: ["_metadata"])
+    assert not is_valid_catalog(tmp_path / "copy", strict=True)
+
+
 def test_is_valid_catalog_warn_missing_metadata(small_sky_source_dir, tmp_path):
     """Test that if some files are missing an error is raised"""
     flags = {
