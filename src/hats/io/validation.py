@@ -249,9 +249,6 @@ def _is_valid_catalog_strict(pointer, handle_error, verbose):
         parquet_path_pixels = []
         for hats_file in dataset.files:
             hats_fp = UPath(hats_file, protocol=metadata_file.protocol, **metadata_file.storage_options)
-            if not hats_fp.exists():
-                handle_error(f"Pixel partition is missing: {hats_fp}")
-                is_valid = False
             healpix_pixel = get_healpix_from_path(hats_file)
             if healpix_pixel == INVALID_PIXEL:
                 handle_error(f"Could not derive partition pixel from parquet path: {str(hats_fp)}")
@@ -261,15 +258,37 @@ def _is_valid_catalog_strict(pointer, handle_error, verbose):
         parquet_path_pixels = sort_pixels(parquet_path_pixels)
 
         if not np.array_equal(expected_pixels, parquet_path_pixels):
-            handle_error("Partition pixels differ between catalog and parquet paths")
+            handle_error(
+                "Partition pixels differ between _metadata and partition_info\n"
+                f"Extra: {set(parquet_path_pixels) - set(expected_pixels)} \n"
+                f"Missing: {set(expected_pixels) - set(parquet_path_pixels)}"
+            )
             is_valid = False
     else:
         handle_error("_metadata file does not exist.")
 
-    for pixel_path in catalog.get_pixel_paths():
-        if not pixel_path.exists():
-            handle_error(f"Pixel partition is missing: {str(pixel_path)}")
+    if len(catalog.get_healpix_pixels()) > 10_000:
+        handle_error(
+            f"Checking file existence for {len(catalog.get_healpix_pixels())} data partitions."
+            " This might take a while."
+        )
+    parquet_path_pixels = []
+    for pixel_path in pointer.rglob("Norder*/Dir*/Npix*"):
+        healpix_pixel = get_healpix_from_path(pixel_path)
+        if healpix_pixel == INVALID_PIXEL:
+            handle_error(f"Could not derive partition pixel from parquet path: {str(pixel_path)}")
             is_valid = False
+        parquet_path_pixels.append(healpix_pixel)
+
+    parquet_path_pixels = sort_pixels(parquet_path_pixels)
+
+    if not np.array_equal(expected_pixels, parquet_path_pixels):
+        handle_error(
+            "Partition pixels differ between partition_info and parquet paths\n"
+            f"Extra: {set(parquet_path_pixels) - set(expected_pixels)} \n"
+            f"Missing: {set(expected_pixels) - set(parquet_path_pixels)}"
+        )
+        is_valid = False
 
     if verbose:
         # Print a few more stats

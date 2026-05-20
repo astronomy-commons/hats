@@ -193,7 +193,7 @@ def test_is_valid_catalog_fail_with_missing_partitions(small_sky_source_dir, tmp
     shutil.copytree(
         small_sky_source_dir, tmp_path / "copy", ignore=lambda _, f: ["Npix=4.parquet", "Npix=176.parquet"]
     )
-    with pytest.warns(match="partition is missing"):
+    with pytest.warns(match="Partition pixels differ"):
         assert not is_valid_catalog(tmp_path / "copy", **flags)
 
 
