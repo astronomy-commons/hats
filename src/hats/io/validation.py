@@ -185,6 +185,7 @@ def is_valid_collection(
     return is_valid
 
 
+# pylint: disable=too-many-statements
 def _is_valid_catalog_strict(pointer, handle_error, verbose):
     """Determine if this is a valid catalog, using strict criteria.
 
@@ -196,10 +197,6 @@ def _is_valid_catalog_strict(pointer, handle_error, verbose):
     is_valid = True
     if not _is_catalog_info_valid(pointer):
         handle_error("properties file does not exist or is invalid.")
-        is_valid = False
-
-    if not _is_metadata_valid(pointer):
-        handle_error("_metadata file does not exist.")
         is_valid = False
 
     if not _is_common_metadata_valid(pointer):
@@ -215,18 +212,29 @@ def _is_valid_catalog_strict(pointer, handle_error, verbose):
     catalog = read_hats(pointer)
     metadata_file = get_parquet_metadata_pointer(pointer)
 
-    if isinstance(catalog, HealpixDataset):
-        if not _is_partition_info_valid(pointer):
-            handle_error("partition_info.csv file does not exist.")
-            return (False, catalog)
+    if not isinstance(catalog, HealpixDataset):
+        if not _is_metadata_valid(pointer):
+            handle_error("_metadata file does not exist.")
+            is_valid = False
 
-        expected_pixels = sort_pixels(catalog.get_healpix_pixels())
+        ## Load as parquet dataset. Allow errors, and check pixel set against _metadata
+        # As a side effect, this confirms that we can load the directory as a valid dataset.
+        dataset = pds.parquet_dataset(metadata_file.path, filesystem=metadata_file.fs)
 
-        if verbose:
-            print(f"Found {len(expected_pixels)} partitions.")
+        return (is_valid, catalog)
 
-        ## Compare the pixels in _metadata with partition_info.csv
-        # We typically warn when reading from _metadata, but it's expected right now.
+    if not _is_partition_info_valid(pointer):
+        handle_error("partition_info.csv file does not exist.")
+        return (False, catalog)
+
+    expected_pixels = sort_pixels(catalog.get_healpix_pixels())
+
+    if verbose:
+        print(f"Found {len(expected_pixels)} partitions.")
+
+    ## Compare the pixels in _metadata with partition_info.csv
+    # We typically warn when reading from _metadata, but it's expected right now.
+    if _is_metadata_valid(pointer):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             metadata_pixels = sort_pixels(PartitionInfo.read_from_file(metadata_file).get_healpix_pixels())
@@ -255,17 +263,20 @@ def _is_valid_catalog_strict(pointer, handle_error, verbose):
         if not np.array_equal(expected_pixels, parquet_path_pixels):
             handle_error("Partition pixels differ between catalog and parquet paths")
             is_valid = False
-
-        if verbose:
-            # Print a few more stats
-            print(
-                "Approximate coverage is "
-                f"{catalog.partition_info.calculate_fractional_coverage()*100:0.2f} % of the sky."
-            )
     else:
-        ## Load as parquet dataset. Allow errors, and check pixel set against _metadata
-        # As a side effect, this confirms that we can load the directory as a valid dataset.
-        dataset = pds.parquet_dataset(metadata_file.path, filesystem=metadata_file.fs)
+        handle_error("_metadata file does not exist.")
+
+    for pixel_path in catalog.get_pixel_paths():
+        if not pixel_path.exists():
+            handle_error(f"Pixel partition is missing: {str(pixel_path)}")
+            is_valid = False
+
+    if verbose:
+        # Print a few more stats
+        print(
+            "Approximate coverage is "
+            f"{catalog.partition_info.calculate_fractional_coverage()*100:0.2f} % of the sky."
+        )
 
     return (is_valid, catalog)
 

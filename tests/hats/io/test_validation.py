@@ -197,6 +197,19 @@ def test_is_valid_catalog_fail_with_missing_partitions(small_sky_source_dir, tmp
         assert not is_valid_catalog(tmp_path / "copy", **flags)
 
 
+def test_is_valid_catalog_warn_missing_metadata(small_sky_source_dir, tmp_path):
+    """Test that if some files are missing an error is raised"""
+    flags = {
+        "strict": True,  # more intensive checks
+        "fail_fast": False,  # check everything, and just return true/false
+        "verbose": False,  # don't bother printing anything.
+    }
+    # copy all files, but the `_metadata`
+    shutil.copytree(small_sky_source_dir, tmp_path / "copy", ignore=lambda _, f: ["_metadata"])
+    with pytest.warns(match="_metadata file does not exist"):
+        assert is_valid_catalog(tmp_path / "copy", **flags)
+
+
 def test_is_valid_catalog_fail_with_missing_partition_info(small_sky_source_dir, tmp_path):
     """Test that if some files are missing an error is raised"""
     flags = {
