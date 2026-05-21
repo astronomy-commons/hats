@@ -267,8 +267,8 @@ def _is_valid_catalog_strict(pointer):
     if not np.array_equal(expected_pixels, parquet_path_pixels):
         logging.warning(
             "Partition pixels differ between partition_info and parquet paths\n"
-            f"Extra: {set(parquet_path_pixels) - set(expected_pixels)} \n"
-            f"Missing: {set(expected_pixels) - set(parquet_path_pixels)}"
+            f"Extra: {sorted(set(parquet_path_pixels) - set(expected_pixels))} \n"
+            f"Missing: {sorted(set(expected_pixels) - set(parquet_path_pixels))}"
         )
         is_valid = False
 
