@@ -141,8 +141,8 @@ def test_valid_collection(small_sky_collection_dir):
     """Check that all of our object catalogs in test data are valid"""
     assert is_valid_collection(small_sky_collection_dir)
     assert is_valid_collection(small_sky_collection_dir, strict=True)
-    assert not is_valid_catalog(small_sky_collection_dir)
-    assert not is_valid_catalog(small_sky_collection_dir, strict=True)
+    assert is_valid_catalog(small_sky_collection_dir)
+    assert is_valid_catalog(small_sky_collection_dir, strict=True)
 
 
 def test_is_valid_collection_fail_with_missing_primary_lax(tmp_path):

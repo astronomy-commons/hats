@@ -22,7 +22,11 @@ from hats.loaders import read_hats
 from hats.pixel_math.healpix_pixel import INVALID_PIXEL
 from hats.pixel_math.healpix_pixel_function import sort_pixels
 
+# Allow f-strings here - this is all very logging-forward functionality.
+# pylint: disable=logging-fstring-interpolation
 
+
+# pylint: disable=unused-argument
 def is_valid_catalog(
     pointer: str | Path | UPath,
     strict: bool = False,
@@ -60,6 +64,11 @@ def is_valid_catalog(
         True if both the properties and partition_info files are valid, False otherwise
     """
     pointer = get_upath(pointer)
+
+    if is_collection_info_valid(pointer):
+        logging.warning("Looking for catalog - found collection.")
+        return is_valid_collection(pointer, strict=strict)
+
     if not strict:
         return _is_catalog_info_valid(pointer) and (
             _is_partition_info_valid(pointer) or _is_metadata_valid(pointer)
@@ -69,6 +78,7 @@ def is_valid_catalog(
     return is_valid
 
 
+# pylint: disable=unused-argument
 def is_valid_collection(
     pointer: str | Path | UPath,
     strict: bool = False,
@@ -80,7 +90,6 @@ def is_valid_collection(
     NB: This method uses logging to issue INFO, WARNING, and ERROR
     messages. Configure your logging environment to appropriately
     channel messages.
-
 
     Parameters
     ----------
