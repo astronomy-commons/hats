@@ -45,17 +45,12 @@ def is_valid_catalog(
         pointer to base catalog directory
     strict : bool
         should we perform additional checking that every optional
-        file exists, and contains valid, consistent information.
+        file exists, and contains valid, consistent information, AS WELL AS
+        all expected data partitions for the catalog's partitions.
         (Default value = False)
     fail_fast : bool
-        if performing strict checks, should we return at the first
-        failure, or continue and find all problems?
-        (Default value = False)
         DEPRECATED - will be removed in a future version.
     verbose : bool
-        if performing strict checks, should we print out counts,
-        progress, and approximate sky coverage?
-        (Default value = True)
         DEPRECATED - will be removed in a future version.
 
     Returns
@@ -97,17 +92,12 @@ def is_valid_collection(
         pointer to base catalog collection directory
     strict : bool
         should we perform additional checking that every optional
-        file exists, and contains valid, consistent information.
+        file exists, and contains valid, consistent information, AS WELL
+        AS strict checking on all sub-catalogs (primary, margin, and index).
         (Default value = False)
     fail_fast : bool
-        if performing strict checks, should we return at the first
-        failure, or continue and find all problems?
-        (Default value = False)
         DEPRECATED - will be removed in a future version.
     verbose : bool
-        if performing strict checks, should we print out counts,
-        progress, and approximate sky coverage?
-        (Default value = True)
         DEPRECATED - will be removed in a future version.
 
     Returns
