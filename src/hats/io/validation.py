@@ -26,7 +26,6 @@ from hats.pixel_math.healpix_pixel_function import sort_pixels
 # pylint: disable=logging-fstring-interpolation
 
 
-# pylint: disable=unused-argument
 def is_valid_catalog(
     pointer: str | Path | UPath,
     strict: bool = False,
@@ -58,6 +57,9 @@ def is_valid_catalog(
     bool
         True if both the properties and partition_info files are valid, False otherwise
     """
+    del fail_fast
+    del verbose
+
     pointer = get_upath(pointer)
 
     if is_collection_info_valid(pointer):
@@ -73,7 +75,6 @@ def is_valid_catalog(
     return is_valid
 
 
-# pylint: disable=unused-argument
 def is_valid_collection(
     pointer: str | Path | UPath,
     strict: bool = False,
@@ -106,6 +107,9 @@ def is_valid_collection(
         True if the collection properties are valid, and all sub-catalogs pass
         validation.
     """
+    del fail_fast
+    del verbose
+
     pointer = get_upath(pointer)
     if not is_collection_info_valid(pointer):
         return False
@@ -127,7 +131,7 @@ def is_valid_collection(
     is_valid &= subcatalog_valid
 
     if sub_catalog and not isinstance(sub_catalog, Catalog):
-        logging.error(
+        logging.warning(
             "Primary catalog is the wrong type (expected Catalog, "
             f"found {sub_catalog.catalog_info.catalog_type})."
         )
@@ -139,7 +143,7 @@ def is_valid_collection(
             is_valid &= subcatalog_valid
 
             if sub_catalog and not isinstance(sub_catalog, MarginCatalog):
-                logging.error(
+                logging.warning(
                     "Margin catalog is the wrong type (expected margin, "
                     f"found {sub_catalog.catalog_info.catalog_type})."
                 )
@@ -151,13 +155,13 @@ def is_valid_collection(
             is_valid &= subcatalog_valid
 
             if sub_catalog and not isinstance(sub_catalog, IndexCatalog):
-                logging.error(
+                logging.warning(
                     f"Index catalog is the wrong type (expected index, "
                     f"found {sub_catalog.catalog_info.catalog_type})."
                 )
                 is_valid = False
             if sub_catalog and sub_catalog.catalog_info.indexing_column != index_field:
-                logging.error(
+                logging.warning(
                     f"Index catalog index columns don't match (expected {index_field}, "
                     f"found {sub_catalog.catalog_info.indexing_column})."
                 )
@@ -175,11 +179,11 @@ def _is_valid_catalog_strict(pointer):
 
     is_valid = True
     if not _is_catalog_info_valid(pointer):
-        logging.error("properties file does not exist or is invalid.")
+        logging.warning("properties file does not exist or is invalid.")
         is_valid = False
 
     if not _is_common_metadata_valid(pointer):
-        logging.error("_common_metadata file does not exist.")
+        logging.warning("_common_metadata file does not exist.")
         is_valid = False
 
     if not is_valid:
@@ -203,7 +207,7 @@ def _is_valid_catalog_strict(pointer):
         return (is_valid, catalog)
 
     if not _is_partition_info_valid(pointer):
-        logging.error("partition_info.csv file does not exist.")
+        logging.warning("partition_info.csv file does not exist.")
         return (False, catalog)
 
     expected_pixels = sort_pixels(catalog.get_healpix_pixels())
@@ -229,14 +233,14 @@ def _is_valid_catalog_strict(pointer):
             hats_fp = UPath(hats_file, protocol=metadata_file.protocol, **metadata_file.storage_options)
             healpix_pixel = get_healpix_from_path(hats_file)
             if healpix_pixel == INVALID_PIXEL:
-                logging.error(f"Could not derive partition pixel from parquet path: {str(hats_fp)}")
+                logging.warning(f"Could not derive partition pixel from parquet path: {str(hats_fp)}")
                 is_valid = False
             parquet_path_pixels.append(healpix_pixel)
 
         parquet_path_pixels = sort_pixels(parquet_path_pixels)
 
         if not np.array_equal(expected_pixels, parquet_path_pixels):
-            logging.error(
+            logging.warning(
                 "Partition pixels differ between _metadata and partition_info\n"
                 f"Extra: {set(parquet_path_pixels) - set(expected_pixels)} \n"
                 f"Missing: {set(expected_pixels) - set(parquet_path_pixels)}"
@@ -254,14 +258,14 @@ def _is_valid_catalog_strict(pointer):
     for pixel_path in pointer.rglob("Norder*/Dir*/Npix*"):
         healpix_pixel = get_healpix_from_path(pixel_path)
         if healpix_pixel == INVALID_PIXEL:
-            logging.error(f"Could not derive partition pixel from parquet path: {str(pixel_path)}")
+            logging.warning(f"Could not derive partition pixel from parquet path: {str(pixel_path)}")
             is_valid = False
         parquet_path_pixels.append(healpix_pixel)
 
     parquet_path_pixels = sort_pixels(parquet_path_pixels)
 
     if not np.array_equal(expected_pixels, parquet_path_pixels):
-        logging.error(
+        logging.warning(
             "Partition pixels differ between partition_info and parquet paths\n"
             f"Extra: {set(parquet_path_pixels) - set(expected_pixels)} \n"
             f"Missing: {set(expected_pixels) - set(parquet_path_pixels)}"
