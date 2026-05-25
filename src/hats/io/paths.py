@@ -9,7 +9,7 @@ from urllib.parse import urlencode
 from fsspec.implementations.http import HTTPFileSystem
 from upath import UPath
 
-from hats.io.file_io.file_pointer import get_upath
+from hats.io.file_io.file_pointer import filter_query_params_for_url, get_upath
 from hats.pixel_math.healpix_pixel import INVALID_PIXEL, HealpixPixel
 
 PARTITION_ORDER = "Norder"
@@ -207,6 +207,7 @@ def pixel_catalog_file(
 
     url_params = ""
     if isinstance(catalog_base_dir.fs, HTTPFileSystem) and query_params:
+        query_params = filter_query_params_for_url(str(catalog_base_dir), query_params)
         url_params = dict_to_query_urlparams(query_params)
 
     return (
