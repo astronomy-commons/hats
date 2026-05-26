@@ -166,6 +166,12 @@ def test_get_healpix_from_path():
     result = paths.get_healpix_from_path("Norder=5/Dir=0/Npix=34.pq")
     assert result == expected
 
+    # Some fsspec backends (notably HTTP) percent-encode the path separators.
+    result = paths.get_healpix_from_path(
+        "http://0.0.0.0:8000/foo/dataset/Norder%3D5/Dir%3D0/Npix%3D34.parquet"
+    )
+    assert result == expected
+
 
 def test_get_healpix_from_path_invalid():
     expected = INVALID_PIXEL
