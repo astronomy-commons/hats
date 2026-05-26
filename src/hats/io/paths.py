@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from urllib.parse import urlencode
+from urllib.parse import urlencode, unquote
 
 from fsspec.implementations.http import HTTPFileSystem
 from upath import UPath
@@ -126,6 +126,8 @@ def get_healpix_from_path(path: str) -> HealpixPixel:
     """
     if not isinstance(path, str):
         path = str(path)
+    # HTTP fsspec backend compatibility (decode %3D etc. before matching)
+    path = unquote(path)
     healpix_path_pattern = re.compile(r".*Norder=(\d*).*Npix=(\d*).*")
     match = healpix_path_pattern.match(path)
     if not match:
