@@ -7,6 +7,7 @@ from urllib.parse import urlparse
 from upath import UPath
 
 BLOCK_SIZE = 32 * 1024
+_VIZCAT_HOST = "vizcat.cds.unistra.fr"
 
 
 def get_upath(path: str | Path | UPath) -> UPath:
@@ -55,10 +56,35 @@ def get_upath_for_protocol(path: str | Path) -> UPath:
         }
 
         parts = urlparse(path)
-        if parts.netloc == "vizcat.cds.unistra.fr":
+        if parts.netloc == _VIZCAT_HOST:
             kwargs["cache_options"] = {"parquet_precache_all_bytes": True}
         upath = UPath(path, **kwargs)
     return upath
+
+
+def filter_query_params_for_url(url: str, query_params: dict) -> dict:
+    """Return a copy of ``query_params`` with any keys unsupported by the target
+    host removed.
+
+    Currently the only special case is VizCaT (``vizcat.cds.unistra.fr``), which
+    does not support server-side ``filters``.
+
+    Parameters
+    ----------
+    url : str
+        Full URL of the catalog resource (used only to inspect the host).
+    query_params : dict
+        Query parameters dict as produced by
+        :func:`~hats.io.paths.dict_to_query_urlparams`.
+
+    Returns
+    -------
+    dict
+        Filtered copy of ``query_params``.
+    """
+    if urlparse(url).netloc == _VIZCAT_HOST:
+        return {k: v for k, v in query_params.items() if k != "filters"}
+    return query_params
 
 
 def directory_has_contents(pointer: str | Path | UPath) -> bool:

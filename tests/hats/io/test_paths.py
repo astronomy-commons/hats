@@ -53,6 +53,18 @@ def test_pixel_catalog_file_w_query_params():
     assert expected == str(result)
 
 
+def test_pixel_catalog_file_vizcat_drops_filters():
+    """Filters are excluded from the query string for vizcat URLs."""
+    query_params = {"columns": ["ID", "RA", "DEC"], "filters": ["r_auto<13"]}
+    result = paths.pixel_catalog_file(
+        "https://vizcat.cds.unistra.fr/hats/gaia_dr3",
+        HealpixPixel(0, 5),
+        query_params=query_params,
+    )
+    assert "columns=" in str(result)
+    assert "filters=" not in str(result)
+
+
 def test_pixel_catalog_file_nonint():
     """Simple case with non-integer inputs"""
     with pytest.raises(AttributeError):
