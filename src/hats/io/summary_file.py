@@ -1,18 +1,23 @@
+import base64
 import importlib.resources
+import io
 from itertools import starmap
 from pathlib import Path
 from typing import Literal
 
 import human_readable
 import jinja2
+import matplotlib.pyplot as plt
 import nested_pandas as npd
 import numpy as np
 import pandas as pd
+from matplotlib.colors import LogNorm
 from upath import UPath
 
 from hats.catalog import CollectionProperties
 from hats.catalog.catalog_collection import CatalogCollection
 from hats.catalog.healpix_dataset.healpix_dataset import HealpixDataset
+from hats.inspection.visualize_catalog import plot_density
 from hats.io import get_common_metadata_pointer, get_partition_info_pointer, templates
 from hats.io.file_io import get_upath, read_parquet_file_to_pandas
 from hats.io.paths import get_data_thumbnail_pointer
@@ -200,6 +205,8 @@ def generate_markdown_collection_summary(
     else:
         cone_code_example = None
 
+    pixel_map_b64, density_map_b64 = _generate_sky_coverage_images(catalog)
+
     return template.render(
         name=name,
         description=description,
@@ -214,6 +221,8 @@ def generate_markdown_collection_summary(
         huggingface_metadata=huggingface_metadata,
         metadata_table=metadata_table,
         column_table=column_table,
+        pixel_map_b64=pixel_map_b64,
+        density_map_b64=density_map_b64,
     )
 
 
@@ -481,3 +490,27 @@ def _get_example_row(catalog: HealpixDataset) -> npd.NestedFrame | None:
 
     idx = rng.integers(len(example_nf))
     return example_nf.iloc[idx : idx + 1]
+
+
+def _generate_sky_coverage_images(catalog):
+    pixel_map_b64 = None
+    density_map_b64 = None
+    try:
+        fig, _ = catalog.plot_pixels()
+        pixel_map_b64 = _fig_to_webp_base64(fig)
+    except (ImportError, ValueError):
+        pass
+    try:
+        fig, _ = plot_density(catalog, edgecolors="face", norm=LogNorm())
+        density_map_b64 = _fig_to_webp_base64(fig)
+    except (ImportError, ValueError):
+        pass
+    return pixel_map_b64, density_map_b64
+
+
+def _fig_to_webp_base64(fig) -> str:
+    buffer = io.BytesIO()
+    fig.savefig(buffer, format="webp")
+    plt.close(fig)
+    buffer.seek(0)
+    return base64.b64encode(buffer.read()).decode("ascii")
