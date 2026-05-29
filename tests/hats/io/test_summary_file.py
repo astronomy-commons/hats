@@ -527,6 +527,7 @@ def test_gen_md_column_table_nested_catalog(small_sky_nested_dir):
 
 
 def test_write_collection_summary_file_contains_images(tmp_path, small_sky_collection_dir):
+    pytest.importorskip("matplotlib.pyplot")
 
     collection_base_dir = tmp_path / "collection"
     shutil.copytree(small_sky_collection_dir, collection_base_dir)
