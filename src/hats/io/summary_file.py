@@ -7,11 +7,9 @@ from typing import Literal
 
 import human_readable
 import jinja2
-import matplotlib.pyplot as plt
 import nested_pandas as npd
 import numpy as np
 import pandas as pd
-from matplotlib.colors import LogNorm
 from upath import UPath
 
 from hats.catalog import CollectionProperties
@@ -205,7 +203,11 @@ def generate_markdown_collection_summary(
     else:
         cone_code_example = None
 
-    pixel_map_b64, density_map_b64 = _generate_sky_coverage_images(catalog)
+    pixel_map_b64, density_map_b64 = None, None
+    try:
+        pixel_map_b64, density_map_b64 = _generate_sky_coverage_images(catalog)
+    except ImportError:
+        pass
 
     return template.render(
         name=name,
@@ -492,23 +494,21 @@ def _get_example_row(catalog: HealpixDataset) -> npd.NestedFrame | None:
     return example_nf.iloc[idx : idx + 1]
 
 
+# pylint: disable=import-outside-toplevel,import-error
 def _generate_sky_coverage_images(catalog):
-    pixel_map_b64 = None
-    density_map_b64 = None
-    try:
-        fig, _ = catalog.plot_pixels()
-        pixel_map_b64 = _fig_to_webp_base64(fig)
-    except (ImportError, ValueError):
-        pass
-    try:
-        fig, _ = plot_density(catalog, edgecolors="face", norm=LogNorm())
-        density_map_b64 = _fig_to_webp_base64(fig)
-    except (ImportError, ValueError):
-        pass
+    from matplotlib.colors import LogNorm
+
+    fig, _ = catalog.plot_pixels()
+    pixel_map_b64 = _fig_to_webp_base64(fig)
+    fig, _ = plot_density(catalog, edgecolors="face", norm=LogNorm())
+    density_map_b64 = _fig_to_webp_base64(fig)
     return pixel_map_b64, density_map_b64
 
 
+# pylint: disable=import-outside-toplevel,import-error
 def _fig_to_webp_base64(fig) -> str:
+    import matplotlib.pyplot as plt
+
     buffer = io.BytesIO()
     fig.savefig(buffer, format="webp")
     plt.close(fig)
