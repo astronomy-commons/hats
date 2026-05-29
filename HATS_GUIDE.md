@@ -28,8 +28,129 @@ The HATS Python library provides:
 - MOC (Multi-Order Coverage) map support
 - Plotting utilities for visualizing sky maps
 
-[LSDB](https://github.com/astronomy-commons/lsdb) operates on top of HATS: every `lsdb.Catalog` holds a `hc_structure` attribute that is
+[LSDB](https://github.com/astronomy-commons/lsdb) operates on top of HATS - every `lsdb.Catalog` holds a `hc_structure` attribute that is
 a `hats.catalog.Catalog` instance.
+
+## Design goals and north stars
+
+**CRITICAL: Always keep these design principles in mind when making changes to HATS.**
+
+**Storage format correctness is paramount.** HATS defines the on-disk layout that LSDB
+and downstream tools rely on. The partition layout, metadata conventions, and path structure
+must be kept consistent. Any format change must be backward-compatible or explicitly versioned.
+
+**HEALPix NESTED ordering is the backbone.** All partition identification, MOC operations,
+and pixel-math utilities must be consistent with the HEALPix NESTED scheme. Never mix
+RING and NESTED ordering silently.
+
+**Metadata, not computation.** HATS classes describe what is on disk - they do not load
+row data or perform analytics. Keep catalog classes lightweight: they hold structural
+metadata and provide path resolution. Row-level computation belongs in LSDB.
+
+**LSDB compatibility is the primary consumer.** LSDB depends on HATS classes extensively.
+API changes cascade to LSDB and downstream users. Maintain backward compatibility; if
+breaking changes are necessary, be explicit and loud about it.
+
+**Slim API surface.** Do not add new public API methods unless asked. Prefer composing
+existing primitives. If you think a new method is needed, propose it first and get
+agreement on the design before implementing.
+
+**Backwards compatibility.** Maintain backward compatibility where possible! If breaking
+changes are necessary, be loud about it.
+
+**Document current behavior.** When migrating away from old patterns, use `@deprecated`
+with a helpful message rather than silently removing behavior.
+
+**Docstrings and type safety.** All public methods must have complete NumPy-style
+docstrings and accurate type annotations.
+
+## Coding advice
+
+- **Do not push or open PRs** unless explicitly asked.
+- When changing code, ensure that the current assumptions of the change appear to have always 
+been true. 
+- Leave code better than you find it over keeping old assumptions around.
+
+## Development setup
+
+> HATS and LSDB are typically developed in the same environment. **Prefer installing HATS into an existing
+> LSDB environment** rather than creating a new one. Only create a fresh environment if you don't have one.
+
+- **Python ≥ 3.11** (see `pyproject.toml` `requires-python`)
+- If you need a new env: `conda create -n hats python=3.11 && conda activate hats`
+- Clone and install: `git clone https://github.com/astronomy-commons/hats.git && cd hats`
+- Run the setup script: `echo 'y' | bash .setup_dev.sh`
+  - Installs the package in editable mode with dev and full extras
+  - Installs pre-commit hooks
+- Alternative manual install: `pip install -e .'[dev]' && pre-commit install`
+- For optional plotting support: `pip install -e '.[full]'`
+- For bleeding-edge dependency versions: `pip install -r requirements.txt`
+- For documentation dependencies: `pip install -r docs/requirements.txt`
+
+## Common commands
+
+```bash
+# Run the full test suite (includes doctests in src/ and docs/)
+python -m pytest
+
+# Run only unit tests (skip doctest collection from docs/)
+python -m pytest tests/
+
+# Run with coverage reporting
+python -m pytest --cov=hats --cov-report=xml
+
+# Lint
+pylint src/ --rcfile=./src/.pylintrc
+pylint tests/ --rcfile=./tests/.pylintrc
+
+# Format
+black src/ tests/ && isort src/ tests/
+
+# Type check
+mypy src/ tests/ --ignore-missing-imports
+
+# Pre-commit (runs black, isort, pylint, mypy ...)
+pre-commit run --all-files
+
+# Build docs. Requires `docs/requirements.txt` dependencies installed.
+cd docs && make html
+
+# Run ASV benchmarks
+cd benchmarks && asv run --quick
+```
+
+## Repository structure
+
+```
+src/hats/               Main package
+src/hats/catalog/       Catalog class hierarchy (Catalog, MarginCatalog, MapCatalog, AssociationCatalog, IndexCatalog)
+src/hats/pixel_math/    HEALPix pixel math and spatial index utilities
+src/hats/pixel_tree/    PixelTree, MOC filtering, and pixel alignment
+src/hats/io/            File I/O, path helpers, and metadata utilities
+src/hats/inspection/    Plotting and visualization utilities
+src/hats/loaders/       Catalog loading from disk or object store
+src/hats/search/        Region search utilities (cone, box, polygon, MOC)
+tests/hats/             Test suite (mirrors src/ layout)
+tests/data/             Small HATS-formatted test catalogs
+benchmarks/             ASV performance benchmarks
+docs/                   Sphinx documentation sources
+docs/notebooks/         Jupyter notebook tutorials
+```
+
+Key files:
+
+| File                                                              | Purpose                                                        |
+|-------------------------------------------------------------------|----------------------------------------------------------------|
+| `pyproject.toml`                                                  | Project metadata, dependencies, pytest/black/mypy config       |
+| `src/hats/__init__.py`                                            | Public API - everything exported here is stable public surface |
+| `src/hats/catalog/catalog.py`                                     | Main `Catalog` class                                           |
+| `src/hats/catalog/healpix_dataset/healpix_dataset.py`             | Base `HealpixDataset` class, shared by all catalog types       |
+| `src/hats/catalog/dataset/table_properties.py`                    | `TableProperties` - typed catalog metadata from `hats.properties` |
+| `src/hats/catalog/dataset/collection_properties.py`               | `CollectionProperties` - metadata for catalog collections      |
+| `src/hats/pixel_tree/pixel_tree.py`                               | `PixelTree` - which pixels exist and at what order             |
+| `src/hats/pixel_math/healpix_pixel.py`                            | `HealpixPixel` - single partition identifier `(order, pixel)`  |
+| `src/hats/io/paths.py`                                            | Path helpers for constructing on-disk file paths               |
+| `src/hats/loaders/read_hats.py`                                   | `read_hats` entry point for loading catalogs from disk         |
 
 ## Core concepts
 
@@ -37,41 +158,32 @@ a `hats.catalog.Catalog` instance.
 
 HATS partitions the sky using the
 [HEALPix](https://healpix.sourceforge.io/) pixelisation scheme in **NESTED**
-ordering. At order `k`, the sky is divided into `12 × 4^k` equal-area pixels.
-Higher orders mean finer resolution and more (smaller) pixels.
+ordering:
+- At order `k`, the sky is divided into `12 × 4^k` equal-area pixels.
+- Each pixel at order `k` has exactly 4 children at order `k+1`.
+- Higher orders mean finer resolution and more (smaller) pixels.
 
-Each pixel at order `k` has exactly 4 children at order `k+1`, forming a
-hierarchy. HATS exploits this to store catalogs at mixed orders: dense regions
-use high-order (small) pixels and sparse regions use low-order (large) pixels,
-keeping each Parquet file at a manageable row count.
+HATS catalogs are multi-order:
+- Dense regions use high-order (small) pixels
+and sparse regions use low-order (large) pixels. 
+- Pixels that are balanced in size.
 
-A single partition is identified by the pair `(Norder, Npix)`:
-- `Norder` - HEALPix order (integer, typically 0–10 for catalog partitions)
-- `Npix` - pixel number in NESTED ordering at that order
-
-The high-precision sky position of every row is stored separately in a
-`_healpix_29` column (order-29 NESTED pixel), which LSDB uses for spatial
-indexing independent of the partition order.
+Each partition is identified by a HEALPix `(Norder, Npix)` pair:
+- `Norder` - HEALPix order (integer)
+- `Npix` - pixel number in NESTED ordering at that order (integer)
 
 ### Catalog types
 
 | Type | `dataproduct_type` | Purpose |
 |---|---|---|
 | Object | `object` | Standard point-source catalog |
+| Source | `source` | Time-domain source catalog |
 | Margin | `margin` | Boundary objects duplicated from adjacent pixels |
 | Index | `index` | Secondary index on a non-spatial column |
+| Map | `map` | Continuous sky map (non-point-source data) |
 | Association | `association` | Cross-catalog join table |
 
-### Catalog collections
-
-A collection groups a primary catalog with its associated margin and index
-catalogs under a single root directory. A `collection.properties` file at the
-root lists the members. When LSDB opens a collection with `open_catalog()`, the
-default margin is automatically loaded and attached as `catalog.margin`.
-
 ## On-disk directory layout
-
-### Object catalog
 
 ```
 my_catalog/
@@ -79,7 +191,7 @@ my_catalog/
 ├── partition_info.csv       # One row per partition: Norder,Npix
 ├── skymap.fits              # Counts per pixel as a FITS image
 └── dataset/
-    ├── _metadata            # Parquet consolidated metadata
+    ├── _metadata            # Parquet metadata with statistics
     ├── _common_metadata     # Parquet schema metadata
     ├── Norder=1/
     │   └── Dir=0/
@@ -90,32 +202,7 @@ my_catalog/
             └── Npix=176.parquet
 ```
 
-The `Dir=` level is a HIVE-partitioning optimisation: files are grouped into
-subdirectories of at most a fixed number of pixels to avoid filesystem
-limitations with very large catalogs. `Dir` is computed as
-`Npix // pixels_per_dir`.
-
-### Margin catalog
-
-Same layout as an object catalog, with two differences in `hats.properties`:
-
-```
-dataproduct_type=margin
-hats_margin_threshold=3600.0      # margin radius in arcseconds
-hats_primary_table_url=../my_catalog
-```
-
-### Catalog collection
-
-```
-my_collection/
-├── collection.properties    # Lists member catalog paths
-├── my_catalog/              # Primary object catalog (full layout above)
-├── my_catalog_margin/       # Margin catalog (full layout above)
-└── my_catalog_index/        # Index catalog (optional)
-```
-
-## `hats.properties` file
+### `hats.properties` file
 
 The primary metadata file uses a simple `key=value` format. Key fields:
 
@@ -135,7 +222,7 @@ hats_version=v1.0
 hats_creation_date=2025-10-06T14:20UTC
 ```
 
-## `partition_info.csv`
+### `partition_info.csv`
 
 Lists every partition present in the catalog, one per line:
 
@@ -150,7 +237,41 @@ Norder,Npix
 This is the authoritative list of which Parquet files should exist under
 `dataset/`. LSDB reads this at open time to build the Dask task graph.
 
-## Key HATS classes
+### Margin catalog
+
+Same layout as an object catalog, with two differences in `hats.properties`:
+
+```
+dataproduct_type=margin
+hats_margin_threshold=3600.0      # margin radius in arcseconds
+hats_primary_table_url=../my_catalog
+```
+
+### Catalog collection
+
+A collection groups a primary catalog with its associated margin and index catalogs under a single root directory. A `collection.properties` file at the root lists the members. When LSDB opens a collection with `open_catalog()`, the default margin is automatically loaded and attached as catalog.margin.
+
+```
+my_collection/
+├── collection.properties    # Lists member catalog paths
+├── my_catalog/              # Primary object catalog (full layout above)
+├── my_catalog_margin/       # Margin catalog (full layout above)
+└── my_catalog_index/        # Index catalog (optional)
+```
+
+## Architecture: Catalog class hierarchy
+
+All catalog types inherit from `HealpixDataset`. The class hierarchy is:
+
+```
+Dataset
+└── HealpixDataset
+    ├── Catalog            (object / source)
+    ├── MarginCatalog      (margin)
+    ├── MapCatalog         (map)
+    ├── AssociationCatalog (association)
+    └── IndexCatalog       (index)
+```
 
 ### `hats.catalog.Catalog` - the `hc_structure` object
 
@@ -199,9 +320,14 @@ info.margin_threshold    # float - radius in arcseconds
 info.indexing_column     # str  - column being indexed
 
 # Association-catalog-specific
-info.primary_column           # str
-info.join_column              # str
-info.assn_max_separation      # float - arcseconds
+info.primary_catalog             # str  - path to the primary (left) catalog
+info.primary_column              # str  - ID column in the primary catalog
+info.primary_column_association  # str  - matching column in the association table
+info.join_catalog                # str  - path to the join (right) catalog
+info.join_column                 # str  - ID column in the join catalog
+info.join_column_association     # str  - matching column in the association table
+info.assn_max_separation         # float - maximum match separation in arcseconds
+info.contains_leaf_files         # bool  - whether leaf parquet files are present
 ```
 
 ### `hats.pixel_tree.PixelTree` - the pixel tree
@@ -215,13 +341,11 @@ tree = cat.hc_structure.pixel_tree
 tree.get_healpix_pixels()   # list[HealpixPixel] - all partitions
 tree.get_max_depth()        # int - highest order in the catalog
 tree.to_moc()               # mocpy.MOC - sky coverage
+tree.to_depth29_ranges()    # np.ndarray of shape (N, 2) - intervals at order 29
+HealpixPixel(1, 44) in tree # bool - O(log N) containment check
 ```
 
-The tree is hierarchical: a pixel at order `k` implicitly covers its 4 children
-at order `k+1`. Mixed-order catalogs (where different regions are stored at
-different orders) are represented naturally.
-
-### `hats.pixel_math.HealpixPixel` - a single partition
+### `hats.pixel_math.HealpixPixel` - a single HEALPix pixel identifier
 
 ```python
 from hats.pixel_math import HealpixPixel
@@ -230,9 +354,6 @@ pix = HealpixPixel(order=1, pixel=44)
 
 pix.order    # int - 1
 pix.pixel    # int - 44
-
-# Pixel is identified by (order, pixel) - used as dict keys in LSDB's
-# _ddf_pixel_map to map a partition to its Dask partition index.
 ```
 
 ## Margin catalogs and why they matter
@@ -274,27 +395,122 @@ paths.get_catalog_info_pointer(catalog_base_path)
 # → catalog_base_path/hats.properties
 ```
 
-## Inspecting a catalog's structure in practice
+## Typical HATS workflow
+
+A typical HATS workflow (outside of LSDB) involves:
+
+1. **Loading a catalog structure** from disk or object store.
+2. **Exploring metadata** to understand the catalog shape, coverage, and schema.
+3. **Filtering by pixel or region** to get a subset of partitions.
+4. **Constructing file paths** for downstream readers using path utilities.
+
+### Load a catalog
 
 ```python
-import lsdb
+from hats.loaders import read_hats
 
-cat = lsdb.open_catalog("/path/to/catalog")
+# Load from local disk or object store (returns CatalogCollection or Dataset)
+cat = read_hats("/path/to/catalog")
 
+# When loading a collection, margin and index catalogs are included
+cat = read_hats("/path/to/collection")
+```
+
+### Explore metadata
+
+```python
 # Partition layout
-for pix in cat.hc_structure.get_healpix_pixels():
-    print(pix.order, pix.pixel)
+print(cat.get_healpix_pixels())
 
 # Maximum partition order
-max_order = cat.hc_structure.pixel_tree.get_max_depth()
+max_order = cat.pixel_tree.get_max_depth()
 
 # Metadata
-info = cat.hc_structure.catalog_info
+info = cat.catalog_info
 print(info.catalog_name, info.total_rows, info.ra_column, info.dec_column)
 
 # Arrow schema (column names + types, no data loaded)
-print(cat.hc_structure.schema)
+print(cat.schema)
 
-# Sky coverage as a MOC
-moc = cat.hc_structure.moc
+# Sky coverage fraction
+print(info.moc_sky_fraction)
 ```
+
+### Visualize coverage
+
+```python
+import hats.inspection
+
+# Plot HEALPix partition map
+hats.inspection.plot_pixels(cat)
+
+# Plot MOC sky coverage
+hats.inspection.plot_moc(cat.moc)
+
+# Plot density map
+hats.inspection.plot_density(cat)
+```
+
+### Filter by pixel or region
+
+```python
+from hats.pixel_math import HealpixPixel
+
+# Restrict to a specific list of pixels
+pixels = [HealpixPixel(order=1, pixel=44), HealpixPixel(order=1, pixel=45)]
+filtered = cat.filter_from_pixel_list(pixels)
+
+# Filter using a MOC
+from mocpy import MOC
+moc = MOC.from_fits("/path/to/coverage.fits")
+filtered = cat.filter_by_moc(moc)
+```
+
+### Construct partition file paths
+
+```python
+from hats.io import paths
+from hats.pixel_math import HealpixPixel
+
+for pixel in cat.get_healpix_pixels():
+    path = paths.pixel_catalog_file(cat.catalog_path, pixel)
+    # pass `path` to pyarrow.parquet.read_table or similar
+```
+
+## Testing Conventions
+
+- **File naming:** `tests/hats/test_<name>.py`, mirroring the `src/hats/` layout.
+- **Fixtures:** defined in `tests/conftest.py`. Use existing fixtures; do not
+  duplicate test data. All fixtures are backed by tiny HATS catalogs in `tests/data/`.
+- Default test run: `python -m pytest`
+- **Doctest enforcement:** `pytest` is configured with `--doctest-modules` and
+  `--doctest-glob=*.rst`. All public docstring examples must be runnable and correct.
+- **No network in unit tests.** Test data lives in `tests/data/`; do not fetch from
+  the internet in unit tests.
+
+## Key Conventions
+
+- **Line length:** 110 characters (`black` and `isort` both enforce this).
+- **Import style:** `isort` with `profile = "black"`. Do not hand-tune import order.
+- **Docstrings:** NumPy style. All public functions and methods require a complete
+  docstring including `Parameters` and `Returns`. Try to also include an `Examples` block.
+- **Deprecation:** use `@deprecated(version="X.Y", reason="...")` from the
+  `deprecated` package. Never silently remove behavior.
+- **`_version.py` is auto-generated** by `setuptools_scm` from git tags. Never
+  edit it by hand; it is excluded from coverage and linting.
+- **All file paths use `UPath`** from `universal-pathlib`. Do not use raw `str` paths
+  in internal code; wrap with `UPath` to support both local and remote (S3, GCS) stores.
+- **`CatalogType` enum** is the canonical source for catalog type strings. Do not
+  compare `catalog_type` against raw string literals; use `CatalogType.OBJECT` etc.
+
+## CI/CD and GitHub Workflows
+
+- **`testing-and-coverage.yml`** - runs on every PR and push to `main`; matrix over
+  Python 3.11–3.14; uploads coverage to Codecov.
+- **`smoke-test.yml`** - daily at 06:45 UTC; tests both `[dev]` and `[full]` extras
+  across Python 3.11–3.14.
+- **`testing-windows.yml`** - Windows-specific test matrix.
+- **`asv-main.yml` / `asv-pr.yml` / `asv-nightly.yml`** - ASV performance benchmarks;
+  PR results are posted back to the PR.
+- **`publish-to-pypi.yml`** - triggered on tagged releases.
+- **`pre-commit-ci.yml`** - automated pre-commit hook checks for format/lint/mypy.
