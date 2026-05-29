@@ -4,6 +4,7 @@ jupytext
 matplotlib
 myst_parser
 nbconvert
+myst-parser
 nbsphinx
 numpydoc
 sphinx
