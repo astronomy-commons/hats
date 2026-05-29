@@ -15,7 +15,6 @@ from upath import UPath
 from hats.catalog import CollectionProperties
 from hats.catalog.catalog_collection import CatalogCollection
 from hats.catalog.healpix_dataset.healpix_dataset import HealpixDataset
-from hats.inspection.visualize_catalog import plot_density
 from hats.io import get_common_metadata_pointer, get_partition_info_pointer, templates
 from hats.io.file_io import get_upath, read_parquet_file_to_pandas
 from hats.io.paths import get_data_thumbnail_pointer
@@ -496,21 +495,26 @@ def _get_example_row(catalog: HealpixDataset) -> npd.NestedFrame | None:
 
 # pylint: disable=import-outside-toplevel,import-error
 def _generate_sky_coverage_images(catalog):
+    import matplotlib.figure
     from matplotlib.colors import LogNorm
 
-    fig, _ = catalog.plot_pixels()
+    from hats.inspection.visualize_catalog import plot_density
+
+    pixel_map_b64 = None
+    density_map_b64 = None
+
+    fig = matplotlib.figure.Figure(figsize=(6, 3))
+    catalog.plot_pixels(fig=fig)
     pixel_map_b64 = _fig_to_webp_base64(fig)
-    fig, _ = plot_density(catalog, edgecolors="face", norm=LogNorm())
+    fig = matplotlib.figure.Figure(figsize=(6, 3))
+    plot_density(catalog, norm=LogNorm(), fig=fig)
     density_map_b64 = _fig_to_webp_base64(fig)
     return pixel_map_b64, density_map_b64
 
 
 # pylint: disable=import-outside-toplevel,import-error
 def _fig_to_webp_base64(fig) -> str:
-    import matplotlib.pyplot as plt
 
     buffer = io.BytesIO()
     fig.savefig(buffer, format="webp")
-    plt.close(fig)
-    buffer.seek(0)
-    return base64.b64encode(buffer.read()).decode("ascii")
+    return base64.b64encode(buffer.getvalue()).decode("ascii")
