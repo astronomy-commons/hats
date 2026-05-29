@@ -345,6 +345,48 @@ tree.to_depth29_ranges()    # np.ndarray of shape (N, 2) - intervals at order 29
 HealpixPixel(1, 44) in tree # bool - O(log N) containment check
 ```
 
+#### How the pixel tree works
+
+The pixel tree stores each healpix pixel as a range of order-29 pixels. For example, a pixel at order 1 with 
+Npix=44 corresponds to an interval of 4^28 pixels at order 29. The pixel tree is an ordered list of these
+intervals. To check if a pixel is in the tree, we convert it to its order-29 interval and do a binary search 
+to see if it matches any of the stored intervals.
+
+#### Why use order-29 intervals?
+
+Using order-29 intervals allows us to represent any pixel at any order as a contiguous range of pixels at 
+a fixed high order. This simplifies the logic since we only need to deal with one fixed order internally.
+Order 29 is chosen because it is the highest order that can fit within a 64-bit integer, allowing us to use
+efficient integer arithmetic for pixel math and containment checks.
+
+#### PixelAlignment
+
+One of the most important uses of the pixel tree is 'aligning' multiple catalogs to each other, figuring
+out which pixels overlap between them, and creating a mapping of which pixels in one catalog correspond to 
+which pixels in the other. This is important for crossmatching and other operations that need to combine data 
+from multiple catalogs.
+
+To do this, we use the `hats.pixel_tree.pixel_alignment.align_trees` method which takes two pixel trees,
+iterates through both of their pixel interval lists in order, checks for each pair of intervals whether they
+overlap, and if so computes the intersection of those intervals and converts it back to the corresponding
+pixels at the original orders, and iterating to the next intervals in one or both trees depending on which
+one has the smaller next interval. This is an efficient O(N) operation where N is the total number of pixels 
+in both trees.
+
+The result is a mapping of which pixels in one catalog correspond to which pixels in the other. The other
+result from aligning pixel trees is an output aligned pixel tree which is the union of the two input trees,
+covering the intersection of the two catalogs, with pixels split as needed to ensure that any pixel in the
+aligned tree is fully contained in a single pixel in each of the input trees. This means that the the aligned
+tree can be the output structure for a crossmatched catalog, ensuring that each partition in the output is 
+roughly no bigger than a single partition in either input catalog, which keeps file sizes manageable.
+
+The pixel alignment also supports specifying a 'how' parameter which controls how to handle pixels that are 
+present in one tree but not the other. The default is 'inner' which only includes pixels that are present 
+in both trees. 'left' includes all pixels from the first tree, with empty partitions for pixels not in the 
+second tree. 'right' includes all pixels from the second tree, with empty partitions for pixels not in the 
+first tree. 'outer' includes all pixels from both trees, with empty partitions for pixels not in the other 
+tree.
+
 ### `hats.pixel_math.HealpixPixel` - a single HEALPix pixel identifier
 
 ```python
