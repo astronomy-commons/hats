@@ -535,5 +535,5 @@ def test_write_collection_summary_file_contains_images(tmp_path, small_sky_colle
     output_path = write_collection_summary_file(collection_base_dir, fmt="markdown")
 
     content = output_path.read_text()
-    assert "![Pixel map](data:image/webp;base64," in content
-    assert "![Density map](data:image/webp;base64," in content
+    assert "![Pixel Skymap](data:image/webp;base64," in content
+    assert "![Density Skymap](data:image/webp;base64," in content

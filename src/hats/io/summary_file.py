@@ -514,7 +514,9 @@ def _generate_sky_coverage_images(catalog):
 
 # pylint: disable=import-outside-toplevel,import-error
 def _fig_to_webp_base64(fig) -> str:
+    import matplotlib.pyplot as plt
 
     buffer = io.BytesIO()
     fig.savefig(buffer, format="webp")
+    plt.close(fig)
     return base64.b64encode(buffer.getvalue()).decode("ascii")
