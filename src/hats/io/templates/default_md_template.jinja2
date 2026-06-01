@@ -124,3 +124,10 @@ The list of default columns is available in the [`hats.properties`]({{uris["prim
 {% endif %}
 
 {% endif %}
+
+{% if pixel_map_b64 or density_map_b64 %}
+## Sky coverage 
+
+{% if pixel_map_b64 %}![Pixel Skymap](data:image/webp;base64,{{pixel_map_b64}}){%endif%}
+{% if density_map_b64 %}![Density Skymap](data:image/webp;base64,{{density_map_b64}}){%endif%}
+{% endif %}

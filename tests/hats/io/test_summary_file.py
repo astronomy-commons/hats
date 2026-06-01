@@ -524,3 +524,16 @@ def test_gen_md_column_table_nested_catalog(small_sky_nested_dir):
     rendered = template.render(column_table=column_table)
     assert "Nested?" in rendered
     assert "lc" in rendered
+
+
+def test_write_collection_summary_file_contains_images(tmp_path, small_sky_collection_dir):
+    pytest.importorskip("matplotlib.pyplot")
+
+    collection_base_dir = tmp_path / "collection"
+    shutil.copytree(small_sky_collection_dir, collection_base_dir)
+
+    output_path = write_collection_summary_file(collection_base_dir, fmt="markdown")
+
+    content = output_path.read_text()
+    assert "![Pixel Skymap](data:image/webp;base64," in content
+    assert "![Density Skymap](data:image/webp;base64," in content
