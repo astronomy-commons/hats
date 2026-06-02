@@ -60,8 +60,12 @@ def _get_package_info(package_name):
         if installed_version is None:
             return branch
         return f"{installed_version} ({branch})"
-    except subprocess.CalledProcessError:
+    except Exception:  # pylint: disable=broad-exception-caught # pragma: no cover
+        pass
+
+    if installed_version is None:
         return "N/A"
+    return installed_version
 
 
 def print_versions(package_name, extra_deps):
