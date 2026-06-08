@@ -75,7 +75,9 @@ docstrings and accurate type annotations.
 > LSDB environment** rather than creating a new one. Only create a fresh environment if you need.
 
 - **Python ≥ 3.11** (see `pyproject.toml` `requires-python`)
-- If you need a new env: `conda create -n hats python=3.11 && conda activate hats`
+- If you need a new env
+  - Using conda: `conda create -n hats python=3.11 && conda activate hats`
+  - Using venv: `python -m venv .venv && source .venv/bin/activate`
 - Clone and install: `git clone https://github.com/astronomy-commons/hats.git && cd hats`
 - Run the setup script: `echo 'y' | bash .setup_dev.sh`
   - Installs the package in editable mode with dev and full extras
@@ -187,13 +189,13 @@ Helpers in `spatial_index.py`:
 
 ### Catalog types
 
-| Type            | `dataproduct_type` | Purpose                                                  |
-|-----------------|--------------------|----------------------------------------------------------|
-| Object / Source | `object` / `source` | Standard point-source catalog                            |
-| Margin          | `margin`           | Boundary objects duplicated from adjacent pixels         |
-| Index           | `index`            | Secondary index on a non-spatial column (e.g. object ID) |
-| Map             | `map`              | Continuous sky map (non-point-source data)               |
-| Association     | `association`      | Cross-catalog join table (with extra columns)            |
+| Type            | `dataproduct_type`    | Purpose                                                  |
+|-----------------|-----------------------|----------------------------------------------------------|
+| Object / Source | `object` / `source`   | Standard point-source catalog                            |
+| Margin          | `margin`              | Boundary objects duplicated from adjacent pixels         |
+| Index           | `index`               | Secondary index on a non-spatial column (e.g. object ID) |
+| Map             | `map`                 | Continuous sky map (non-point-source data)               |
+| Association     | `association`         | Cross-catalog join table (with extra columns)            |
 
 ## On-disk directory layout
 
