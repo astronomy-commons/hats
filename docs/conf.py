@@ -31,6 +31,7 @@ extensions = [
     "numpydoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.autodoc",
+    "myst_parser",
 ]
 
 extensions.append("autoapi.extension")
