@@ -2,7 +2,7 @@
 
 **Last updated:** 2026-06-08 | **HATS version:** v0.9.2
 
-Canonical reference for AI coding assistants working on HATS (Hierarchical Adaptive Tiling Scheme). 
+Canonical reference for AI coding assistants working on HATS (Hierarchical Adaptive Tiling Scheme).
 Tool-specific files (`CLAUDE.md`, `.github/copilot-instructions.md`) contain only tool-specific overrides
 and reference this file for shared guidance. **Edit this file** for changes that should
 apply to all AI assistants; edit tool-specific files only for tool-specific behavior.
@@ -16,10 +16,9 @@ apply to all AI assistants; edit tool-specific files only for tool-specific beha
 
 ## What is HATS
 
-HATS is a storage format and Python library for partitioning large
-astronomical catalogs on the celestial sphere. It divides the sky into HEALPix pixels and stores each pixel's data as a separate Parquet file,
-enabling efficient spatial queries and distributed computation without loading
-the full dataset.
+HATS is a storage format and Python library for partitioning large astronomical catalogs on the celestial sphere.
+It divides the sky into HEALPix pixels and stores each pixel's data as a separate Parquet file, enabling
+efficient spatial queries and distributed computation without loading the full dataset.
 
 The HATS Python library provides:
 - Classes for reading and representing catalog structure and metadata
@@ -28,8 +27,8 @@ The HATS Python library provides:
 - MOC (Multi-Order Coverage) map support
 - Plotting utilities for visualizing sky maps
 
-[LSDB](https://github.com/astronomy-commons/lsdb) operates on top of HATS - every `lsdb.Catalog` holds a `hc_structure` attribute that is
-a `hats.catalog.Catalog` instance.
+[LSDB](https://github.com/astronomy-commons/lsdb) operates on top of HATS — every `lsdb.Catalog` holds a `hc_structure` attribute
+that is a `hats.catalog.Catalog` instance.
 
 ## Design goals and north stars
 
@@ -40,8 +39,8 @@ and downstream tools rely on. The partition layout, metadata conventions, and pa
 must be kept consistent. Any format change must be backward-compatible or explicitly versioned.
 
 **HEALPix NESTED ordering is the backbone.** All partition identification, MOC operations,
-and pixel-math utilities must be consistent with the HEALPix NESTED scheme. Never mix
-RING and NESTED ordering silently. Use the `cdshealpix` and `mocpy` Python libraries for core HEALPix math operations.
+and pixel-math utilities must be consistent with the HEALPix NESTED scheme. Never mix RING and NESTED
+ordering silently. Use the `cdshealpix` and `mocpy` Python libraries for core HEALPix math operations.
 
 **Metadata, not computation.** HATS classes describe what is on disk - they do not load
 row data or perform analytics. Keep catalog classes lightweight: they hold structural
@@ -67,8 +66,7 @@ docstrings and accurate type annotations.
 ## Coding advice
 
 - **Do not push or open PRs** unless explicitly asked.
-- When changing code, ensure that the current assumptions of the change appear to have always 
-been true. 
+- When changing code, ensure that the current assumptions of the change appear to have always been true.
 - Leave code better than you find it over keeping old assumptions around.
 
 ## Development setup
@@ -150,27 +148,42 @@ Key files:
 | `src/hats/catalog/dataset/collection_properties.py`               | `CollectionProperties` - catalog collection metadata from `collection.properties` |
 | `src/hats/pixel_tree/pixel_tree.py`                               | `PixelTree` - which pixels exist and at what order                                |
 | `src/hats/pixel_math/healpix_pixel.py`                            | `HealpixPixel` - pixel identifier `(order, pixel)`                                |
+| `src/hats/pixel_tree/pixel_alignment.py`                          | `align_trees` — aligns two pixel trees for crossmatch and join operations         |
 | `src/hats/io/paths.py`                                            | Path helpers for constructing on-disk file paths                                  |
 
 ## Core concepts
 
 ### HEALPix partitioning
 
-HATS partitions the sky using the
-[HEALPix](https://healpix.sourceforge.io/) pixelisation scheme in **NESTED**
-ordering:
+HATS partitions the sky using the [HEALPix](https://healpix.sourceforge.io/) pixelisation scheme in **NESTED** ordering:
 - At order `k`, the sky is divided into `12 × 4^k` equal-area pixels.
 - Each pixel at order `k` has exactly 4 children at order `k+1`.
 - Higher orders mean finer resolution and more (smaller) pixels.
 
 HATS catalogs are multi-order:
-- Dense regions use high-order (small) pixels
-and sparse regions use low-order (large) pixels. 
+- Dense regions use high-order (small) pixels; sparse regions use low-order (large) pixels.
 - Pixels are balanced in the number of rows or size in memory.
 
 Each partition is identified by a HEALPix `(Norder, Npix)` pair:
 - `Norder` - HEALPix order (integer)
 - `Npix` - pixel number in NESTED ordering at that order (integer)
+
+### Spatial index (`_healpix_29`)
+
+Rows in a HATS catalog often carry a `_healpix_29` column: the HEALPix pixel number for that
+row's sky position at the fixed order 29. Order 29 is the highest order that fits in a 64-bit
+integer (`12 × 4^29` pixels), so it serves as a universal, lossless spatial key.
+
+The column enables two key operations without re-reading ra/dec:
+- **Partition assignment** — right-shift by `2 × (29 − target_order)` bits to get the
+  containing pixel at any coarser order: `pixel_at_order_k = _healpix_29 >> (2 * (29 - k))`.
+- **Row-level filtering** — compare `_healpix_29` against the order-29 interval of a search
+  region to efficiently skip rows outside the region of interest.
+
+Helpers in `spatial_index.py`:
+- `compute_spatial_index(ra, dec)` — compute `_healpix_29` values from coordinates.
+- `spatial_index_to_healpix(ids, target_order)` — convert index values to pixels at a coarser order.
+- `healpix_to_spatial_index(order, pixel)` — get the minimum `_healpix_29` value inside a given pixel.
 
 ### Catalog types
 
@@ -206,19 +219,22 @@ my_catalog/
 The primary metadata file uses a simple `key=value` format. Key fields:
 
 ```properties
-obs_collection=my_catalog          # Catalog name
-dataproduct_type=object            # Catalog type
-hats_nrows=1000000                 # Total row count
-hats_col_ra=ra                     # RA column name
-hats_col_dec=dec                   # Dec column name
-hats_col_healpix=_healpix_29       # High-precision HEALPix index column
-hats_col_healpix_order=29          # Order of the index column (always 29)
-hats_order=1                       # Predominant partition order
-hats_npix_suffix=.parquet          # Partition file extension
-hats_estsize=512                   # Estimated size in KiB
-moc_sky_fraction=0.083             # Fraction of sky covered
-hats_version=v1.0
-hats_creation_date=2025-10-06T14:20UTC
+obs_collection=my_catalog                       # Catalog name
+dataproduct_type=object                         # Catalog type
+hats_nrows=1000000                              # Total row count
+hats_col_ra=ra                                  # RA column name
+hats_col_dec=dec                                # Dec column name
+hats_col_healpix=_healpix_29                    # High-precision HEALPix index column
+hats_col_healpix_order=29                       # Order of the index column (can be lower than 29)
+hats_npix_suffix=.parquet                       # Partition file extension
+hats_skymap_order=10                            # HEALPix order of the skymap.fits density image
+hats_max_rows=1000000                           # Maximum row count in any single partition
+hats_estsize=512                                # Estimated catalog size on disk, in KiB
+moc_sky_fraction=0.083                          # Fraction of sky covered
+hats_builder=hats-import v0.6.6, hats v0.6.6    # Tool(s) that created the catalog
+hats_version=v1.0                               # HATS format version
+hats_release_date=2025-08-22                    # Release date of the HATS standard
+hats_creation_date=2025-10-06T14:20UTC          # Catalog creation date
 ```
 
 ### `partition_info.csv`
@@ -290,7 +306,7 @@ hc.on_disk             # bool - True if loaded from disk
 
 # Convenience delegation
 hc.get_healpix_pixels()           # list[HealpixPixel]
-hc.filter_from_pixel_list(pixels) # new HatsCatalog restricted to pixels
+hc.filter_from_pixel_list(pixels) # new `hats.catalog.Catalog` restricted to pixels
 ```
 
 ### `hats.catalog.TableProperties` - catalog metadata
@@ -346,14 +362,14 @@ HealpixPixel(1, 44) in tree # bool - O(log N) containment check
 
 #### How the pixel tree works
 
-The pixel tree stores each healpix pixel as a range of order-29 pixels. For example, a pixel at order 1 with 
+The pixel tree stores each healpix pixel as a range of order-29 pixels. For example, a pixel at order 1 with
 Npix=44 corresponds to an interval of 4^28 pixels at order 29. The pixel tree is an ordered list of these
-intervals. To check if a pixel is in the tree, we convert it to its order-29 interval and do a binary search 
+intervals. To check if a pixel is in the tree, we convert it to its order-29 interval and do a binary search
 to see if it matches any of the stored intervals.
 
 #### Why use order-29 intervals?
 
-Using order-29 intervals allows us to represent any pixel at any order as a contiguous range of pixels at 
+Using order-29 intervals allows us to represent any pixel at any order as a contiguous range of pixels at
 a fixed high order. This simplifies the logic since we only need to deal with one fixed order internally.
 Order 29 is chosen because it is the highest order that can fit within a 64-bit integer, allowing us to use
 efficient integer arithmetic for pixel math and containment checks.
@@ -361,30 +377,31 @@ efficient integer arithmetic for pixel math and containment checks.
 #### PixelAlignment
 
 One of the most important uses of the pixel tree is 'aligning' multiple catalogs to each other, figuring
-out which pixels overlap between them, and creating a mapping of which pixels in one catalog correspond to 
-which pixels in the other. This is important for crossmatching and other operations that need to combine data 
+out which pixels overlap between them, and creating a mapping of which pixels in one catalog correspond to
+which pixels in the other. This is important for crossmatching and other operations that need to combine data
 from multiple catalogs.
 
 To do this, we use the `hats.pixel_tree.pixel_alignment.align_trees` method which takes two pixel trees,
 iterates through both of their pixel interval lists in order, checks for each pair of intervals whether they
 overlap, and if so computes the intersection of those intervals and converts it back to the corresponding
 pixels at the original orders, and iterating to the next intervals in one or both trees depending on which
-one has the smaller next interval. This is an efficient O(N) operation where N is the total number of pixels 
+one has the smaller next interval. This is an efficient O(N) operation where N is the total number of pixels
 in both trees.
 
 The result is a mapping of which pixels in one catalog correspond to which pixels in the other. The other
 result from aligning pixel trees is an output aligned pixel tree which is the union of the two input trees,
 covering the intersection of the two catalogs, with pixels split as needed to ensure that any pixel in the
-aligned tree is fully contained in a single pixel in each of the input trees. This means that the the aligned
-tree can be the output structure for a crossmatched catalog, ensuring that each partition in the output is 
+aligned tree is fully contained in a single pixel in each of the input trees. This means that the aligned
+tree can be the output structure for a crossmatched catalog, ensuring that each partition in the output is
 roughly no bigger than a single partition in either input catalog, which keeps file sizes manageable.
 
-The pixel alignment also supports specifying a 'how' parameter which controls how to handle pixels that are 
-present in one tree but not the other. The default is 'inner' which only includes pixels that are present 
-in both trees. 'left' includes all pixels from the first tree, with empty partitions for pixels not in the 
-second tree. 'right' includes all pixels from the second tree, with empty partitions for pixels not in the 
-first tree. 'outer' includes all pixels from both trees, with empty partitions for pixels not in the other 
-tree.
+The pixel alignment also supports a `how` parameter that controls how to handle pixels present in one tree
+but not the other:
+
+- `inner` (default): only pixels present in both trees.
+- `left`: all pixels from the first tree; empty partitions for pixels absent from the second.
+- `right`: all pixels from the second tree; empty partitions for pixels absent from the first.
+- `outer`: all pixels from both trees; empty partitions wherever each is absent from the other.
 
 ### `hats.pixel_math.HealpixPixel` - a single HEALPix pixel identifier
 
