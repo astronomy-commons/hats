@@ -1,6 +1,6 @@
 # HATS Guide
 
-**Last updated:** 2026-05-29 | **HATS version:** v0.9.0
+**Last updated:** 2026-06-08 | **HATS version:** v0.9.2
 
 Canonical reference for AI coding assistants working on HATS (Hierarchical Adaptive Tiling Scheme). 
 Tool-specific files (`CLAUDE.md`, `.github/copilot-instructions.md`) contain only tool-specific overrides
@@ -17,7 +17,7 @@ apply to all AI assistants; edit tool-specific files only for tool-specific beha
 ## What is HATS
 
 HATS is a storage format and Python library for partitioning large
-astronomical point-source catalogs on the celestial sphere. It divides the sky into HEALPix pixels and stores each pixel's data as a separate Parquet file,
+astronomical catalogs on the celestial sphere. It divides the sky into HEALPix pixels and stores each pixel's data as a separate Parquet file,
 enabling efficient spatial queries and distributed computation without loading
 the full dataset.
 
@@ -41,7 +41,7 @@ must be kept consistent. Any format change must be backward-compatible or explic
 
 **HEALPix NESTED ordering is the backbone.** All partition identification, MOC operations,
 and pixel-math utilities must be consistent with the HEALPix NESTED scheme. Never mix
-RING and NESTED ordering silently.
+RING and NESTED ordering silently. Use the `cdshealpix` and `mocpy` Python libraries for core HEALPix math operations.
 
 **Metadata, not computation.** HATS classes describe what is on disk - they do not load
 row data or perform analytics. Keep catalog classes lightweight: they hold structural
@@ -73,8 +73,8 @@ been true.
 
 ## Development setup
 
-> HATS and LSDB are typically developed in the same environment. **Prefer installing HATS into an existing
-> LSDB environment** rather than creating a new one. Only create a fresh environment if you don't have one.
+> HATS and LSDB are typically developed in the same local environment. **Prefer installing HATS into the existing
+> LSDB environment** rather than creating a new one. Only create a fresh environment if you need.
 
 - **Python ≥ 3.11** (see `pyproject.toml` `requires-python`)
 - If you need a new env: `conda create -n hats python=3.11 && conda activate hats`
@@ -83,8 +83,8 @@ been true.
   - Installs the package in editable mode with dev and full extras
   - Installs pre-commit hooks
 - Alternative manual install: `pip install -e .'[dev]' && pre-commit install`
-- For optional plotting support: `pip install -e '.[full]'`
-- For bleeding-edge dependency versions: `pip install -r requirements.txt`
+- For full optional features (e.g. plotting, polygon search): `pip install -e '.[full]'`
+- For bleeding-edge dependency versions (nested-pandas from `main`): `pip install -r requirements.txt`
 - For documentation dependencies: `pip install -r docs/requirements.txt`
 
 ## Common commands
@@ -139,18 +139,18 @@ docs/notebooks/         Jupyter notebook tutorials
 
 Key files:
 
-| File                                                              | Purpose                                                        |
-|-------------------------------------------------------------------|----------------------------------------------------------------|
-| `pyproject.toml`                                                  | Project metadata, dependencies, pytest/black/mypy config       |
-| `src/hats/__init__.py`                                            | Public API - everything exported here is stable public surface |
-| `src/hats/catalog/catalog.py`                                     | Main `Catalog` class                                           |
-| `src/hats/catalog/healpix_dataset/healpix_dataset.py`             | Base `HealpixDataset` class, shared by all catalog types       |
-| `src/hats/catalog/dataset/table_properties.py`                    | `TableProperties` - typed catalog metadata from `hats.properties` |
-| `src/hats/catalog/dataset/collection_properties.py`               | `CollectionProperties` - metadata for catalog collections      |
-| `src/hats/pixel_tree/pixel_tree.py`                               | `PixelTree` - which pixels exist and at what order             |
-| `src/hats/pixel_math/healpix_pixel.py`                            | `HealpixPixel` - single partition identifier `(order, pixel)`  |
-| `src/hats/io/paths.py`                                            | Path helpers for constructing on-disk file paths               |
-| `src/hats/loaders/read_hats.py`                                   | `read_hats` entry point for loading catalogs from disk         |
+| File                                                              | Purpose                                                                           |
+|-------------------------------------------------------------------|-----------------------------------------------------------------------------------|
+| `pyproject.toml`                                                  | Project metadata, dependencies, pytest/black/mypy config                          |
+| `src/hats/__init__.py`                                            | Public API - everything exported here is stable public surface                    |
+| `src/hats/catalog/catalog.py`                                     | Main `Catalog` class                                                              |
+| `src/hats/catalog/healpix_dataset/healpix_dataset.py`             | Base `HealpixDataset` class, shared by all catalog types                          |
+| `src/hats/loaders/read_hats.py`                                   | `read_hats` entry point for loading catalog metadata from disk                    |
+| `src/hats/catalog/dataset/table_properties.py`                    | `TableProperties` - typed catalog metadata from `hats.properties`                 |
+| `src/hats/catalog/dataset/collection_properties.py`               | `CollectionProperties` - catalog collection metadata from `collection.properties` |
+| `src/hats/pixel_tree/pixel_tree.py`                               | `PixelTree` - which pixels exist and at what order                                |
+| `src/hats/pixel_math/healpix_pixel.py`                            | `HealpixPixel` - pixel identifier `(order, pixel)`                                |
+| `src/hats/io/paths.py`                                            | Path helpers for constructing on-disk file paths                                  |
 
 ## Core concepts
 
@@ -166,7 +166,7 @@ ordering:
 HATS catalogs are multi-order:
 - Dense regions use high-order (small) pixels
 and sparse regions use low-order (large) pixels. 
-- Pixels that are balanced in size.
+- Pixels are balanced in the number of rows or size in memory.
 
 Each partition is identified by a HEALPix `(Norder, Npix)` pair:
 - `Norder` - HEALPix order (integer)
@@ -174,14 +174,13 @@ Each partition is identified by a HEALPix `(Norder, Npix)` pair:
 
 ### Catalog types
 
-| Type | `dataproduct_type` | Purpose |
-|---|---|---|
-| Object | `object` | Standard point-source catalog |
-| Source | `source` | Time-domain source catalog |
-| Margin | `margin` | Boundary objects duplicated from adjacent pixels |
-| Index | `index` | Secondary index on a non-spatial column |
-| Map | `map` | Continuous sky map (non-point-source data) |
-| Association | `association` | Cross-catalog join table |
+| Type            | `dataproduct_type` | Purpose                                                  |
+|-----------------|--------------------|----------------------------------------------------------|
+| Object / Source | `object` / `source` | Standard point-source catalog                            |
+| Margin          | `margin`           | Boundary objects duplicated from adjacent pixels         |
+| Index           | `index`            | Secondary index on a non-spatial column (e.g. object ID) |
+| Map             | `map`              | Continuous sky map (non-point-source data)               |
+| Association     | `association`      | Cross-catalog join table (with extra columns)            |
 
 ## On-disk directory layout
 
@@ -189,7 +188,7 @@ Each partition is identified by a HEALPix `(Norder, Npix)` pair:
 my_catalog/
 ├── hats.properties          # Primary metadata (key=value format)
 ├── partition_info.csv       # One row per partition: Norder,Npix
-├── skymap.fits              # Counts per pixel as a FITS image
+├── skymap.fits              # FITS image with counts per pixel at a fixed high order (e.g. 10)
 └── dataset/
     ├── _metadata            # Parquet metadata with statistics
     ├── _common_metadata     # Parquet schema metadata
@@ -249,7 +248,7 @@ hats_primary_table_url=../my_catalog
 
 ### Catalog collection
 
-A collection groups a primary catalog with its associated margin and index catalogs under a single root directory. A `collection.properties` file at the root lists the members. When LSDB opens a collection with `open_catalog()`, the default margin is automatically loaded and attached as catalog.margin.
+A collection groups a primary catalog with its associated margin and index catalogs under a single root directory. A `collection.properties` file at the root lists the members. When LSDB opens a collection with `open_catalog()`, the default margin is automatically loaded and attached as `catalog.margin`.
 
 ```
 my_collection/
@@ -403,12 +402,11 @@ pix.pixel    # int - 44
 A margin catalog stores a copy of every object that lies within
 `margin_threshold` arcseconds of a pixel boundary, duplicated into the adjacent
 pixel's margin file. This ensures that spatial operations spanning partition
-edges (crossmatch, cone search near a boundary) see all relevant objects without
+edges (crossmatch or joins near a boundary) see all relevant objects without
 loading the entire neighboring partition.
 
-**Rule of thumb:** `margin_threshold` must be ≥ the search radius used in any
-crossmatch or spatial query. When in doubt, use a margin with a generous
-threshold.
+**Rule of thumb:** To ensure completeness of the result, `margin_threshold`
+must be ≥ the search radius used in any cross-catalog operation.
 
 ```python
 # The margin is attached automatically when opening a collection
@@ -432,9 +430,13 @@ from hats.io import paths
 paths.pixel_catalog_file(catalog_base_path, HealpixPixel(order=1, pixel=44))
 # → catalog_base_path/dataset/Norder=1/Dir=0/Npix=44.parquet
 
-# Path to the metadata file
-paths.get_catalog_info_pointer(catalog_base_path)
-# → catalog_base_path/hats.properties
+# Path to the parquet common metadata file
+paths.get_common_metadata_pointer(catalog_base_path)
+# → catalog_base_path/dataset/_common_metadata
+
+# File pointer to FITS image file
+paths.get_skymap_file_pointer(catalog_base_path)
+# → catalog_base_path/skymap.fits or catalog_base_path/skymap.K.fits
 ```
 
 ## Typical HATS workflow
@@ -454,8 +456,14 @@ from hats.loaders import read_hats
 # Load from local disk or object store (returns CatalogCollection or Dataset)
 cat = read_hats("/path/to/catalog")
 
-# When loading a collection, margin and index catalogs are included
+# Catalog collection
 cat = read_hats("/path/to/collection")
+cat.main_catalog                            # Main catalog (`hats.catalog.Catalog`)
+cat.all_margins                             # All margins
+cat.default_margin                          # Default margin name
+cat.all_indexes                             # All indexes
+cat.default_index_field                     # Default index field name
+cat.get_index_dir_for_field("object_id")    # Pointer to "object_id" index field catalog
 ```
 
 ### Explore metadata
@@ -481,15 +489,13 @@ print(info.moc_sky_fraction)
 ### Visualize coverage
 
 ```python
-import hats.inspection
-
 # Plot HEALPix partition map
-hats.inspection.plot_pixels(cat)
+cat.plot_pixels()
 
 # Plot MOC sky coverage
-hats.inspection.plot_moc(cat.moc)
+cat.plot_moc()
 
-# Plot density map
+# Plot point-density map
 hats.inspection.plot_density(cat)
 ```
 
@@ -502,9 +508,17 @@ from hats.pixel_math import HealpixPixel
 pixels = [HealpixPixel(order=1, pixel=44), HealpixPixel(order=1, pixel=45)]
 filtered = cat.filter_from_pixel_list(pixels)
 
-# Filter using a MOC
+# Filter using region filters
+filtered = cat.filter_by_cone(ra=47.1, dec=6, radius_arcsec=30 * 3600)                          # Cone
+filtered = cat.filter_by_box(ra=(280, 300), dec=(-40, -30))                                     # Box
+filtered = cat.filter_by_polygon(vertices=[(300, -50), (300, -55), (272, -55), (272, -50)])     # Polygon
+
+# Filter using any other MOC
 from mocpy import MOC
-moc = MOC.from_fits("/path/to/coverage.fits")
+orders = np.array([1, 1, 2])
+pixels = np.array([45, 46, 128])
+max_depth = 2
+moc = MOC.from_healpix_cells(pixels, orders, max_depth)
 filtered = cat.filter_by_moc(moc)
 ```
 
