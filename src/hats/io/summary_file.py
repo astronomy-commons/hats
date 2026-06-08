@@ -1,4 +1,6 @@
+import base64
 import importlib.resources
+import io
 from itertools import starmap
 from pathlib import Path
 from typing import Literal
@@ -200,6 +202,12 @@ def generate_markdown_collection_summary(
     else:
         cone_code_example = None
 
+    pixel_map_b64, density_map_b64 = None, None
+    try:
+        pixel_map_b64, density_map_b64 = _generate_sky_coverage_images(catalog)
+    except ImportError:
+        pass
+
     return template.render(
         name=name,
         description=description,
@@ -214,6 +222,8 @@ def generate_markdown_collection_summary(
         huggingface_metadata=huggingface_metadata,
         metadata_table=metadata_table,
         column_table=column_table,
+        pixel_map_b64=pixel_map_b64,
+        density_map_b64=density_map_b64,
     )
 
 
@@ -481,3 +491,32 @@ def _get_example_row(catalog: HealpixDataset) -> npd.NestedFrame | None:
 
     idx = rng.integers(len(example_nf))
     return example_nf.iloc[idx : idx + 1]
+
+
+# pylint: disable=import-outside-toplevel,import-error
+def _generate_sky_coverage_images(catalog):
+    import matplotlib.figure
+    from matplotlib.colors import LogNorm
+
+    from hats.inspection.visualize_catalog import plot_density
+
+    pixel_map_b64 = None
+    density_map_b64 = None
+
+    fig = matplotlib.figure.Figure(figsize=(6, 3))
+    catalog.plot_pixels(fig=fig)
+    pixel_map_b64 = _fig_to_webp_base64(fig)
+    fig = matplotlib.figure.Figure(figsize=(6, 3))
+    plot_density(catalog, norm=LogNorm(), fig=fig)
+    density_map_b64 = _fig_to_webp_base64(fig)
+    return pixel_map_b64, density_map_b64
+
+
+# pylint: disable=import-outside-toplevel,import-error
+def _fig_to_webp_base64(fig) -> str:
+    import matplotlib.pyplot as plt
+
+    buffer = io.BytesIO()
+    fig.savefig(buffer, format="webp")
+    plt.close(fig)
+    return base64.b64encode(buffer.getvalue()).decode("ascii")
