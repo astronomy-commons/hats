@@ -987,12 +987,17 @@ def test_catalog_plot_density(small_sky_dir):
     small_sky_source_catalog = read_hats(small_sky_dir)
     with pytest.warns(match="smaller"):
         _, ax = plot_density(small_sky_source_catalog)
-    order10_paths = ax.collections[0].get_paths()
+    order10_col = ax.collections[0]
+    order10_paths = order10_col.get_paths()
     assert "Angular density of catalog small_sky" == ax.get_title()
+    # edgecolors default to "face", so they should match the face colors
+    np.testing.assert_array_equal(order10_col.get_edgecolors(), order10_col.get_facecolors())
 
     _, ax = plot_density(small_sky_source_catalog, order=3)
-    order3_paths = ax.collections[-1].get_paths()
+    order3_col = ax.collections[-1]
+    order3_paths = order3_col.get_paths()
     assert "Angular density of catalog small_sky" == ax.get_title()
+    np.testing.assert_array_equal(order3_col.get_edgecolors(), order3_col.get_facecolors())
 
     assert len(order3_paths) < len(order10_paths)
 
