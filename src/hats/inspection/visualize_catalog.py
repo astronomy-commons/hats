@@ -362,24 +362,3 @@ def plot_healpix_map(
     plt.xlabel("RA")
     plt.title(title)
     return fig, ax
-
-
-def write_skymap_image(catalog, path):
-    """Write a density skymap image to a file."""
-    # pylint: disable=import-outside-toplevel,import-error
-    import matplotlib.pyplot as plt
-    from matplotlib.colors import LogNorm
-
-    fig, _ = plot_density(catalog, norm=LogNorm())
-    fig.savefig(path, bbox_inches="tight")
-    plt.close(fig)
-
-
-def write_pixel_map_image(catalog, path):
-    """Write a HEALPix pixel map image to a file."""
-    # pylint: disable=import-outside-toplevel,import-error
-    import matplotlib.pyplot as plt
-
-    fig, _ = plot_pixels(catalog)
-    fig.savefig(path / "partition_info.png", bbox_inches="tight")
-    plt.close(fig)

@@ -367,7 +367,6 @@ def generate_summary(
     huggingface_metadata: bool,
     jinja2_template: str | None = None,
 ) -> str:
-    # pylint: disable=too-many-locals
     """Generate summary content for any HATS catalog or collection."""
     if isinstance(catalog, CatalogCollection):
         md_tmpl, html_tmpl = "collection_md_template.jinja2", "collection_html_template.jinja2"
@@ -384,22 +383,11 @@ def generate_summary(
     cat_props = inner.catalog_info
     catalog_path = catalog.main_catalog_dir if is_collection else catalog.catalog_path
 
-    has_partition_info = get_partition_info_pointer(catalog_path).exists()
     empty_nf = _load_empty_nf(catalog_path)
-    metadata_table = (
-        None
-        if isinstance(catalog, IndexCatalog)
-        else _gen_metadata_table(inner, total_columns=None if empty_nf is None else empty_nf.shape[1])
-    )
     column_table = _gen_column_table(inner, empty_nf)
-
-    needs_sky = not isinstance(catalog, (MarginCatalog, IndexCatalog))
     col_props = catalog.collection_properties if is_collection else None
-    catalog_dir_name = None if is_collection else catalog.catalog_path.name
-    uris = _catalog_uris(col_props, uri) if is_collection else None
-    margin_thresholds = catalog.get_margin_thresholds() if is_collection else None
     has_default_columns, cone_code_example, pixel_map_b64, density_map_b64 = _sky_context(
-        inner, name, cat_props, column_table, needs_sky
+        inner, name, cat_props, column_table, not isinstance(catalog, (MarginCatalog, IndexCatalog))
     )
 
     return template.render(
@@ -407,18 +395,22 @@ def generate_summary(
         description=description,
         cat_props=cat_props,
         uri=uri,
-        has_partition_info=has_partition_info,
+        has_partition_info=get_partition_info_pointer(catalog_path).exists(),
         huggingface_metadata=huggingface_metadata,
-        metadata_table=metadata_table,
+        metadata_table=(
+            None
+            if isinstance(catalog, IndexCatalog)
+            else _gen_metadata_table(inner, total_columns=None if empty_nf is None else empty_nf.shape[1])
+        ),
         column_table=column_table,
-        catalog_dir_name=catalog_dir_name,
+        catalog_dir_name=None if is_collection else catalog.catalog_path.name,
         has_default_columns=has_default_columns,
         cone_code_example=cone_code_example,
         pixel_map_b64=pixel_map_b64,
         density_map_b64=density_map_b64,
         col_props=col_props,
-        uris=uris,
-        margin_thresholds=margin_thresholds,
+        uris=_catalog_uris(col_props, uri) if is_collection else None,
+        margin_thresholds=catalog.get_margin_thresholds() if is_collection else None,
     )
 
 

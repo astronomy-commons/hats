@@ -522,3 +522,37 @@ def test_write_catalog_summary_file_contains_images(tmp_path, small_sky_collecti
     content = output_path.read_text()
     assert "![Pixel Skymap](data:image/webp;base64," in content
     assert "![Density Skymap](data:image/webp;base64," in content
+
+
+def test_write_catalog_summary_file_margin(tmp_path, margin_catalog_path):
+    dest = tmp_path / margin_catalog_path.name
+    shutil.copytree(margin_catalog_path, dest)
+    output_path = write_catalog_summary_file(dest, fmt="markdown")
+    assert output_path.name == "README.md"
+    assert "HATS Margin Catalog" in output_path.read_text()
+
+
+def test_write_catalog_summary_file_index(tmp_path, small_sky_order1_id_index_dir):
+    dest = tmp_path / small_sky_order1_id_index_dir.name
+    shutil.copytree(small_sky_order1_id_index_dir, dest)
+    output_path = write_catalog_summary_file(dest, fmt="markdown")
+    assert output_path.name == "README.md"
+    assert "HATS Index Catalog" in output_path.read_text()
+
+
+def test_write_catalog_summary_file_standalone_catalog(tmp_path, small_sky_order1_dir):
+    dest = tmp_path / small_sky_order1_dir.name
+    shutil.copytree(small_sky_order1_dir, dest)
+    output_path = write_catalog_summary_file(dest, fmt="markdown")
+    assert output_path.name == "README.md"
+    assert "HATS Catalog" in output_path.read_text()
+
+
+def test_write_catalog_summary_file_html(tmp_path, small_sky_collection_dir):
+    collection_base_dir = tmp_path / "collection"
+    shutil.copytree(small_sky_collection_dir, collection_base_dir)
+
+    output_path = write_catalog_summary_file(collection_base_dir, fmt="html")
+
+    assert output_path.name == "index.html"
+    assert "<!DOCTYPE html>" in output_path.read_text()
