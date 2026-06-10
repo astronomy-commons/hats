@@ -14,220 +14,31 @@ from upath import UPath
 
 from hats.catalog import CollectionProperties
 from hats.catalog.catalog_collection import CatalogCollection
+from hats.catalog.dataset import Dataset
 from hats.catalog.healpix_dataset.healpix_dataset import HealpixDataset
+from hats.catalog.index.index_catalog import IndexCatalog
+from hats.catalog.margin_cache.margin_catalog import MarginCatalog
 from hats.io import get_common_metadata_pointer, get_partition_info_pointer, templates
 from hats.io.file_io import get_upath, read_parquet_file_to_pandas
 from hats.io.paths import get_data_thumbnail_pointer
 from hats.loaders.read_hats import read_hats
 
 
-def write_collection_summary_file(
-    collection_path: str | Path | UPath,
-    *,
-    fmt: Literal["markdown"],
-    filename: str | None = None,
-    output_dir: str | Path | UPath | None = None,
-    name: str | None = None,
-    description: str | None = None,
-    uri: str | None = None,
-    huggingface_metadata: bool = False,
-    jinja2_template: str | None = None,
-) -> UPath:
-    """Write a summary readme file for a HATS catalog.
-
-    Parameters
-    ----------
-    collection_path: str | Path | UPath
-        The path to the HATS collection.
-    fmt : str
-        The format of the summary file. Currently only "markdown" is supported.
-    filename: str | None, default=None
-        The name of the summary file. If None, default depends on a `fmt`:
-        - "README.md" for "markdown" format.
-    output_dir : str | Path | UPath | None
-        The root directory to output the summary file to. If None, the summary
-        file would be written to the `collection_path`. If the directory does
-        not exist, it would be created.
-    name : str | None, default=None
-        Human-readable name of the catalog. By default, generated based on
-        catalog metadata.
-    description : str | None, default=None
-        Description of the catalog. By default, generated based on catalog
-        metadata.
-    uri : str | None, default=None
-        URI of the catalog to use for the hyperlinks and code-snippet examples.
-        Not validated. If None, a placeholder would be used for
-        the code-snippets.
-    huggingface_metadata : bool, default=False
-        Whether to include Hugging Face specific metadata header in
-        the Markdown file, by default False. Supported only when
-        `fmt="markdown"`.
-    jinja2_template : str, default=None
-        `jinja2` template string to use for generating the summary file.
-        If provided, it would override the default template from these
-        functions:
-        - `default_md_template()` for `fmt="markdown"`.
-
-    Returns
-    -------
-    UPath
-        The path to the written summary file.
-
-    Notes
-    -----
-
-    1. Not all options are supported for all formats.
-    2. Default template is the subject of frequent changes, do not rely on it.
-    """
-    collection_path = get_upath(collection_path)
-    if fmt != "markdown" and huggingface_metadata:
-        raise ValueError("`huggingface_metadata=True` is supported only for `fmt='markdown'`")
-
-    collection = read_hats(collection_path)
-    if not isinstance(collection, CatalogCollection):
-        raise ValueError(
-            f"The provided path '{collection_path}' contains a HATS catalog, but not a collection.'"
-        )
-
-    if name is None:
-        name = collection.collection_properties.name
-
-    if description is None:
-        description = f"This is the collection of HATS catalogs representing {name}."
-
-    match fmt:
-        case "markdown":
-            content = generate_markdown_collection_summary(
-                collection=collection,
-                name=name,
-                description=description,
-                uri=uri,
-                huggingface_metadata=huggingface_metadata,
-                jinja2_template=jinja2_template,
-            )
-        case _:
-            raise ValueError(f"Unsupported format: {fmt=}")
-
-    if filename is None:
-        match fmt:
-            case "markdown":
-                filename = "README.md"
-            case _:
-                raise ValueError(f"Unsupported format: {fmt=}")
-
-    output_dir = collection_path if output_dir is None else get_upath(output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
-    output_path = output_dir / filename
-
-    with output_path.open("w") as f:
-        f.write(content)
-
-    return output_path
+def _cone_code_example(column_table: pd.DataFrame, cat_props) -> dict | None:
+    if "example" not in column_table:
+        return None
+    ra = np.round(float(column_table.loc[cat_props.ra_column]["example"]))
+    if ra >= 360.0:
+        ra -= 360.0
+    dec = np.round(float(column_table.loc[cat_props.dec_column]["example"]))
+    if dec >= 90.0:
+        dec = 89.9
+    if dec <= -90.0:
+        dec = -89.9
+    return {"ra": ra, "dec": dec}
 
 
-def default_md_template() -> str:
-    """Get the default Jinja2 template string for generating Markdown summary files.
-
-    Returns
-    -------
-    str
-        The default Jinja2 template string.
-    """
-    return importlib.resources.read_text(templates, "default_md_template.jinja2")
-
-
-def generate_markdown_collection_summary(
-    collection: CatalogCollection,
-    *,
-    name: str,
-    description: str,
-    uri: str | None,
-    huggingface_metadata: bool,
-    jinja2_template: str | None = None,
-) -> str:
-    """Generate Markdown summary content for a HATS collection.
-
-    Parameters
-    ----------
-    collection : CatalogCollection
-        HATS collection to generate summary for.
-    name : str
-        Title of the Markdown document.
-    description : str
-        Description of the catalog.
-    uri : str | None
-        URI of the catalog to use for the hyperlinks and code-snippet examples.
-        Not validated. If None, a placeholder would be used for
-        the code-snippets.
-    huggingface_metadata : bool
-        Whether to include Hugging Face specific metadata header in
-        the Markdown file.
-    jinja2_template : str | None
-
-    """
-    col_props = collection.collection_properties
-    catalog = collection.main_catalog
-    cat_props = catalog.catalog_info
-
-    env = jinja2.Environment(undefined=jinja2.StrictUndefined)
-    if jinja2_template is None:
-        jinja2_template = default_md_template()
-    template = env.from_string(jinja2_template)
-
-    uris = _catalog_uris(col_props, uri)
-    has_partition_info = get_partition_info_pointer(collection.main_catalog_dir).exists()
-    margin_thresholds = collection.get_margin_thresholds()
-
-    if (common_metadata := get_common_metadata_pointer(collection.main_catalog_dir)).exists():
-        empty_nf = read_parquet_file_to_pandas(common_metadata)
-    else:
-        empty_nf = None
-
-    metadata_table = _gen_md_metadata_table(
-        catalog, total_columns=None if empty_nf is None else empty_nf.shape[1]
-    )
-
-    column_table = _gen_md_column_table(catalog, empty_nf)
-
-    if "example" in column_table:
-        ra = np.round(float(column_table.loc[cat_props.ra_column]["example"]))
-        if ra >= 360.0:
-            ra -= 360.0
-        dec = np.round(float(column_table.loc[cat_props.dec_column]["example"]))
-        if dec >= 90.0:
-            dec = 89.9
-        if dec <= -90.0:
-            dec = -89.9
-        cone_code_example = {"ra": ra, "dec": dec}
-    else:
-        cone_code_example = None
-
-    pixel_map_b64, density_map_b64 = None, None
-    try:
-        pixel_map_b64, density_map_b64 = _generate_sky_coverage_images(catalog)
-    except ImportError:
-        pass
-
-    return template.render(
-        name=name,
-        description=description,
-        col_props=col_props,
-        cat_props=cat_props,
-        uris=uris,
-        has_partition_info=has_partition_info,
-        has_default_columns=bool(cat_props.default_columns),
-        cone_code_example=cone_code_example,
-        margin_thresholds=margin_thresholds,
-        uri=uri,
-        huggingface_metadata=huggingface_metadata,
-        metadata_table=metadata_table,
-        column_table=column_table,
-        pixel_map_b64=pixel_map_b64,
-        density_map_b64=density_map_b64,
-    )
-
-
-def _gen_md_metadata_table(catalog: HealpixDataset, total_columns: int | None) -> dict[str, object]:
+def _gen_metadata_table(catalog: Dataset, total_columns: int | None) -> dict[str, object]:
     props = catalog.catalog_info
     has_healpix_column = props.healpix_column is not None
 
@@ -236,13 +47,13 @@ def _gen_md_metadata_table(catalog: HealpixDataset, total_columns: int | None) -
         metadata_table["Number of rows"] = f"{props.total_rows:,}"
     if total_columns is not None:
         key = "Number of columns"
-        # Exclude HEALPix index columns from the count
         value = f"{total_columns - int(has_healpix_column):,}"
         if props.default_columns is not None:
             key = "Number of columns (default columns)"
             value = f"{value} ({len(props.default_columns):,})"
         metadata_table[key] = value
-    metadata_table["Number of partitions"] = f"{len(catalog.get_healpix_pixels()):,}"
+    if isinstance(catalog, HealpixDataset):
+        metadata_table["Number of partitions"] = f"{len(catalog.get_healpix_pixels()):,}"
     if (hats_estsize_kb := props.extra_dict().get("hats_estsize")) is not None:
         metadata_table["Size on disk"] = human_readable.file_size(int(hats_estsize_kb) * 1024, binary=True)
     if (hats_builder := props.extra_dict().get("hats_builder")) is not None:
@@ -292,12 +103,9 @@ def _format_example_value(
             return "[]"
         fmt_kwargs = {"float_precision": float_precision, "soft_limit": soft_limit, "hard_limit": hard_limit}
         suffix = f", … ({len(items)} total)]"
-        # Always include at least one item
         parts = [_format_example_value(items[0], **fmt_kwargs)]
         for item in items[1:]:
             candidate = _format_example_value(item, **fmt_kwargs)
-            # Check if adding this item would exceed the soft limit,
-            # accounting for the truncation suffix
             preview = "[" + ", ".join(parts + [candidate]) + suffix
             if len(preview) > soft_limit:
                 break
@@ -368,8 +176,8 @@ def _build_column_table(
     return result
 
 
-def _gen_md_column_table(
-    catalog: HealpixDataset, empty_nf: npd.NestedFrame | None, fmt_value=_format_example_value
+def _gen_column_table(
+    catalog: Dataset, empty_nf: npd.NestedFrame | None, fmt_value=_format_example_value
 ) -> pd.DataFrame:
     props = catalog.catalog_info
 
@@ -418,7 +226,6 @@ def _join_catalog_uri(col_upath: str | None, path: str) -> str:
     except ValueError:
         return path
 
-    # If path is an absolute URI, return it as-is
     if upath.protocol:
         return path
 
@@ -466,12 +273,15 @@ def _catalog_uris(properties: CollectionProperties, uri: str | None) -> dict[str
     }
 
 
-def _get_example_frame(catalog: HealpixDataset, rng: np.random.Generator) -> npd.NestedFrame | None:
+def _get_example_frame(catalog: Dataset, rng: np.random.Generator) -> npd.NestedFrame | None:
     if (root := catalog.catalog_path) is None or not root.exists():
         return None
 
     if (thumbnail_path := get_data_thumbnail_pointer(root)).exists():
         return read_parquet_file_to_pandas(thumbnail_path, is_dir=False)
+
+    if not isinstance(catalog, HealpixDataset):
+        return None
 
     healpix_pixels = catalog.get_healpix_pixels()
     pixel = rng.choice(healpix_pixels)
@@ -480,7 +290,6 @@ def _get_example_frame(catalog: HealpixDataset, rng: np.random.Generator) -> npd
 
 def _get_example_row(catalog: HealpixDataset) -> npd.NestedFrame | None:
     """Returns a single-row nested frame with a random example row."""
-    # We want it to be pseudo-random but reproducible
     random_seed = 42
     rng = np.random.Generator(np.random.PCG64(random_seed))
 
@@ -494,20 +303,16 @@ def _get_example_row(catalog: HealpixDataset) -> npd.NestedFrame | None:
 
 
 # pylint: disable=import-outside-toplevel,import-error
-def _generate_sky_coverage_images(catalog):
-    import matplotlib.figure
+def _generate_sky_coverage_images(catalog, name: str | None = None):
     from matplotlib.colors import LogNorm
 
     from hats.inspection.visualize_catalog import plot_density
 
-    pixel_map_b64 = None
-    density_map_b64 = None
-
-    fig = matplotlib.figure.Figure(figsize=(6, 3))
-    catalog.plot_pixels(fig=fig)
+    pixel_title = f"Catalog pixel map - {name}" if name else None
+    density_title = f"Angular density of catalog {name}" if name else None
+    fig, _ = catalog.plot_pixels(plot_title=pixel_title)
     pixel_map_b64 = _fig_to_webp_base64(fig)
-    fig = matplotlib.figure.Figure(figsize=(6, 3))
-    plot_density(catalog, norm=LogNorm(), fig=fig)
+    fig, _ = plot_density(catalog, norm=LogNorm(), edgecolors="face", plot_title=density_title)
     density_map_b64 = _fig_to_webp_base64(fig)
     return pixel_map_b64, density_map_b64
 
@@ -517,6 +322,169 @@ def _fig_to_webp_base64(fig) -> str:
     import matplotlib.pyplot as plt
 
     buffer = io.BytesIO()
-    fig.savefig(buffer, format="webp")
+    fig.savefig(buffer, format="webp", bbox_inches="tight")
     plt.close(fig)
     return base64.b64encode(buffer.getvalue()).decode("ascii")
+
+
+def _load_empty_nf(catalog_path) -> "npd.NestedFrame | None":
+    """Reads the common metadata parquet file from a catalog directory and returns it as a nested pd
+    Originally in generate_summary_summary and created for refactorting"""
+    if (p := get_common_metadata_pointer(catalog_path)).exists():
+        return read_parquet_file_to_pandas(p)
+    return None
+
+
+def _load_template(jinja2_template: str | None, default_name: str) -> jinja2.Template:
+    """Loads a Jinja2 tempale and returns it ready to call .read(). Also allows custom Jinja2 templates.
+    Originally in generate_summary_summary and created for refactorting"""
+    env = jinja2.Environment(undefined=jinja2.StrictUndefined)
+    if jinja2_template is None:
+        jinja2_template = importlib.resources.read_text(templates, default_name)
+    return env.from_string(jinja2_template)
+
+
+def _sky_context(inner, name, cat_props, column_table, needs_sky):
+    if not needs_sky:
+        return None, None, None, None
+    has_default_columns = bool(cat_props.default_columns)
+    cone_code_example = _cone_code_example(column_table, cat_props)
+    pixel_map_b64, density_map_b64 = None, None
+    try:
+        pixel_map_b64, density_map_b64 = _generate_sky_coverage_images(inner, name)
+    except ImportError:
+        pass
+    return has_default_columns, cone_code_example, pixel_map_b64, density_map_b64
+
+
+def generate_summary(
+    catalog,
+    *,
+    fmt: Literal["markdown", "html"],
+    name: str,
+    description: str,
+    uri: str | None,
+    huggingface_metadata: bool,
+    jinja2_template: str | None = None,
+) -> str:
+    # pylint: disable=too-many-locals
+    """Generate summary content for any HATS catalog or collection."""
+    if isinstance(catalog, CatalogCollection):
+        md_tmpl, html_tmpl = "collection_md_template.jinja2", "collection_html_template.jinja2"
+    elif isinstance(catalog, MarginCatalog):
+        md_tmpl, html_tmpl = "margin_md_template.jinja2", "margin_html_template.jinja2"
+    elif isinstance(catalog, IndexCatalog):
+        md_tmpl, html_tmpl = "index_md_template.jinja2", "index_html_template.jinja2"
+    else:
+        md_tmpl, html_tmpl = "catalog_md_template.jinja2", "catalog_html_template.jinja2"
+    template = _load_template(jinja2_template, md_tmpl if fmt == "markdown" else html_tmpl)
+
+    is_collection = isinstance(catalog, CatalogCollection)
+    inner = catalog.main_catalog if is_collection else catalog
+    cat_props = inner.catalog_info
+    catalog_path = catalog.main_catalog_dir if is_collection else catalog.catalog_path
+
+    has_partition_info = get_partition_info_pointer(catalog_path).exists()
+    empty_nf = _load_empty_nf(catalog_path)
+    metadata_table = (
+        None
+        if isinstance(catalog, IndexCatalog)
+        else _gen_metadata_table(inner, total_columns=None if empty_nf is None else empty_nf.shape[1])
+    )
+    column_table = _gen_column_table(inner, empty_nf)
+
+    needs_sky = not isinstance(catalog, (MarginCatalog, IndexCatalog))
+    col_props = catalog.collection_properties if is_collection else None
+    catalog_dir_name = None if is_collection else catalog.catalog_path.name
+    uris = _catalog_uris(col_props, uri) if is_collection else None
+    margin_thresholds = catalog.get_margin_thresholds() if is_collection else None
+    has_default_columns, cone_code_example, pixel_map_b64, density_map_b64 = _sky_context(
+        inner, name, cat_props, column_table, needs_sky
+    )
+
+    return template.render(
+        name=name,
+        description=description,
+        cat_props=cat_props,
+        uri=uri,
+        has_partition_info=has_partition_info,
+        huggingface_metadata=huggingface_metadata,
+        metadata_table=metadata_table,
+        column_table=column_table,
+        catalog_dir_name=catalog_dir_name,
+        has_default_columns=has_default_columns,
+        cone_code_example=cone_code_example,
+        pixel_map_b64=pixel_map_b64,
+        density_map_b64=density_map_b64,
+        col_props=col_props,
+        uris=uris,
+        margin_thresholds=margin_thresholds,
+    )
+
+
+def write_catalog_summary_file(
+    catalog_path: str | Path | UPath,
+    *,
+    fmt: Literal["markdown", "html"],
+    filename: str | None = None,
+    output_dir: str | Path | UPath | None = None,
+    name: str | None = None,
+    description: str | None = None,
+    uri: str | None = None,
+    huggingface_metadata: bool = False,
+    jinja2_template: str | None = None,
+) -> UPath:
+    """Write a summary readme file for any HATS catalog or collection.
+
+    Supports Catalog, MarginCatalog, IndexCatalog, and CatalogCollection.
+    """
+    from hats.catalog.catalog import Catalog
+
+    catalog_path = get_upath(catalog_path)
+    if fmt not in ("markdown", "html"):
+        raise ValueError(f"Unsupported format: {fmt=}")
+    if fmt != "markdown" and huggingface_metadata:
+        raise ValueError("`huggingface_metadata=True` is supported only for `fmt='markdown'`")
+
+    catalog = read_hats(catalog_path)
+
+    if isinstance(catalog, CatalogCollection):
+        name = name or catalog.collection_properties.name
+        description = description or f"This is the collection of HATS catalogs representing {name}."
+    elif isinstance(catalog, MarginCatalog):
+        name = name or catalog.catalog_info.catalog_name
+        description = description or f"This is the margin catalog for {name.removesuffix('_margin')}."
+    elif isinstance(catalog, IndexCatalog):
+        name = name or catalog.catalog_info.catalog_name
+        indexing_column = catalog.catalog_info.indexing_column
+        primary = catalog.catalog_info.primary_catalog
+        description = description or (
+            f"This index maps {indexing_column} values to partitions in the "
+            f"{primary} catalog for fast non-spatial lookups."
+        )
+    elif isinstance(catalog, Catalog):
+        name = name or catalog.catalog_info.catalog_name
+        description = description or f"This is the HATS catalog for {name}."
+    else:
+        raise ValueError(f"Unsupported catalog type at '{catalog_path}': {type(catalog).__name__}")
+
+    content = generate_summary(
+        catalog,
+        fmt=fmt,
+        name=name,
+        description=description,
+        uri=uri,
+        huggingface_metadata=huggingface_metadata,
+        jinja2_template=jinja2_template,
+    )
+
+    if filename is None:
+        filename = "README.md" if fmt == "markdown" else "index.html"
+    output_dir = catalog_path if output_dir is None else get_upath(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_path = output_dir / filename
+
+    with output_path.open("w") as f:
+        f.write(content)
+
+    return output_path

@@ -1,0 +1,116 @@
+{%- if huggingface_metadata %}
+---
+configs:
+- config_name: default
+  data_dir: dataset
+tags:
+- astronomy
+---
+{%- endif %}
+
+# {{name}} HATS Catalog 
+
+{{description}}
+
+### Access the catalog
+
+We recommend the use of the [LSDB](https://lsdb.io) Python framework to access HATS catalogs.
+LSDB can be installed via `pip install lsdb` or `conda install conda-forge::lsdb`,
+see more details [in the docs](https://docs.lsdb.io/).
+The following code provides a minimal example of opening this catalog:
+
+```python
+import lsdb
+
+# Full sky coverage{% if has_default_columns %}, default columns only{% endif %}.
+catalog = lsdb.open_catalog("{{ uri or '<PATH>' }}")
+{%- if cone_code_example %}
+# One-degree cone{% if has_default_columns %}, all columns{% endif %}.
+catalog = lsdb.open_catalog(
+    "{{ uri or '<PATH>' }}",
+    search_filter=lsdb.ConeSearch(ra={{ cone_code_example["ra"] }}, dec={{ cone_code_example["dec"] }}, radius_arcsec=3600.0),
+    {%- if has_default_columns %}
+    columns="all",
+    {%- endif %}
+)
+{%- endif %}
+```
+
+This catalog is represented as an [Apache Parquet dataset](https://arrow.apache.org/docs/python/dataset.html) and can be accessed with a variety of tools, including `pandas`, `pyarrow`, `dask`, `Spark`, `DuckDB`.
+
+### File structure
+
+This catalog is represented by the following files and directories:
+
+- [`{{catalog_dir_name}}/`](.) — HATS catalog directory
+  - [`dataset/`](dataset/) — Apache Parquet dataset directory
+    - ... parquet metadata and data files in sub directories ...
+  - [`hats.properties`](hats.properties) — textual metadata file describing this HATS catalog
+  {%- if has_partition_info %}
+  - [`partition_info.csv`](partition_info.csv) — CSV file with a list of catalog HEALPix tiles (catalog partitions)
+  {%- endif %}
+  {%- if cat_props.skymap_order %}
+  - [`skymap.fits`](skymap.fits) — HEALPix skymap FITS file with row-counts per HEALPix tile of fixed order {{cat_props.skymap_order}}
+  {%- for alt_order in (cat_props.skymap_alt_orders or []) %}
+  - [`skymap.{{alt_order}}.fits`](skymap.{{alt_order}}.fits) — HEALPix skymap FITS file at order {{alt_order}}
+  {%- endfor %}
+  {%- endif %}
+
+### Catalog metadata
+
+Catalog metadata:
+
+|{%- for name in metadata_table.keys() %} **{{name}}** |{%- endfor %}
+|{%- for _ in metadata_table %} --- |{%- endfor %}
+|{%- for value in metadata_table.values() %} {{value}} |{%- endfor %}
+
+{% if not column_table.empty %}
+### Catalog columns
+
+The main HATS catalog contains the following columns:
+
+| **Name** | {% for col in column_table.index %} **`{{col}}`** |{% endfor %}
+| --- | {% for _ in column_table.index %} --- |{% endfor %}
+| **Data Type** | {% for value in column_table.dtype %} {{value}} |{% endfor %}
+{%- if "default" in column_table %}
+| **Default?** | {% for value in column_table.default %} {{ "Yes" if value else "No" }} |{% endfor %}
+{%- endif %}
+{%- if "nested_into" in column_table %}
+| **Nested?** | {% for value in column_table.nested_into %} {{ value or "—" }} |{% endfor %}
+{%- endif %}
+{%- if "rows" in column_table %}
+| **Value count** | {% for value in column_table.rows %} {{ value }} |{% endfor %}
+{%- endif %}
+{%- if "nulls" in column_table %}
+| **Null count** | {% for value in column_table.nulls %} {{ value }} |{% endfor %}
+{%- endif %}
+{%- if "example" in column_table %}
+| **Example row** | {% for value in column_table.example %} {{ value }} |{% endfor %}
+{%- endif %}
+{%- if "min_value" in column_table %}
+| **Minimum value** | {% for value in column_table.min_value %} {{ value }} |{% endfor %}
+{%- endif %}
+{%- if "max_value" in column_table %}
+| **Maximum value** | {% for value in column_table.max_value %} {{ value }} |{% endfor %}
+{%- endif %}
+{% if "default" in column_table %}
+"Default" indicates whether the column is included when loading the catalog with `lsdb.open_catalog()`
+without specifying any columns to load.
+The list of default columns is available in the [`hats.properties`](hats.properties) file.
+{% endif %}
+{% if "nested_into" in column_table %}
+"Nested" indicates whether the column is stored as a nested field inside another "struct" column.
+{% endif %}
+{% if "rows" in column_table %}
+"Value count" may be different from the total number of rows for nested columns: each nested element is counted as a single value.
+{% if "nulls" in column_table %} "Null count" also refers to "elementary" values, not to rows. {% endif %}
+{% endif %}
+
+{% endif %}
+
+{% if pixel_map_b64 or density_map_b64 %}
+## Sky coverage 
+
+{% if density_map_b64 %}![Density Skymap](data:image/webp;base64,{{density_map_b64}}){%endif%}
+{% if pixel_map_b64 %}![Pixel Skymap](data:image/webp;base64,{{pixel_map_b64}}){%endif%}
+{% endif %}

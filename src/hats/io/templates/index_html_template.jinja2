@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{name}} HATS Index Catalog</title>
+  <style>
+    body { font-family: sans-serif; max-width: 960px; margin: 2rem auto; padding: 0 1rem; color: #222; }
+    h1, h2, h3 { border-bottom: 1px solid #ddd; padding-bottom: 0.3em; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; display: block; overflow-x: auto; }
+    th, td { border: 1px solid #ddd; padding: 0.5em 0.75em; text-align: left; }
+    th { background: #f5f5f5; }
+    pre { background: #f8f8f8; border: 1px solid #ddd; padding: 1em; border-radius: 4px; overflow-x: auto; }
+    code { font-family: monospace; background: #f3f3f3; padding: 0.1em 0.3em; border-radius: 3px; }
+    a { color: #0969da; }
+    blockquote { border-left: 4px solid #ddd; margin: 1em 0; padding: 0.5em 1em; color: #555; background: #fafafa; }
+  </style>
+</head>
+<body>
+
+<h1>{{name}} HATS Index Catalog</h1>
+<blockquote><strong>Note:</strong> This is a secondary index catalog for <code>{{cat_props.primary_catalog}}</code> and is not intended to be used as a standalone catalog.</blockquote>
+<p>{{description}}</p>
+
+<h3>Use the index catalog</h3>
+<p>This index catalog cannot be opened directly with LSDB. Instead, load the primary catalog
+(or its collection) with LSDB and call <code>id_search()</code> to query by <code>{{cat_props.indexing_column}}</code>:</p>
+
+<pre><code>import lsdb
+
+catalog = lsdb.read_hats("&lt;CATALOG_COLLECTION_PATH&gt;")
+ids = [...]
+result = catalog.id_search(values={"{{ cat_props.indexing_column }}": ids})
+result.compute()</code></pre>
+
+<h3>File structure</h3>
+<p>This catalog is represented by the following files and directories:</p>
+<ul>
+  <li><a href="."><code>{{catalog_dir_name}}/</code></a> — index catalog directory
+    <ul>
+      <li><a href="dataset/"><code>dataset/</code></a> — Apache Parquet dataset directory
+        <ul><li>... parquet metadata and data files in sub directories ...</li></ul>
+      </li>
+      <li><a href="hats.properties"><code>hats.properties</code></a> — textual metadata file describing this index catalog</li>
+      {%- if has_partition_info %}
+      <li><a href="partition_info.csv"><code>partition_info.csv</code></a> — CSV file with a list of catalog partitions</li>
+      {%- endif %}
+    </ul>
+  </li>
+</ul>
+
+{% if metadata_table %}
+<h3>Catalog metadata</h3>
+<table>
+  <tr>{% for key in metadata_table.keys() %}<th>{{key}}</th>{% endfor %}</tr>
+  <tr>{% for value in metadata_table.values() %}<td>{{value}}</td>{% endfor %}</tr>
+</table>
+{% endif %}
+
+{% if not column_table.empty %}
+<h3>Index Catalog Schema</h3>
+<table>
+  <tr><th>Name</th>{% for col in column_table.index %}<th><code>{{col}}</code></th>{% endfor %}</tr>
+  <tr><th>Data Type</th>{% for value in column_table.dtype %}<td>{{value}}</td>{% endfor %}</tr>
+  {%- if "nested_into" in column_table %}
+  <tr><th>Nested?</th>{% for value in column_table.nested_into %}<td>{{ value or "—" }}</td>{% endfor %}</tr>
+  {%- endif %}
+  {%- if "rows" in column_table %}
+  <tr><th>Value count</th>{% for value in column_table.rows %}<td>{{ value }}</td>{% endfor %}</tr>
+  {%- endif %}
+  {%- if "nulls" in column_table %}
+  <tr><th>Null count</th>{% for value in column_table.nulls %}<td>{{ value }}</td>{% endfor %}</tr>
+  {%- endif %}
+  {%- if "example" in column_table %}
+  <tr><th>Example row</th>{% for value in column_table.example %}<td>{{ value }}</td>{% endfor %}</tr>
+  {%- endif %}
+  {%- if "min_value" in column_table %}
+  <tr><th>Minimum value</th>{% for value in column_table.min_value %}<td>{{ value }}</td>{% endfor %}</tr>
+  {%- endif %}
+  {%- if "max_value" in column_table %}
+  <tr><th>Maximum value</th>{% for value in column_table.max_value %}<td>{{ value }}</td>{% endfor %}</tr>
+  {%- endif %}
+</table>
+{% if "nested_into" in column_table %}
+<p>"Nested" indicates whether the column is stored as a nested field inside another "struct" column.</p>
+{% endif %}
+{% if "rows" in column_table %}
+<p>"Value count" may be different from the total number of rows for nested columns: each nested element is counted as a single value.
+{% if "nulls" in column_table %} "Null count" also refers to "elementary" values, not to rows.{% endif %}</p>
+{% endif %}
+{% endif %}
+
+</body>
+</html>

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>gaia_source_id_index HATS Index Catalog</title>
+  <style>
+    body { font-family: sans-serif; max-width: 960px; margin: 2rem auto; padding: 0 1rem; color: #222; }
+    h1, h2, h3 { border-bottom: 1px solid #ddd; padding-bottom: 0.3em; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; display: block; overflow-x: auto; }
+    th, td { border: 1px solid #ddd; padding: 0.5em 0.75em; text-align: left; }
+    th { background: #f5f5f5; }
+    pre { background: #f8f8f8; border: 1px solid #ddd; padding: 1em; border-radius: 4px; overflow-x: auto; }
+    code { font-family: monospace; background: #f3f3f3; padding: 0.1em 0.3em; border-radius: 3px; }
+    a { color: #0969da; }
+    blockquote { border-left: 4px solid #ddd; margin: 1em 0; padding: 0.5em 1em; color: #555; background: #fafafa; }
+  </style>
+</head>
+<body>
+
+<h1>gaia_source_id_index HATS Index Catalog</h1>
+<blockquote><strong>Note:</strong> This is a secondary index catalog for <code>/data3/epyc/data3/hats/catalogs/v06/gaia_dr3/gaia</code> and is not intended to be used as a standalone catalog.</blockquote>
+<p>This index maps source_id values to partitions in the Gaia DR3 catalog.</p>
+
+<h3>Use the index catalog</h3>
+<p>This index catalog cannot be opened directly with LSDB. Instead, load the primary catalog
+(or its collection) with LSDB and call <code>id_search()</code> to query by <code>source_id</code>:</p>
+
+<pre><code>import lsdb
+
+catalog = lsdb.read_hats("&lt;CATALOG_COLLECTION_PATH&gt;")
+ids = [...]
+result = catalog.id_search(values={"source_id": ids})
+result.compute()</code></pre>
+
+<h3>File structure</h3>
+<p>This catalog is represented by the following files and directories:</p>
+<ul>
+  <li><a href="."><code>gaia_source_id_index/</code></a> — index catalog directory
+    <ul>
+      <li><a href="dataset/"><code>dataset/</code></a> — Apache Parquet dataset directory
+        <ul><li>... parquet metadata and data files in sub directories ...</li></ul>
+      </li>
+      <li><a href="hats.properties"><code>hats.properties</code></a> — textual metadata file describing this index catalog</li>
+    </ul>
+  </li>
+</ul>
+
+
+
+
+<h3>Index Catalog Schema</h3>
+<table>
+  <tr><th>Name</th><th><code>Norder</code></th><th><code>Npix</code></th></tr>
+  <tr><th>Data Type</th><td>uint8</td><td>uint64</td></tr>
+  <tr><th>Minimum value</th><td>2</td><td>0</td></tr>
+  <tr><th>Maximum value</th><td>6</td><td>42847</td></tr>
+</table>
+
+
+
+
+</body>
+</html>

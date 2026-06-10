@@ -12,11 +12,10 @@ import yaml
 
 from hats.io.summary_file import (
     _build_column_table,
-    _gen_md_column_table,
-    _gen_md_metadata_table,
-    default_md_template,
-    generate_markdown_collection_summary,
-    write_collection_summary_file,
+    _gen_column_table,
+    _gen_metadata_table,
+    generate_summary,
+    write_catalog_summary_file,
 )
 from hats.loaders import read_hats
 
@@ -38,12 +37,12 @@ def extract_yaml_from_readme(readme_path):
     return yaml.safe_load(yaml_content)
 
 
-def test_write_collection_summary_file_markdown(tmp_path, small_sky_collection_dir):
+def test_write_catalog_summary_file_markdown(tmp_path, small_sky_collection_dir):
     """Test writing a basic markdown summary file for a collection"""
     collection_base_dir = tmp_path / "collection"
     shutil.copytree(small_sky_collection_dir, collection_base_dir)
 
-    output_path = write_collection_summary_file(
+    output_path = write_catalog_summary_file(
         collection_base_dir,
         fmt="markdown",
     )
@@ -58,12 +57,12 @@ def test_write_collection_summary_file_markdown(tmp_path, small_sky_collection_d
     assert "This is the collection of HATS catalogs representing small_sky_o1_collection" in content
 
 
-def test_write_collection_summary_file_custom_filename(tmp_path, small_sky_collection_dir):
+def test_write_catalog_summary_file_custom_filename(tmp_path, small_sky_collection_dir):
     """Test writing a summary file with a custom filename"""
     collection_base_dir = tmp_path / "collection"
     shutil.copytree(small_sky_collection_dir, collection_base_dir)
 
-    output_path = write_collection_summary_file(
+    output_path = write_catalog_summary_file(
         collection_base_dir,
         fmt="markdown",
         filename="CUSTOM.md",
@@ -74,7 +73,7 @@ def test_write_collection_summary_file_custom_filename(tmp_path, small_sky_colle
     assert output_path.parent == collection_base_dir
 
 
-def test_write_collection_summary_file_custom_name_description(tmp_path, small_sky_collection_dir):
+def test_write_catalog_summary_file_custom_name_description(tmp_path, small_sky_collection_dir):
     """Test writing a summary file with custom title and description"""
     collection_base_dir = tmp_path / "collection"
     shutil.copytree(small_sky_collection_dir, collection_base_dir)
@@ -82,7 +81,7 @@ def test_write_collection_summary_file_custom_name_description(tmp_path, small_s
     custom_name = "My Custom Title"
     custom_description = "This is a custom description for the catalog."
 
-    output_path = write_collection_summary_file(
+    output_path = write_catalog_summary_file(
         collection_base_dir,
         fmt="markdown",
         name=custom_name,
@@ -94,12 +93,12 @@ def test_write_collection_summary_file_custom_name_description(tmp_path, small_s
     assert custom_description in content
 
 
-def test_write_collection_summary_file_with_huggingface_metadata(tmp_path, small_sky_collection_dir):
+def test_write_catalog_summary_file_with_huggingface_metadata(tmp_path, small_sky_collection_dir):
     """Test writing a markdown summary file with Hugging Face metadata"""
     collection_base_dir = tmp_path / "collection"
     shutil.copytree(small_sky_collection_dir, collection_base_dir)
 
-    output_path = write_collection_summary_file(
+    output_path = write_catalog_summary_file(
         collection_base_dir,
         fmt="markdown",
         huggingface_metadata=True,
@@ -113,24 +112,25 @@ def test_write_collection_summary_file_with_huggingface_metadata(tmp_path, small
     assert "astronomy" in content
 
 
-def test_write_collection_summary_file_unsupported_fits_format(tmp_path, small_sky_collection_dir):
+def test_write_catalog_summary_file_unsupported_fits_format(tmp_path, small_sky_collection_dir):
     """Test that fits format raises an error for unsupported format"""
     collection_base_dir = tmp_path / "collection"
     shutil.copytree(small_sky_collection_dir, collection_base_dir)
 
     with pytest.raises(ValueError, match="Unsupported format"):
-        write_collection_summary_file(
+        write_catalog_summary_file(
             collection_base_dir,
             fmt="fits",  # Not supported
         )
 
 
-def test_generate_markdown_collection_summary_basic(small_sky_collection_dir):
+def test_generate_summary_basic(small_sky_collection_dir):
     """Test generating markdown summary content"""
     collection = read_hats(small_sky_collection_dir)
 
-    content = generate_markdown_collection_summary(
-        collection=collection,
+    content = generate_summary(
+        collection,
+        fmt="markdown",
         name="Test Title",
         description="Test Description",
         uri=None,
@@ -142,12 +142,13 @@ def test_generate_markdown_collection_summary_basic(small_sky_collection_dir):
     assert "config_name" not in content  # No YAML frontmatter
 
 
-def test_generate_markdown_collection_summary_with_huggingface(small_sky_collection_dir):
+def test_generate_summary_with_huggingface(small_sky_collection_dir):
     """Test generating markdown summary content with Hugging Face metadata"""
     collection = read_hats(small_sky_collection_dir)
 
-    content = generate_markdown_collection_summary(
-        collection=collection,
+    content = generate_summary(
+        collection,
+        fmt="markdown",
         name="Test Title",
         description="Test Description",
         uri=None,
@@ -165,7 +166,7 @@ def test_generate_hugging_face_yaml_metadata(tmp_path, small_sky_collection_dir)
     shutil.copytree(small_sky_collection_dir, collection_base_dir)
 
     # Generate the summary file with Hugging Face metadata
-    readme_path = write_collection_summary_file(
+    readme_path = write_catalog_summary_file(
         collection_base_dir,
         fmt="markdown",
         huggingface_metadata=True,
@@ -217,7 +218,7 @@ def test_generate_hugging_face_yaml_metadata_no_margins(tmp_path, small_sky_coll
     collection = read_hats(collection_base_dir)
 
     # Generate the summary file with Hugging Face metadata
-    readme_path = write_collection_summary_file(
+    readme_path = write_catalog_summary_file(
         collection_base_dir,
         fmt="markdown",
         huggingface_metadata=True,
@@ -248,7 +249,7 @@ def test_generate_hugging_face_yaml_metadata_no_indexes(tmp_path, small_sky_coll
     collection = read_hats(collection_base_dir)
 
     # Generate the summary file with Hugging Face metadata
-    readme_path = write_collection_summary_file(
+    readme_path = write_catalog_summary_file(
         collection_base_dir,
         fmt="markdown",
         huggingface_metadata=True,
@@ -264,15 +265,6 @@ def test_generate_hugging_face_yaml_metadata_no_indexes(tmp_path, small_sky_coll
     assert "id" not in config_names
 
 
-def test_write_collection_summary_file_with_non_collection_raises_error(small_sky_dir):
-    """Test that ValueError is raised when a non-collection catalog path is passed"""
-    with pytest.raises(ValueError, match="contains a HATS catalog, but not a collection"):
-        write_collection_summary_file(
-            small_sky_dir,
-            fmt="markdown",
-        )
-
-
 def test_load_hats_collection_with_huggingface_datasets(tmp_path, small_sky_collection_dir):
     """Test loading HATS collection configs with Hugging Face datasets library"""
     datasets = pytest.importorskip("datasets")
@@ -281,7 +273,7 @@ def test_load_hats_collection_with_huggingface_datasets(tmp_path, small_sky_coll
     shutil.copytree(small_sky_collection_dir, collection_base_dir)
 
     # Generate the summary file with Hugging Face metadata
-    write_collection_summary_file(
+    write_catalog_summary_file(
         collection_base_dir,
         fmt="markdown",
         huggingface_metadata=True,
@@ -331,14 +323,14 @@ def test_load_hats_collection_with_huggingface_datasets(tmp_path, small_sky_coll
     assert len(dataset_index["train"]) == index_catalog.catalog_info.total_rows
 
 
-def test_write_collection_summary_file_custom_output_dir(tmp_path, small_sky_collection_dir):
+def test_write_catalog_summary_file_custom_output_dir(tmp_path, small_sky_collection_dir):
     """Test writing a summary file to a custom output directory"""
     collection_base_dir = tmp_path / "collection"
     shutil.copytree(small_sky_collection_dir, collection_base_dir)
 
     output_dir = tmp_path / "custom_output"
 
-    output_path = write_collection_summary_file(
+    output_path = write_catalog_summary_file(
         collection_base_dir,
         fmt="markdown",
         output_dir=output_dir,
@@ -349,14 +341,14 @@ def test_write_collection_summary_file_custom_output_dir(tmp_path, small_sky_col
     assert output_path.name == "README.md"
 
 
-def test_write_collection_summary_file_custom_uri(tmp_path, small_sky_collection_dir):
+def test_write_catalog_summary_file_custom_uri(tmp_path, small_sky_collection_dir):
     """Test writing a summary file with a custom URI"""
     collection_base_dir = tmp_path / "collection"
     shutil.copytree(small_sky_collection_dir, collection_base_dir)
 
     custom_uri = "s3://my-bucket/my-catalog"
 
-    output_path = write_collection_summary_file(
+    output_path = write_catalog_summary_file(
         collection_base_dir,
         fmt="markdown",
         uri=custom_uri,
@@ -366,7 +358,7 @@ def test_write_collection_summary_file_custom_uri(tmp_path, small_sky_collection
     assert custom_uri in content
 
 
-def test_write_collection_summary_file_custom_jinja2_template(tmp_path, small_sky_collection_dir):
+def test_write_catalog_summary_file_custom_jinja2_template(tmp_path, small_sky_collection_dir):
     """Test writing a summary file with a custom jinja2 template"""
     collection_base_dir = tmp_path / "collection"
     shutil.copytree(small_sky_collection_dir, collection_base_dir)
@@ -375,7 +367,7 @@ def test_write_collection_summary_file_custom_jinja2_template(tmp_path, small_sk
     custom_description = "Test catalog description."
     custom_template = "Name: {{ name }}\nDescription: {{ description }}"
 
-    output_path = write_collection_summary_file(
+    output_path = write_catalog_summary_file(
         collection_base_dir,
         fmt="markdown",
         name=custom_name,
@@ -387,20 +379,13 @@ def test_write_collection_summary_file_custom_jinja2_template(tmp_path, small_sk
     assert content == "Name: Test Catalog Name\nDescription: Test catalog description."
 
 
-def test_default_md_template():
-    """Test that default_md_template returns a valid jinja2 template string"""
-    template = default_md_template()
-    assert isinstance(template, str)
-    assert len(template) > 0
-
-
-def test_gen_md_metadata_table(small_sky_collection_dir):
+def test_gen_metadata_table(small_sky_collection_dir):
     """Test metadata table generation with proper formatting"""
     collection = read_hats(small_sky_collection_dir)
     catalog = collection.main_catalog
 
     # Test with total_columns=6 (includes healpix column)
-    metadata_table = _gen_md_metadata_table(catalog, total_columns=6)
+    metadata_table = _gen_metadata_table(catalog, total_columns=6)
 
     # Check exact row count
     assert metadata_table["Number of rows"] == "131"
@@ -412,7 +397,7 @@ def test_gen_md_metadata_table(small_sky_collection_dir):
     assert metadata_table["Number of columns"] == "5"
 
 
-def test_gen_md_column_table_nested_columns():
+def test_gen_column_table_nested_columns():
     """Test column table generation with nested and regular columns"""
     # Create a custom nested frame with regular and nested columns
     nf = npd.NestedFrame(
@@ -459,7 +444,7 @@ def test_gen_md_column_table_nested_columns():
     pd.testing.assert_frame_equal(column_table.reset_index(drop=False).reset_index(drop=True), expected)
 
 
-def test_gen_md_column_table_nested_columns_empty():
+def test_gen_column_table_nested_columns_empty():
     """Test column table generation with nested columns when the frame is empty (cell is None)"""
     nf = npd.NestedFrame(
         {
@@ -481,10 +466,10 @@ def test_gen_md_column_table_nested_columns_empty():
     assert "example" not in column_table.columns
 
 
-def test_gen_md_column_table_nested_catalog(small_sky_nested_dir):
+def test_gen_column_table_nested_catalog(small_sky_nested_dir):
     """Test column table generation from a real nested catalog with nested columns"""
     catalog = read_hats(small_sky_nested_dir)
-    column_table = _gen_md_column_table(catalog, empty_nf=None)
+    column_table = _gen_column_table(catalog, empty_nf=None)
 
     # The nested catalog has regular columns and lc.* nested columns
     assert "nested_into" in column_table.columns
@@ -526,13 +511,13 @@ def test_gen_md_column_table_nested_catalog(small_sky_nested_dir):
     assert "lc" in rendered
 
 
-def test_write_collection_summary_file_contains_images(tmp_path, small_sky_collection_dir):
+def test_write_catalog_summary_file_contains_images(tmp_path, small_sky_collection_dir):
     pytest.importorskip("matplotlib.pyplot")
 
     collection_base_dir = tmp_path / "collection"
     shutil.copytree(small_sky_collection_dir, collection_base_dir)
 
-    output_path = write_collection_summary_file(collection_base_dir, fmt="markdown")
+    output_path = write_catalog_summary_file(collection_base_dir, fmt="markdown")
 
     content = output_path.read_text()
     assert "![Pixel Skymap](data:image/webp;base64," in content

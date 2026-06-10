@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{name}} HATS Catalog</title>
+  <style>
+    body { font-family: sans-serif; max-width: 960px; margin: 2rem auto; padding: 0 1rem; color: #222; }
+    h1, h2, h3 { border-bottom: 1px solid #ddd; padding-bottom: 0.3em; }
+    table { border-collapse: collapse; width: 100%; margin: 1em 0; display: block; overflow-x: auto; }
+    th, td { border: 1px solid #ddd; padding: 0.5em 0.75em; text-align: left; }
+    th { background: #f5f5f5; }
+    pre { background: #f8f8f8; border: 1px solid #ddd; padding: 1em; border-radius: 4px; overflow-x: auto; }
+    code { font-family: monospace; background: #f3f3f3; padding: 0.1em 0.3em; border-radius: 3px; }
+    a { color: #0969da; }
+    img { max-width: 100%; display: block; margin: 1em 0; }
+  </style>
+</head>
+<body>
+
+<h1>{{name}} HATS Catalog</h1>
+<p>{{description}}</p>
+
+<h3>Access the catalog</h3>
+<p>We recommend the use of the <a href="https://lsdb.io">LSDB</a> Python framework to access HATS catalogs.
+LSDB can be installed via <code>pip install lsdb</code> or <code>conda install conda-forge::lsdb</code>,
+see more details <a href="https://docs.lsdb.io/">in the docs</a>.
+The following code provides a minimal example of opening this catalog:</p>
+
+<pre><code>import lsdb
+
+# Full sky coverage{% if has_default_columns %}, default columns only{% endif %}.
+catalog = lsdb.open_catalog("{{ uri or '&lt;PATH&gt;' }}")
+{%- if cone_code_example %}
+# One-degree cone{% if has_default_columns %}, all columns{% endif %}.
+catalog = lsdb.open_catalog(
+    "{{ uri or '&lt;PATH&gt;' }}",
+    search_filter=lsdb.ConeSearch(ra={{ cone_code_example["ra"] }}, dec={{ cone_code_example["dec"] }}, radius_arcsec=3600.0),
+    {%- if has_default_columns %}
+    columns="all",
+    {%- endif %}
+)
+{%- endif %}</code></pre>
+
+<p>This catalog is represented as an <a href="https://arrow.apache.org/docs/python/dataset.html">Apache Parquet dataset</a> and can be accessed with a variety of tools, including <code>pandas</code>, <code>pyarrow</code>, <code>dask</code>, <code>Spark</code>, <code>DuckDB</code>.</p>
+
+{% if pixel_map_b64 or density_map_b64 %}
+<h2>Sky coverage</h2>
+{% if density_map_b64 %}<img src="data:image/webp;base64,{{density_map_b64}}" alt="Density Skymap">{% endif %}
+{% if pixel_map_b64 %}<img src="data:image/webp;base64,{{pixel_map_b64}}" alt="Pixel Skymap">{% endif %}
+{% endif %}
+
+<h3>File structure</h3>
+<p>This catalog is represented by the following files and directories:</p>
+<ul>
+  <li><a href="."><code>{{catalog_dir_name}}/</code></a> — HATS catalog directory
+    <ul>
+      <li><a href="dataset/"><code>dataset/</code></a> — Apache Parquet dataset directory
+        <ul><li>... parquet metadata and data files in sub directories ...</li></ul>
+      </li>
+      <li><a href="hats.properties"><code>hats.properties</code></a> — textual metadata file describing this HATS catalog</li>
+      {%- if has_partition_info %}
+      <li><a href="partition_info.csv"><code>partition_info.csv</code></a> — CSV file with a list of catalog HEALPix tiles (catalog partitions)</li>
+      {%- endif %}
+      {%- if cat_props.skymap_order %}
+      <li><a href="skymap.fits"><code>skymap.fits</code></a> — HEALPix skymap FITS file with row-counts per HEALPix tile of fixed order {{cat_props.skymap_order}}</li>
+      {%- for alt_order in (cat_props.skymap_alt_orders or []) %}
+      <li><a href="skymap.{{alt_order}}.fits"><code>skymap.{{alt_order}}.fits</code></a> — HEALPix skymap FITS file at order {{alt_order}}</li>
+      {%- endfor %}
+      {%- endif %}
+    </ul>
+  </li>
+</ul>
+
+<h3>Catalog metadata</h3>
+<p>Catalog metadata:</p>
+<table>
+  <tr>{% for key in metadata_table.keys() %}<th>{{key}}</th>{% endfor %}</tr>
+  <tr>{% for value in metadata_table.values() %}<td>{{value}}</td>{% endfor %}</tr>
+</table>
+
+{% if not column_table.empty %}
+<h3>Catalog columns</h3>
+<p>The main HATS catalog contains the following columns:</p>
+<table>
+  <tr><th>Name</th>{% for col in column_table.index %}<th><code>{{col}}</code></th>{% endfor %}</tr>
+  <tr><th>Data Type</th>{% for value in column_table.dtype %}<td>{{value}}</td>{% endfor %}</tr>
+  {%- if "default" in column_table %}
+  <tr><th>Default?</th>{% for value in column_table.default %}<td>{{ "Yes" if value else "No" }}</td>{% endfor %}</tr>
+  {%- endif %}
+  {%- if "nested_into" in column_table %}
+  <tr><th>Nested?</th>{% for value in column_table.nested_into %}<td>{{ value or "—" }}</td>{% endfor %}</tr>
+  {%- endif %}
+  {%- if "rows" in column_table %}
+  <tr><th>Value count</th>{% for value in column_table.rows %}<td>{{ value }}</td>{% endfor %}</tr>
+  {%- endif %}
+  {%- if "nulls" in column_table %}
+  <tr><th>Null count</th>{% for value in column_table.nulls %}<td>{{ value }}</td>{% endfor %}</tr>
+  {%- endif %}
+  {%- if "example" in column_table %}
+  <tr><th>Example row</th>{% for value in column_table.example %}<td>{{ value }}</td>{% endfor %}</tr>
+  {%- endif %}
+  {%- if "min_value" in column_table %}
+  <tr><th>Minimum value</th>{% for value in column_table.min_value %}<td>{{ value }}</td>{% endfor %}</tr>
+  {%- endif %}
+  {%- if "max_value" in column_table %}
+  <tr><th>Maximum value</th>{% for value in column_table.max_value %}<td>{{ value }}</td>{% endfor %}</tr>
+  {%- endif %}
+</table>
+{% if "default" in column_table %}
+<p>"Default" indicates whether the column is included when loading the catalog with <code>lsdb.open_catalog()</code>
+without specifying any columns to load.
+The list of default columns is available in the <a href="hats.properties"><code>hats.properties</code></a> file.</p>
+{% endif %}
+{% if "nested_into" in column_table %}
+<p>"Nested" indicates whether the column is stored as a nested field inside another "struct" column.</p>
+{% endif %}
+{% if "rows" in column_table %}
+<p>"Value count" may be different from the total number of rows for nested columns: each nested element is counted as a single value.
+{% if "nulls" in column_table %} "Null count" also refers to "elementary" values, not to rows.{% endif %}</p>
+{% endif %}
+{% endif %}
+
+
+</body>
+</html>
