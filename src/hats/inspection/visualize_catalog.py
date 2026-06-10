@@ -66,6 +66,9 @@ def plot_density(catalog: Catalog, *, plot_title: str | None = None, order=None,
     if unit is None:
         unit = u.deg * u.deg
 
+    if "edgecolors" not in kwargs and "ec" not in kwargs:
+        kwargs["edgecolors"] = "face"
+
     pix_area = hp.order2pixarea(order, unit=unit)
 
     point_map = point_map / pix_area
