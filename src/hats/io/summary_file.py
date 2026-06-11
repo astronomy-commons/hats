@@ -336,7 +336,7 @@ def _load_empty_nf(catalog_path) -> "npd.NestedFrame | None":
 
 
 def _load_template(jinja2_template: str | None, default_name: str) -> jinja2.Template:
-    """Loads a Jinja2 tempale and returns it ready to call .read(). Also allows custom Jinja2 templates.
+    """Loads a Jinja2 temlate and returns it ready to call .read(). Also allows custom Jinja2 templates.
     Originally in generate_summary_summary and created for refactorting"""
     env = jinja2.Environment(undefined=jinja2.StrictUndefined)
     if jinja2_template is None:
@@ -457,8 +457,6 @@ def write_catalog_summary_file(
     elif isinstance(catalog, Catalog):
         name = name or catalog.catalog_info.catalog_name
         description = description or f"This is the HATS catalog for {name}."
-    else:
-        raise ValueError(f"Unsupported catalog type at '{catalog_path}': {type(catalog).__name__}")
 
     content = generate_summary(
         catalog,

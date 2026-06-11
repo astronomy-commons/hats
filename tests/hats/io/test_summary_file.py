@@ -556,3 +556,10 @@ def test_write_catalog_summary_file_html(tmp_path, small_sky_collection_dir):
 
     assert output_path.name == "index.html"
     assert "<!DOCTYPE html>" in output_path.read_text()
+
+
+def test_write_catalog_summary_file_html_huggingface_raises(tmp_path, small_sky_collection_dir):
+    collection_base_dir = tmp_path / "collection"
+    shutil.copytree(small_sky_collection_dir, collection_base_dir)
+    with pytest.raises(ValueError, match="huggingface_metadata"):
+        write_catalog_summary_file(collection_base_dir, fmt="html", huggingface_metadata=True)
