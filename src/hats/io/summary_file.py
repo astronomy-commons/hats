@@ -429,6 +429,13 @@ def write_catalog_summary_file(
     catalog_path = get_upath(catalog_path)
     if fmt != "markdown" and huggingface_metadata:
         raise ValueError("`huggingface_metadata=True` is supported only for `fmt='markdown'`")
+    match fmt:
+        case "markdown":
+            filename = filename or "README.md"
+        case "html":
+            filename = filename or "index.html"
+        case _:
+            raise ValueError(f"Unsupported format: {fmt!r}. Expected 'markdown' or 'html'.")
     catalog = read_hats(catalog_path)
 
     if isinstance(catalog, CatalogCollection):
@@ -459,14 +466,6 @@ def write_catalog_summary_file(
         jinja2_template=jinja2_template,
     )
 
-    if filename is None:
-        match fmt:
-            case "markdown":
-                filename = "README.md"
-            case "html":
-                filename = "index.html"
-            case _:
-                raise ValueError(f"Unsupported format: {fmt!r}. Expected 'markdown' or 'html'.")
     output_dir = catalog_path if output_dir is None else get_upath(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     output_path = output_dir / filename

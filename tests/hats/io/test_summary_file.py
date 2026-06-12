@@ -563,3 +563,10 @@ def test_write_catalog_summary_file_html_huggingface_raises(tmp_path, small_sky_
     shutil.copytree(small_sky_collection_dir, collection_base_dir)
     with pytest.raises(ValueError, match="huggingface_metadata"):
         write_catalog_summary_file(collection_base_dir, fmt="html", huggingface_metadata=True)
+
+
+def test_write_catalog_summary_file_invalid_format_raises(tmp_path, small_sky_collection_dir):
+    collection_base_dir = tmp_path / "collection"
+    shutil.copytree(small_sky_collection_dir, collection_base_dir)
+    with pytest.raises(ValueError, match="Unsupported format"):
+        write_catalog_summary_file(collection_base_dir, fmt="md")
