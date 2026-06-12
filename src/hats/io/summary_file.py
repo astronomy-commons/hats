@@ -399,7 +399,7 @@ def generate_summary(
             if isinstance(catalog, IndexCatalog)
             else _gen_metadata_table(inner, total_columns=None if empty_nf is None else empty_nf.shape[1])
         ),
-        column_table=column_table,
+        column_table=pd.DataFrame() if isinstance(catalog, IndexCatalog) else column_table,
         catalog_dir_name=None if is_collection else catalog.catalog_path.name,
         has_default_columns=has_default_columns,
         cone_code_example=cone_code_example,
