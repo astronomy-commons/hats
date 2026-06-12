@@ -1,0 +1,42 @@
+{%- if huggingface_metadata %}
+---
+configs:
+- config_name: default
+  data_dir: dataset
+tags:
+- astronomy
+---
+{%- endif %}
+
+# {{name}} HATS Index Catalog
+
+> **Note:** This is a secondary index catalog for `{{cat_props.primary_catalog}}` and is not intended to be used as a standalone catalog.
+
+{{description}}
+
+### Use the index catalog
+
+This index catalog cannot be opened directly with LSDB. Instead, load the primary catalog
+(or its collection) with LSDB and call `id_search()` to query by `{{cat_props.indexing_column}}`:
+
+```python
+import lsdb
+
+catalog = lsdb.read_hats("<CATALOG_COLLECTION_PATH>")
+ids = [...]
+result = catalog.id_search(values={"{{ cat_props.indexing_column }}": ids})
+result.compute()
+```
+
+### File structure
+
+This catalog is represented by the following files and directories:
+
+- [`{{catalog_dir_name}}/`](.) — index catalog directory
+  - [`dataset/`](dataset/) — Apache Parquet dataset directory
+    - ... parquet metadata and data files in sub directories ...
+  - [`hats.properties`](hats.properties) — textual metadata file describing this index catalog
+  {%- if has_partition_info %}
+  - [`partition_info.csv`](partition_info.csv) — CSV file with a list of catalog partitions
+  {%- endif %}
+
