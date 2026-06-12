@@ -327,21 +327,6 @@ def _fig_to_webp_base64(fig) -> str:
     return base64.b64encode(buffer.getvalue()).decode("ascii")
 
 
-def _load_empty_nf(catalog_path) -> "npd.NestedFrame | None":
-    """Reads the common metadata parquet file from a catalog directory and returns it as a nested pd"""
-    if (p := get_common_metadata_pointer(catalog_path)).exists():
-        return read_parquet_file_to_pandas(p)
-    return None
-
-
-def _load_template(jinja2_template: str | None, default_name: str) -> jinja2.Template:
-    """Loads a Jinja2 temlate and returns it ready to call .read(). Also allows custom Jinja2 templates."""
-    env = jinja2.Environment(undefined=jinja2.StrictUndefined)
-    if jinja2_template is None:
-        jinja2_template = importlib.resources.read_text(templates, default_name)
-    return env.from_string(jinja2_template)
-
-
 def generate_summary(
     catalog,
     *,
@@ -361,20 +346,24 @@ def generate_summary(
         md_tmpl, html_tmpl = "index_md_template.jinja2", "index_html_template.jinja2"
     else:
         md_tmpl, html_tmpl = "catalog_md_template.jinja2", "catalog_html_template.jinja2"
+    env = jinja2.Environment(undefined=jinja2.StrictUndefined)
     match fmt:
         case "markdown":
-            template = _load_template(jinja2_template, md_tmpl)
+            tmpl_str = jinja2_template or importlib.resources.read_text(templates, md_tmpl)
         case "html":
-            template = _load_template(jinja2_template, html_tmpl)
+            tmpl_str = jinja2_template or importlib.resources.read_text(templates, html_tmpl)
         case _:
             raise ValueError(f"Unsupported format: {fmt!r}. Expected 'markdown' or 'html'.")
+    template = env.from_string(tmpl_str)
 
     is_collection = isinstance(catalog, CatalogCollection)
     inner = catalog.main_catalog if is_collection else catalog
     cat_props = inner.catalog_info
     catalog_path = catalog.main_catalog_dir if is_collection else catalog.catalog_path
 
-    empty_nf = _load_empty_nf(catalog_path)
+    empty_nf = (
+        read_parquet_file_to_pandas(p) if (p := get_common_metadata_pointer(catalog_path)).exists() else None
+    )
     column_table = _gen_column_table(inner, empty_nf)
     col_props = catalog.collection_properties if is_collection else None
     needs_sky = not isinstance(catalog, (MarginCatalog, IndexCatalog))
