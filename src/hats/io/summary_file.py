@@ -328,33 +328,18 @@ def _fig_to_webp_base64(fig) -> str:
 
 
 def _load_empty_nf(catalog_path) -> "npd.NestedFrame | None":
-    """Reads the common metadata parquet file from a catalog directory and returns it as a nested pd
-    Originally in generate_summary_summary and created for refactorting"""
+    """Reads the common metadata parquet file from a catalog directory and returns it as a nested pd"""
     if (p := get_common_metadata_pointer(catalog_path)).exists():
         return read_parquet_file_to_pandas(p)
     return None
 
 
 def _load_template(jinja2_template: str | None, default_name: str) -> jinja2.Template:
-    """Loads a Jinja2 temlate and returns it ready to call .read(). Also allows custom Jinja2 templates.
-    Originally in generate_summary_summary and created for refactorting"""
+    """Loads a Jinja2 temlate and returns it ready to call .read(). Also allows custom Jinja2 templates."""
     env = jinja2.Environment(undefined=jinja2.StrictUndefined)
     if jinja2_template is None:
         jinja2_template = importlib.resources.read_text(templates, default_name)
     return env.from_string(jinja2_template)
-
-
-def _sky_context(inner, name, cat_props, column_table, needs_sky):
-    if not needs_sky:
-        return None, None, None, None
-    has_default_columns = bool(cat_props.default_columns)
-    cone_code_example = _cone_code_example(column_table, cat_props)
-    pixel_map_b64, density_map_b64 = None, None
-    try:
-        pixel_map_b64, density_map_b64 = _generate_sky_coverage_images(inner, name)
-    except ImportError:
-        pass
-    return has_default_columns, cone_code_example, pixel_map_b64, density_map_b64
 
 
 def generate_summary(
@@ -376,7 +361,13 @@ def generate_summary(
         md_tmpl, html_tmpl = "index_md_template.jinja2", "index_html_template.jinja2"
     else:
         md_tmpl, html_tmpl = "catalog_md_template.jinja2", "catalog_html_template.jinja2"
-    template = _load_template(jinja2_template, md_tmpl if fmt == "markdown" else html_tmpl)
+    match fmt:
+        case "markdown":
+            template = _load_template(jinja2_template, md_tmpl)
+        case "html":
+            template = _load_template(jinja2_template, html_tmpl)
+        case _:
+            raise ValueError(f"Unsupported format: {fmt!r}. Expected 'markdown' or 'html'.")
 
     is_collection = isinstance(catalog, CatalogCollection)
     inner = catalog.main_catalog if is_collection else catalog
@@ -386,9 +377,15 @@ def generate_summary(
     empty_nf = _load_empty_nf(catalog_path)
     column_table = _gen_column_table(inner, empty_nf)
     col_props = catalog.collection_properties if is_collection else None
-    has_default_columns, cone_code_example, pixel_map_b64, density_map_b64 = _sky_context(
-        inner, name, cat_props, column_table, not isinstance(catalog, (MarginCatalog, IndexCatalog))
-    )
+    needs_sky = not isinstance(catalog, (MarginCatalog, IndexCatalog))
+    has_default_columns = bool(cat_props.default_columns) if needs_sky else None
+    cone_code_example = _cone_code_example(column_table, cat_props) if needs_sky else None
+    pixel_map_b64, density_map_b64 = None, None
+    if needs_sky:
+        try:
+            pixel_map_b64, density_map_b64 = _generate_sky_coverage_images(inner, name)
+        except ImportError:
+            pass
 
     return template.render(
         name=name,
@@ -426,18 +423,12 @@ def write_catalog_summary_file(
     huggingface_metadata: bool = False,
     jinja2_template: str | None = None,
 ) -> UPath:
-    """Write a summary readme file for any HATS catalog or collection.
-
-    Supports Catalog, MarginCatalog, IndexCatalog, and CatalogCollection.
-    """
+    """Write a summary readme file for any HATS catalog or collection"""
     from hats.catalog.catalog import Catalog
 
     catalog_path = get_upath(catalog_path)
-    if fmt not in ("markdown", "html"):
-        raise ValueError(f"Unsupported format: {fmt=}")
     if fmt != "markdown" and huggingface_metadata:
         raise ValueError("`huggingface_metadata=True` is supported only for `fmt='markdown'`")
-
     catalog = read_hats(catalog_path)
 
     if isinstance(catalog, CatalogCollection):
@@ -452,7 +443,7 @@ def write_catalog_summary_file(
         primary = catalog.catalog_info.primary_catalog
         description = description or (
             f"This index maps {indexing_column} values to partitions in the "
-            f"{primary} catalog for fast non-spatial lookups."
+            f"{primary} catalog for non-spatial lookups."
         )
     elif isinstance(catalog, Catalog):
         name = name or catalog.catalog_info.catalog_name
@@ -469,7 +460,13 @@ def write_catalog_summary_file(
     )
 
     if filename is None:
-        filename = "README.md" if fmt == "markdown" else "index.html"
+        match fmt:
+            case "markdown":
+                filename = "README.md"
+            case "html":
+                filename = "index.html"
+            case _:
+                raise ValueError(f"Unsupported format: {fmt!r}. Expected 'markdown' or 'html'.")
     output_dir = catalog_path if output_dir is None else get_upath(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     output_path = output_dir / filename

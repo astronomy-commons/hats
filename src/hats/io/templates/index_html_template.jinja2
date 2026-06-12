@@ -81,12 +81,8 @@ result.compute()</code></pre>
   <tr><th>Maximum value</th>{% for value in column_table.max_value %}<td>{{ value }}</td>{% endfor %}</tr>
   {%- endif %}
 </table>
-{% if "nested_into" in column_table %}
-<p>"Nested" indicates whether the column is stored as a nested field inside another "struct" column.</p>
-{% endif %}
-{% if "rows" in column_table %}
-<p>"Value count" may be different from the total number of rows for nested columns: each nested element is counted as a single value.
-{% if "nulls" in column_table %} "Null count" also refers to "elementary" values, not to rows.{% endif %}</p>
+{% if "nested_into" in column_table or "rows" in column_table %}
+<p>{% if "nested_into" in column_table %}"Nested" indicates whether the column is stored as a nested field inside another "struct" column.{% if "rows" in column_table %}<br>{% endif %}{% endif %}{% if "rows" in column_table %}"Value count" may be different from the total number of rows for nested columns: each nested element is counted as a single value.{% if "nulls" in column_table %} "Null count" also refers to "elementary" values, not to rows.{% endif %}{% endif %}</p>
 {% endif %}
 {% endif %}
 
