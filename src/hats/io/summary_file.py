@@ -327,6 +327,34 @@ def _fig_to_webp_base64(fig) -> str:
     return base64.b64encode(buffer.getvalue()).decode("ascii")
 
 
+# pylint: disable=import-outside-toplevel,import-error
+def write_sky_coverage_pngs(
+    catalog_path: str | Path | UPath,
+    output_dir: str | Path | UPath | None = None,
+) -> None:
+    """Write skymap.png and partition_info.png to output_dir (defaults to catalog_path)."""
+    import matplotlib.pyplot as plt
+    from matplotlib.colors import LogNorm
+
+    from hats.inspection.visualize_catalog import plot_density
+
+    catalog = read_hats(get_upath(catalog_path))
+    inner = catalog.main_catalog if isinstance(catalog, CatalogCollection) else catalog
+
+    out = get_upath(output_dir) if output_dir is not None else get_upath(catalog_path)
+    out.mkdir(parents=True, exist_ok=True)
+
+    fig, _ = inner.plot_pixels()
+    with (out / "skymap.png").open("wb") as f:
+        fig.savefig(f, format="png", bbox_inches="tight")
+    plt.close(fig)
+
+    fig, _ = plot_density(inner, norm=LogNorm(), edgecolors="face")
+    with (out / "partition_info.png").open("wb") as f:
+        fig.savefig(f, format="png", bbox_inches="tight")
+    plt.close(fig)
+
+
 def generate_summary(
     catalog,
     *,
@@ -412,7 +440,7 @@ def write_catalog_summary_file(
     huggingface_metadata: bool = False,
     jinja2_template: str | None = None,
 ) -> UPath:
-    """Write a summary readme file for any HATS catalog or collection"""
+    """Write a summary readme file fbor any HATS catalog or collection"""
     from hats.catalog.catalog import Catalog
 
     catalog_path = get_upath(catalog_path)
