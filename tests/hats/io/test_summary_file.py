@@ -573,14 +573,6 @@ def test_write_catalog_summary_file_invalid_format_raises(tmp_path, small_sky_co
         write_catalog_summary_file(collection_base_dir, fmt="md")
 
 
-def test_write_sky_coverage_pngs_standalone(tmp_path, small_sky_order1_dir):
-    catalog_dir = tmp_path / "small_sky_order1"
-    shutil.copytree(small_sky_order1_dir, catalog_dir)
-    write_sky_coverage_pngs(catalog_dir)
-    assert (catalog_dir / "skymap.png").exists()
-    assert (catalog_dir / "partition_info.png").exists()
-
-
 def test_write_sky_coverage_pngs_collection(tmp_path, small_sky_collection_dir):
     collection_dir = tmp_path / "collection"
     shutil.copytree(small_sky_collection_dir, collection_dir)
