@@ -440,7 +440,7 @@ def write_catalog_summary_file(
     huggingface_metadata: bool = False,
     jinja2_template: str | None = None,
 ) -> UPath:
-    """Write a summary readme file fbor any HATS catalog or collection"""
+    """Write a summary readme file for any HATS catalog or collection"""
     from hats.catalog.catalog import Catalog
 
     catalog_path = get_upath(catalog_path)
