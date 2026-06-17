@@ -20,7 +20,7 @@ from hats.catalog.index.index_catalog import IndexCatalog
 from hats.catalog.margin_cache.margin_catalog import MarginCatalog
 from hats.io import get_common_metadata_pointer, get_partition_info_pointer, templates
 from hats.io.file_io import get_upath, read_parquet_file_to_pandas
-from hats.io.paths import get_data_thumbnail_pointer, get_partition_info_png_pointer, get_skymap_png_pointer
+from hats.io.paths import get_data_thumbnail_pointer
 from hats.loaders.read_hats import read_hats
 
 
@@ -342,7 +342,7 @@ def write_skymap_png(catalog_path: str | Path | UPath) -> None:
     inner = catalog.main_catalog if isinstance(catalog, CatalogCollection) else catalog
 
     fig, _ = inner.plot_pixels()
-    with get_skymap_png_pointer(get_upath(catalog_path)).open("wb") as f:
+    with (get_upath(catalog_path) / "skymap.png").open("wb") as f:
         fig.savefig(f, format="png", bbox_inches="tight")
     plt.close(fig)
 
@@ -366,7 +366,7 @@ def write_partition_info_png(catalog_path: str | Path | UPath) -> None:
     inner = catalog.main_catalog if isinstance(catalog, CatalogCollection) else catalog
 
     fig, _ = plot_density(inner, norm=LogNorm(), edgecolors="face")
-    with get_partition_info_png_pointer(get_upath(catalog_path)).open("wb") as f:
+    with (get_upath(catalog_path) / "partition_info.png").open("wb") as f:
         fig.savefig(f, format="png", bbox_inches="tight")
     plt.close(fig)
 
