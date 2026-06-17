@@ -16,7 +16,8 @@ from hats.io.summary_file import (
     _gen_metadata_table,
     generate_summary,
     write_catalog_summary_file,
-    write_sky_coverage_pngs,
+    write_partition_info_png,
+    write_skymap_png,
 )
 from hats.loaders import read_hats
 
@@ -573,9 +574,15 @@ def test_write_catalog_summary_file_invalid_format_raises(tmp_path, small_sky_co
         write_catalog_summary_file(collection_base_dir, fmt="md")
 
 
-def test_write_sky_coverage_pngs_collection(tmp_path, small_sky_collection_dir):
-    collection_dir = tmp_path / "collection"
-    shutil.copytree(small_sky_collection_dir, collection_dir)
-    write_sky_coverage_pngs(collection_dir)
-    assert (collection_dir / "skymap.png").exists()
-    assert (collection_dir / "partition_info.png").exists()
+def test_write_skymap_png(tmp_path, small_sky_order1_dir):
+    dest = tmp_path / small_sky_order1_dir.name
+    shutil.copytree(small_sky_order1_dir, dest)
+    write_skymap_png(dest)
+    assert (dest / "skymap.png").exists()
+
+
+def test_write_partition_info_png(tmp_path, small_sky_order1_dir):
+    dest = tmp_path / small_sky_order1_dir.name
+    shutil.copytree(small_sky_order1_dir, dest)
+    write_partition_info_png(dest)
+    assert (dest / "partition_info.png").exists()

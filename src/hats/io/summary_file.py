@@ -342,7 +342,8 @@ def write_skymap_png(catalog_path: str | Path | UPath) -> None:
     inner = catalog.main_catalog if isinstance(catalog, CatalogCollection) else catalog
 
     fig, _ = inner.plot_pixels()
-    fig.savefig(get_skymap_png_pointer(get_upath(catalog_path)), format="png", bbox_inches="tight")
+    with get_skymap_png_pointer(get_upath(catalog_path)).open("wb") as f:
+        fig.savefig(f, format="png", bbox_inches="tight")
     plt.close(fig)
 
 
@@ -365,7 +366,8 @@ def write_partition_info_png(catalog_path: str | Path | UPath) -> None:
     inner = catalog.main_catalog if isinstance(catalog, CatalogCollection) else catalog
 
     fig, _ = plot_density(inner, norm=LogNorm(), edgecolors="face")
-    fig.savefig(get_partition_info_png_pointer(get_upath(catalog_path)), format="png", bbox_inches="tight")
+    with get_partition_info_png_pointer(get_upath(catalog_path)).open("wb") as f:
+        fig.savefig(f, format="png", bbox_inches="tight")
     plt.close(fig)
 
 
