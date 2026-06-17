@@ -20,7 +20,7 @@ from hats.catalog.index.index_catalog import IndexCatalog
 from hats.catalog.margin_cache.margin_catalog import MarginCatalog
 from hats.io import get_common_metadata_pointer, get_partition_info_pointer, templates
 from hats.io.file_io import get_upath, read_parquet_file_to_pandas
-from hats.io.paths import get_data_thumbnail_pointer
+from hats.io.paths import get_data_thumbnail_pointer, get_partition_info_png_pointer, get_skymap_png_pointer
 from hats.loaders.read_hats import read_hats
 
 
@@ -328,11 +328,34 @@ def _fig_to_webp_base64(fig) -> str:
 
 
 # pylint: disable=import-outside-toplevel,import-error
-def write_sky_coverage_pngs(
-    catalog_path: str | Path | UPath,
-    output_dir: str | Path | UPath | None = None,
-) -> None:
-    """Write skymap.png and partition_info.png to output_dir (defaults to catalog_path)."""
+def write_skymap_png(catalog_path: str | Path | UPath) -> None:
+    """Write a ``skymap.png`` pixel coverage map to the catalog directory.
+    Parameters
+    ----------
+    catalog_path : str | Path | UPath
+        Path to the catalog directory. The PNG will be written alongside
+        the catalog's other files.
+    """
+    import matplotlib.pyplot as plt
+
+    catalog = read_hats(get_upath(catalog_path))
+    inner = catalog.main_catalog if isinstance(catalog, CatalogCollection) else catalog
+
+    fig, _ = inner.plot_pixels()
+    fig.savefig(get_skymap_png_pointer(get_upath(catalog_path)), format="png", bbox_inches="tight")
+    plt.close(fig)
+
+
+# pylint: disable=import-outside-toplevel,import-error
+def write_partition_info_png(catalog_path: str | Path | UPath) -> None:
+    """Write a ``partition_info.png`` angular density map to the catalog directory.
+
+    Parameters
+    ----------
+    catalog_path : str | Path | UPath
+        Path to the catalog directory. The PNG will be written alongside
+        the catalog's other files.
+    """
     import matplotlib.pyplot as plt
     from matplotlib.colors import LogNorm
 
@@ -341,17 +364,8 @@ def write_sky_coverage_pngs(
     catalog = read_hats(get_upath(catalog_path))
     inner = catalog.main_catalog if isinstance(catalog, CatalogCollection) else catalog
 
-    out = get_upath(output_dir) if output_dir is not None else get_upath(catalog_path)
-    out.mkdir(parents=True, exist_ok=True)
-
-    fig, _ = inner.plot_pixels()
-    with (out / "skymap.png").open("wb") as f:
-        fig.savefig(f, format="png", bbox_inches="tight")
-    plt.close(fig)
-
     fig, _ = plot_density(inner, norm=LogNorm(), edgecolors="face")
-    with (out / "partition_info.png").open("wb") as f:
-        fig.savefig(f, format="png", bbox_inches="tight")
+    fig.savefig(get_partition_info_png_pointer(get_upath(catalog_path)), format="png", bbox_inches="tight")
     plt.close(fig)
 
 
