@@ -16,6 +16,8 @@ from hats.io.summary_file import (
     _gen_metadata_table,
     generate_summary,
     write_catalog_summary_file,
+    write_partition_info_png,
+    write_skymap_png,
 )
 from hats.loaders import read_hats
 
@@ -570,3 +572,19 @@ def test_write_catalog_summary_file_invalid_format_raises(tmp_path, small_sky_co
     shutil.copytree(small_sky_collection_dir, collection_base_dir)
     with pytest.raises(ValueError, match="Unsupported format"):
         write_catalog_summary_file(collection_base_dir, fmt="md")
+
+
+def test_write_skymap_png(tmp_path, small_sky_order1_dir):
+    pytest.importorskip("matplotlib.pyplot")
+    dest = tmp_path / small_sky_order1_dir.name
+    shutil.copytree(small_sky_order1_dir, dest)
+    write_skymap_png(dest)
+    assert (dest / "skymap.png").exists()
+
+
+def test_write_partition_info_png(tmp_path, small_sky_order1_dir):
+    pytest.importorskip("matplotlib.pyplot")
+    dest = tmp_path / small_sky_order1_dir.name
+    shutil.copytree(small_sky_order1_dir, dest)
+    write_partition_info_png(dest)
+    assert (dest / "partition_info.png").exists()
