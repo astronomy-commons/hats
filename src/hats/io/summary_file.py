@@ -336,10 +336,7 @@ def write_skymap_png(catalog_path: str | Path | UPath) -> None:
         Path to the catalog directory. The PNG will be written alongside
         the catalog's other files.
     """
-    try:
-        import matplotlib.pyplot as plt
-    except ImportError:
-        return
+    import matplotlib.pyplot as plt
 
     catalog = read_hats(get_upath(catalog_path))
     inner = catalog.main_catalog if isinstance(catalog, CatalogCollection) else catalog
@@ -360,11 +357,8 @@ def write_partition_info_png(catalog_path: str | Path | UPath) -> None:
         Path to the catalog directory. The PNG will be written alongside
         the catalog's other files.
     """
-    try:
-        import matplotlib.pyplot as plt
-        from matplotlib.colors import LogNorm
-    except ImportError:
-        return
+    import matplotlib.pyplot as plt
+    from matplotlib.colors import LogNorm
 
     from hats.inspection.visualize_catalog import plot_density
 

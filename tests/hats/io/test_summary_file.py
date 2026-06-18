@@ -1,6 +1,5 @@
 """Tests for summary file generation"""
 
-import importlib.util
 import re
 import shutil
 
@@ -576,16 +575,16 @@ def test_write_catalog_summary_file_invalid_format_raises(tmp_path, small_sky_co
 
 
 def test_write_skymap_png(tmp_path, small_sky_order1_dir):
+    pytest.importorskip("matplotlib.pyplot")
     dest = tmp_path / small_sky_order1_dir.name
     shutil.copytree(small_sky_order1_dir, dest)
     write_skymap_png(dest)
-    if importlib.util.find_spec("matplotlib") is not None:
-        assert (dest / "skymap.png").exists()
+    assert (dest / "skymap.png").exists()
 
 
 def test_write_partition_info_png(tmp_path, small_sky_order1_dir):
+    pytest.importorskip("matplotlib.pyplot")
     dest = tmp_path / small_sky_order1_dir.name
     shutil.copytree(small_sky_order1_dir, dest)
     write_partition_info_png(dest)
-    if importlib.util.find_spec("matplotlib") is not None:
-        assert (dest / "partition_info.png").exists()
+    assert (dest / "partition_info.png").exists()
