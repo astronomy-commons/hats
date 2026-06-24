@@ -374,12 +374,13 @@ def write_partition_info_png(catalog_path: str | Path | UPath) -> None:
 def generate_summary(
     catalog,
     *,
-    fmt: Literal["markdown", "html"],
+    fmt: Literal["markdown", "html"] | None = None,
     name: str,
     description: str,
     uri: str | None,
     huggingface_metadata: bool,
     jinja2_template: str | None = None,
+    **extra_template_vars,
 ) -> str:
     """Generate summary content for any HATS catalog or collection."""
     if isinstance(catalog, CatalogCollection):
@@ -391,11 +392,17 @@ def generate_summary(
     else:
         md_tmpl, html_tmpl = "catalog_md_template.jinja2", "catalog_html_template.jinja2"
     env = jinja2.Environment(undefined=jinja2.StrictUndefined)
+
+    if jinja2_template is not None and Path(jinja2_template).exists():
+        jinja2_template = Path(jinja2_template).read_text(encoding="utf-8")
+
     match fmt:
         case "markdown":
             tmpl_str = jinja2_template or importlib.resources.read_text(templates, md_tmpl)
         case "html":
             tmpl_str = jinja2_template or importlib.resources.read_text(templates, html_tmpl)
+        case None:
+            tmpl_str = jinja2_template
         case _:
             raise ValueError(f"Unsupported format: {fmt!r}. Expected 'markdown' or 'html'.")
     template = env.from_string(tmpl_str)
@@ -411,7 +418,6 @@ def generate_summary(
     column_table = _gen_column_table(inner, empty_nf)
     col_props = catalog.collection_properties if is_collection else None
     needs_sky = not isinstance(catalog, (MarginCatalog, IndexCatalog))
-    has_default_columns = bool(cat_props.default_columns) if needs_sky else None
     cone_code_example = _cone_code_example(column_table, cat_props) if needs_sky else None
     pixel_map_b64, density_map_b64 = None, None
     if needs_sky:
@@ -434,20 +440,21 @@ def generate_summary(
         ),
         column_table=pd.DataFrame() if isinstance(catalog, IndexCatalog) else column_table,
         catalog_dir_name=None if is_collection else catalog.catalog_path.name,
-        has_default_columns=has_default_columns,
+        has_default_columns=bool(cat_props.default_columns) if needs_sky else None,
         cone_code_example=cone_code_example,
         pixel_map_b64=pixel_map_b64,
         density_map_b64=density_map_b64,
         col_props=col_props,
         uris=_catalog_uris(col_props, uri) if is_collection else None,
         margin_thresholds=catalog.get_margin_thresholds() if is_collection else None,
+        **extra_template_vars,
     )
 
 
 def write_catalog_summary_file(
     catalog_path: str | Path | UPath,
     *,
-    fmt: Literal["markdown", "html"],
+    fmt: Literal["markdown", "html"] | None = None,
     filename: str | None = None,
     output_dir: str | Path | UPath | None = None,
     name: str | None = None,
@@ -455,6 +462,7 @@ def write_catalog_summary_file(
     uri: str | None = None,
     huggingface_metadata: bool = False,
     jinja2_template: str | None = None,
+    **extra_template_vars,
 ) -> UPath:
     """Write a summary readme file for any HATS catalog or collection"""
     from hats.catalog.catalog import Catalog
@@ -467,6 +475,11 @@ def write_catalog_summary_file(
             filename = filename or "README.md"
         case "html":
             filename = filename or "index.html"
+        case None:
+            if jinja2_template is None:
+                raise ValueError("Either `fmt` or `jinja2_template` must be provided.")
+            if filename is None:
+                raise ValueError("`filename` is required when `fmt` is None.")
         case _:
             raise ValueError(f"Unsupported format: {fmt!r}. Expected 'markdown' or 'html'.")
     catalog = read_hats(catalog_path)
@@ -497,6 +510,7 @@ def write_catalog_summary_file(
         uri=uri,
         huggingface_metadata=huggingface_metadata,
         jinja2_template=jinja2_template,
+        **extra_template_vars,
     )
 
     output_dir = catalog_path if output_dir is None else get_upath(output_dir)
