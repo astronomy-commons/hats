@@ -598,7 +598,7 @@ def test_write_catalog_summary_file_extra_template_vars(tmp_path, small_sky_orde
         fmt=None,
         filename="test.xml",
         jinja2_template="<url>{{access_url}}</url><name>{{name}}</name>",
-        access_url="https://data.lsdb.io/small_sky",
+        extra_template_vars={"access_url": "https://data.lsdb.io/small_sky"},
     )
     content = output_path.read_text()
     assert "<url>https://data.lsdb.io/small_sky</url>" in content
@@ -608,15 +608,15 @@ def test_write_catalog_summary_file_extra_template_vars(tmp_path, small_sky_orde
 def test_write_catalog_summary_file_fmt_none_requires_template(tmp_path, small_sky_order1_dir):
     dest = tmp_path / small_sky_order1_dir.name
     shutil.copytree(small_sky_order1_dir, dest)
-    with pytest.raises(ValueError, match="jinja2_template"):
+    with pytest.raises(ValueError, match="`jinja2_template` is required"):
         write_catalog_summary_file(dest, fmt=None, filename="out.xml")
 
 
 def test_write_catalog_summary_file_fmt_none_requires_filename(tmp_path, small_sky_order1_dir):
     dest = tmp_path / small_sky_order1_dir.name
     shutil.copytree(small_sky_order1_dir, dest)
-    with pytest.raises(ValueError, match="filename"):
-        write_catalog_summary_file(dest, fmt=None, jinja2_template="{{ name }}")
+    with pytest.raises(ValueError, match="`filename` is required"):
+        write_catalog_summary_file(dest, fmt=None, jinja2_template="{{name}}")
 
 
 def test_generate_summary_unsupported_fmt_raises(small_sky_order1_dir):
