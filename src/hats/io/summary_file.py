@@ -374,14 +374,48 @@ def write_partition_info_png(catalog_path: str | Path | UPath) -> None:
 def generate_summary(
     catalog,
     *,
-    fmt: Literal["markdown", "html"],
+    fmt: Literal["markdown", "html"] | None = None,
     name: str,
     description: str,
     uri: str | None,
     huggingface_metadata: bool,
     jinja2_template: str | None = None,
+    extra_template_vars: dict | None = None,
 ) -> str:
-    """Generate summary content for any HATS catalog or collection."""
+    """Generate summary content for any HATS catalog or collection.
+
+    Parameters
+    ----------
+    catalog : Catalog | CatalogCollection
+        The HATS catalog or collection to summarize.
+    fmt : Literal["markdown", "html"] | None
+        Output format. Use ``"markdown"`` or ``"html"`` to render the built-in
+        template, or ``None`` to supply a fully custom ``jinja2_template``.
+    name : str
+        Human-readable name rendered in the summary.
+    description : str
+        Description rendered in the summary.
+    uri : str | None
+        URI of the catalog used for hyperlinks and code-snippet examples.
+        If ``None``, a placeholder is used.
+    huggingface_metadata : bool
+        Whether to include Hugging Face YAML frontmatter. Only valid when
+        ``fmt="markdown"``.
+    jinja2_template : str | None
+        Jinja2 template string or path to a ``.jinja2`` file. If a file path
+        is given, the file is read automatically. Overrides the built-in
+        template when ``fmt`` is ``"markdown"`` or ``"html"``; required when
+        ``fmt=None``.
+    extra_template_vars : dict | None
+        Additional variables passed into ``template.render()``. Useful for
+        custom templates (e.g. VO registry XML fields) that reference variables
+        HATS does not supply by default.
+
+    Returns
+    -------
+    str
+        Rendered summary content.
+    """
     if isinstance(catalog, CatalogCollection):
         md_tmpl, html_tmpl = "collection_md_template.jinja2", "collection_html_template.jinja2"
     elif isinstance(catalog, MarginCatalog):
@@ -391,13 +425,19 @@ def generate_summary(
     else:
         md_tmpl, html_tmpl = "catalog_md_template.jinja2", "catalog_html_template.jinja2"
     env = jinja2.Environment(undefined=jinja2.StrictUndefined)
+
+    if jinja2_template is not None and Path(jinja2_template).exists():
+        jinja2_template = Path(jinja2_template).read_text(encoding="utf-8")
+        # sets jinja_template as a file as a path
     match fmt:
         case "markdown":
             tmpl_str = jinja2_template or importlib.resources.read_text(templates, md_tmpl)
         case "html":
             tmpl_str = jinja2_template or importlib.resources.read_text(templates, html_tmpl)
+        case None:
+            tmpl_str = jinja2_template
         case _:
-            raise ValueError(f"Unsupported format: {fmt!r}. Expected 'markdown' or 'html'.")
+            raise ValueError(f"Unsupported format: {fmt!r}. Expected 'markdown', 'html', or None.")
     template = env.from_string(tmpl_str)
 
     is_collection = isinstance(catalog, CatalogCollection)
@@ -411,7 +451,6 @@ def generate_summary(
     column_table = _gen_column_table(inner, empty_nf)
     col_props = catalog.collection_properties if is_collection else None
     needs_sky = not isinstance(catalog, (MarginCatalog, IndexCatalog))
-    has_default_columns = bool(cat_props.default_columns) if needs_sky else None
     cone_code_example = _cone_code_example(column_table, cat_props) if needs_sky else None
     pixel_map_b64, density_map_b64 = None, None
     if needs_sky:
@@ -434,20 +473,21 @@ def generate_summary(
         ),
         column_table=pd.DataFrame() if isinstance(catalog, IndexCatalog) else column_table,
         catalog_dir_name=None if is_collection else catalog.catalog_path.name,
-        has_default_columns=has_default_columns,
+        has_default_columns=bool(cat_props.default_columns) if needs_sky else None,
         cone_code_example=cone_code_example,
         pixel_map_b64=pixel_map_b64,
         density_map_b64=density_map_b64,
         col_props=col_props,
         uris=_catalog_uris(col_props, uri) if is_collection else None,
         margin_thresholds=catalog.get_margin_thresholds() if is_collection else None,
+        **(extra_template_vars or {}),
     )
 
 
 def write_catalog_summary_file(
     catalog_path: str | Path | UPath,
     *,
-    fmt: Literal["markdown", "html"],
+    fmt: Literal["markdown", "html"] | None,
     filename: str | None = None,
     output_dir: str | Path | UPath | None = None,
     name: str | None = None,
@@ -455,8 +495,48 @@ def write_catalog_summary_file(
     uri: str | None = None,
     huggingface_metadata: bool = False,
     jinja2_template: str | None = None,
+    extra_template_vars: dict | None = None,
 ) -> UPath:
-    """Write a summary readme file for any HATS catalog or collection"""
+    """Write a summary readme file for any HATS catalog or collection.
+
+    Parameters
+    ----------
+    catalog_path : str | Path | UPath
+        Path to the HATS catalog or collection directory.
+    fmt : Literal["markdown", "html"] | None
+        Output format. Use ``"markdown"`` (writes ``README.md``) or ``"html"``
+        (writes ``index.html``), or ``None`` to supply a fully custom
+        ``jinja2_template`` and ``filename``.
+    filename : str | None
+        Output filename. Defaults to ``README.md`` for markdown and
+        ``index.html`` for HTML. Required when ``fmt=None``.
+    output_dir : str | Path | UPath | None
+        Directory to write the file to. Defaults to ``catalog_path``.
+    name : str | None
+        Human-readable name. Inferred from catalog metadata if not provided.
+    description : str | None
+        Description. Inferred from catalog metadata if not provided.
+    uri : str | None
+        URI of the catalog used for hyperlinks and code-snippet examples.
+        If ``None``, a placeholder is used.
+    huggingface_metadata : bool
+        Whether to include Hugging Face YAML frontmatter. Only valid when
+        ``fmt="markdown"``.
+    jinja2_template : str | None
+        Jinja2 template string or path to a ``.jinja2`` file. If a file path
+        is given, the file is read automatically. Overrides the built-in
+        template when ``fmt`` is ``"markdown"`` or ``"html"``; required when
+        ``fmt=None``.
+    extra_template_vars : dict | None
+        Additional variables passed into ``template.render()``. Useful for
+        custom templates (e.g. VO registry XML fields) that reference variables
+        HATS does not supply by default.
+
+    Returns
+    -------
+    UPath
+        Path to the written summary file.
+    """
     from hats.catalog.catalog import Catalog
 
     catalog_path = get_upath(catalog_path)
@@ -467,8 +547,13 @@ def write_catalog_summary_file(
             filename = filename or "README.md"
         case "html":
             filename = filename or "index.html"
+        case None:
+            if jinja2_template is None:
+                raise ValueError("`jinja2_template` is required when `fmt` is None.")
+            if filename is None:
+                raise ValueError("`filename` is required when `fmt` is None.")
         case _:
-            raise ValueError(f"Unsupported format: {fmt!r}. Expected 'markdown' or 'html'.")
+            raise ValueError(f"Unsupported format: {fmt!r}. Expected 'markdown', 'html', or None.")
     catalog = read_hats(catalog_path)
 
     if isinstance(catalog, CatalogCollection):
@@ -497,6 +582,7 @@ def write_catalog_summary_file(
         uri=uri,
         huggingface_metadata=huggingface_metadata,
         jinja2_template=jinja2_template,
+        extra_template_vars=extra_template_vars,
     )
 
     output_dir = catalog_path if output_dir is None else get_upath(output_dir)
