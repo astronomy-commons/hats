@@ -82,18 +82,24 @@ def _get_row_mem_size_pa_table(table, row_index):
     return total
 
 
-def get_mem_size_per_row(data):
+def get_mem_size_per_row(data, cols=None):
     """Given a 2D array of data, return a list of memory sizes for each row in the chunk.
 
     Args:
         data (pd.DataFrame or pa.Table): the data chunk to measure
+        cols (list[str] or None): if provided, only these columns are included in the
+            per-row size calculation
 
     Returns:
         list[int]: list of memory sizes for each row in the chunk
     """
     if isinstance(data, pd.DataFrame):
+        if cols is not None:
+            data = data[cols]
         mem_sizes = [_get_row_mem_size_data_frame(row) for row in data.itertuples(index=False, name=None)]
     elif isinstance(data, pa.Table):
+        if cols is not None:
+            data = data.select(cols)
         mem_sizes = [_get_row_mem_size_pa_table(data, i) for i in range(data.num_rows)]
     else:
         raise NotImplementedError(f"Unsupported data type {type(data)} for memory size calculation")
