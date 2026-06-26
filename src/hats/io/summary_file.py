@@ -437,7 +437,7 @@ def generate_summary(
         case None:
             tmpl_str = jinja2_template
         case _:
-            raise ValueError(f"Unsupported format: {fmt!r}. Expected 'markdown' or 'html'.")
+            raise ValueError(f"Unsupported format: {fmt!r}. Expected 'markdown', 'html', or None.")
     template = env.from_string(tmpl_str)
 
     is_collection = isinstance(catalog, CatalogCollection)
@@ -553,7 +553,7 @@ def write_catalog_summary_file(
             if filename is None:
                 raise ValueError("`filename` is required when `fmt` is None.")
         case _:
-            raise ValueError(f"Unsupported format: {fmt!r}. Expected 'markdown' or 'html'.")
+            raise ValueError(f"Unsupported format: {fmt!r}. Expected 'markdown', 'html', or None.")
     catalog = read_hats(catalog_path)
 
     if isinstance(catalog, CatalogCollection):
