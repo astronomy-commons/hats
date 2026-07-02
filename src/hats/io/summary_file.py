@@ -330,6 +330,7 @@ def _fig_to_webp_base64(fig) -> str:
 # pylint: disable=import-outside-toplevel,import-error
 def write_skymap_png(catalog_path: str | Path | UPath) -> None:
     """Write a ``skymap.png`` pixel coverage map to the catalog directory.
+
     Parameters
     ----------
     catalog_path : str | Path | UPath
