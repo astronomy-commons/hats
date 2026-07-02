@@ -10,10 +10,8 @@ import pyarrow as pa
 import pytest
 import yaml
 
+from hats.io._summary_builders import _build_column_table, _gen_column_table, _gen_metadata_table
 from hats.io.summary_file import (
-    _build_column_table,
-    _gen_column_table,
-    _gen_metadata_table,
     generate_summary,
     write_catalog_summary_file,
     write_partition_info_png,
