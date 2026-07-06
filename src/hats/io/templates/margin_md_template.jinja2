@@ -79,8 +79,8 @@ Margin Catalog metadata
 {% if "default" in column_table %}
 "Default" indicates whether the column is included when loading the catalog with `lsdb.open_catalog()`
 without specifying any columns to load.
-The list of default columns is available in the [`hats.properties`]({{uris["primary"]["uri"]}}/hats.properties) file.
-{% endif %}
+{% if uris %}The list of default columns is available in the [`hats.properties`]({{uris["primary"]["uri"]}}/hats.properties) file.
+{% endif %}{% endif %}
 {% if "nested_into" in column_table %}
 "Nested" indicates whether the column is stored as a nested field inside another "struct" column.
 {% endif %}
