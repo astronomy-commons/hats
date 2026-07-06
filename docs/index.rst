@@ -33,7 +33,6 @@ operations on top of these utilities. Some known extensions:
 
    Getting Started <getting_started>
    Directory Scheme <guide/directory_scheme>
-   Summary Files <guide/summary_files>
    Notebooks <notebooks>
    API Reference <autoapi/index>
 
