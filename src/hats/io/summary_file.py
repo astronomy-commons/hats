@@ -284,6 +284,8 @@ def _get_example_frame(catalog: Dataset, rng: np.random.Generator) -> npd.Nested
         return None
 
     healpix_pixels = catalog.get_healpix_pixels()
+    if not healpix_pixels:
+        return None
     pixel = rng.choice(healpix_pixels)
     return catalog.read_pixel_to_pandas(pixel)
 
@@ -330,6 +332,7 @@ def _fig_to_webp_base64(fig) -> str:
 # pylint: disable=import-outside-toplevel,import-error
 def write_skymap_png(catalog_path: str | Path | UPath) -> None:
     """Write a ``skymap.png`` pixel coverage map to the catalog directory.
+
     Parameters
     ----------
     catalog_path : str | Path | UPath
@@ -450,7 +453,7 @@ def generate_summary(
     )
     column_table = _gen_column_table(inner, empty_nf)
     col_props = catalog.collection_properties if is_collection else None
-    needs_sky = not isinstance(catalog, (MarginCatalog, IndexCatalog))
+    needs_sky = not isinstance(catalog, (MarginCatalog, IndexCatalog)) and bool(inner.get_healpix_pixels())
     cone_code_example = _cone_code_example(column_table, cat_props) if needs_sky else None
     pixel_map_b64, density_map_b64 = None, None
     if needs_sky:
