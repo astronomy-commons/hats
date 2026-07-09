@@ -184,3 +184,89 @@ def test_get_mem_size_of_chunk_nested():
     assert mem_sizes[0] == mem_sizes[1]
     # The last entry should be the larger than the other two, since it has 4 sub-rows
     assert mem_sizes[2] > mem_sizes[0]
+
+
+@pytest.mark.parametrize("list_type,offset_width", [(pa.list_, 4), (pa.large_list, 8)])
+def test_get_mem_size_per_row_pyarrow_list_columns(list_type, offset_width):
+    """List columns are sized from the arrow offsets: each row costs its slice of
+    the shared values buffer (element count x element width) plus one offset entry.
+    Null rows hold no data but still occupy an offset entry."""
+    lightcurves = [[10.1, 10.3, 9.8], [], None, [4.2] * 100]
+    table = pa.table({"lightcurve": pa.array(lightcurves, type=list_type(pa.float64()))})
+
+    mem_sizes = get_mem_size_per_row(table)
+
+    expected = [3 * 8 + offset_width, offset_width, offset_width, 100 * 8 + offset_width]
+    assert mem_sizes == expected
+    assert all(isinstance(size, int) for size in mem_sizes)
+
+
+def test_get_mem_size_per_row_pyarrow_list_of_strings():
+    """Lists of variable-width elements attribute the elements' total buffer size
+    uniformly per element, so longer rows cost proportionally more and the group
+    total tracks the loaded buffers."""
+    names = pa.array([["a", "bb"], ["ccc"], []], type=pa.list_(pa.string()))
+    table = pa.table({"names": names})
+
+    mem_sizes = get_mem_size_per_row(table)
+
+    assert all(isinstance(size, int) for size in mem_sizes)
+    # The empty row costs only its offset entry; longer rows cost more.
+    assert mem_sizes[0] > mem_sizes[1] > mem_sizes[2] == 4
+    # The total approximates the column's actual loaded buffers (int truncation
+    # per row can lose up to a byte each).
+    assert sum(mem_sizes) == pytest.approx(names.nbytes, abs=len(mem_sizes))
+
+
+def test_get_mem_size_per_row_pyarrow_strings_and_fixed_widths():
+    """Fixed-width values cost their byte width (bools count as one byte); string
+    values cost their UTF-8 data bytes plus one offset entry."""
+    table = pa.table(
+        {
+            "id": pa.array([1, 2, 3], type=pa.int64()),
+            "flag": pa.array([True, False, True], type=pa.bool_()),
+            "name": pa.array(["1001", None, "ééé"], type=pa.string()),
+        }
+    )
+
+    mem_sizes = get_mem_size_per_row(table)
+
+    # id: 8 each; flag: 1 each; name: data bytes + 4-byte offset entry,
+    # where "ééé" is 6 UTF-8 bytes and the null row holds no data.
+    assert mem_sizes == [8 + 1 + (4 + 4), 8 + 1 + (0 + 4), 8 + 1 + (6 + 4)]
+
+
+def test_get_mem_size_per_row_pyarrow_struct():
+    """Struct rows (e.g. nested columns) cost the sum of their fields."""
+    struct_rows = [
+        {"time": [1.0, 2.0, 3.0], "band": "g"},
+        {"time": [4.0], "band": "rr"},
+    ]
+    struct_type = pa.struct([("time", pa.list_(pa.float64())), ("band", pa.string())])
+    table = pa.table({"lc": pa.array(struct_rows, type=struct_type)})
+
+    mem_sizes = get_mem_size_per_row(table)
+
+    # time: 8 x elements + 4-byte offset entry; band: UTF-8 bytes + 4-byte offset entry.
+    assert mem_sizes == [(3 * 8 + 4) + (1 + 4), (1 * 8 + 4) + (2 + 4)]
+
+
+def test_get_mem_size_per_row_pandas_matches_pyarrow():
+    """A pandas chunk (numerics, strings, ndarray list cells) measures the same as
+    the equivalent arrow table, since pandas columns are converted before measuring."""
+    frame = pd.DataFrame(
+        {
+            "ra": [290.0, 300.0, 310.0],
+            "id_str": ["1001", "1002", "1003"],
+            "mags": [np.array([1.0, 2.0]), np.array([3.0]), np.array([], dtype=np.float64)],
+        }
+    )
+    table = pa.table(
+        {
+            "ra": pa.array(frame["ra"], type=pa.float64()),
+            "id_str": pa.array(frame["id_str"], type=pa.string()),
+            "mags": pa.array([[1.0, 2.0], [3.0], []], type=pa.list_(pa.float64())),
+        }
+    )
+
+    assert get_mem_size_per_row(frame) == get_mem_size_per_row(table)
