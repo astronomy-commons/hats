@@ -339,12 +339,18 @@ def write_skymap_png(catalog_path: str | Path | UPath) -> None:
         Path to the catalog directory. The PNG will be written alongside
         the catalog's other files.
     """
-    import matplotlib.pyplot as plt
+    try:
+        import matplotlib.pyplot as plt
+        from matplotlib.colors import LogNorm
+
+        from hats.inspection.visualize_catalog import plot_density
+    except ImportError as exc:
+        raise ImportError("matplotlib is required to use this method. Install with pip or conda.") from exc
 
     catalog = read_hats(get_upath(catalog_path))
     inner = catalog.main_catalog if isinstance(catalog, CatalogCollection) else catalog
 
-    fig, _ = inner.plot_pixels()
+    fig, _ = plot_density(inner, norm=LogNorm(), edgecolors="face")
     with (get_upath(catalog_path) / "skymap.png").open("wb") as f:
         fig.savefig(f, format="png", bbox_inches="tight")
     plt.close(fig)
@@ -360,15 +366,15 @@ def write_partition_info_png(catalog_path: str | Path | UPath) -> None:
         Path to the catalog directory. The PNG will be written alongside
         the catalog's other files.
     """
-    import matplotlib.pyplot as plt
-    from matplotlib.colors import LogNorm
-
-    from hats.inspection.visualize_catalog import plot_density
+    try:
+        import matplotlib.pyplot as plt
+    except ImportError as exc:
+        raise ImportError("matplotlib is required to use this method. Install with pip or conda.") from exc
 
     catalog = read_hats(get_upath(catalog_path))
     inner = catalog.main_catalog if isinstance(catalog, CatalogCollection) else catalog
 
-    fig, _ = plot_density(inner, norm=LogNorm(), edgecolors="face")
+    fig, _ = inner.plot_pixels()
     with (get_upath(catalog_path) / "partition_info.png").open("wb") as f:
         fig.savefig(f, format="png", bbox_inches="tight")
     plt.close(fig)
