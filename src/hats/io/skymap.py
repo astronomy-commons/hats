@@ -60,6 +60,8 @@ def read_skymap(catalog, order):
 
     ## Deprecated - prefer reading skymap.fits to reading point_map.fits
     map_file_pointer = paths.get_point_map_file_pointer(catalog.catalog_base_dir)
+    if not map_file_pointer.exists():
+        raise FileNotFoundError("No skymap file found in catalog directory.")
     point_map = file_io.read_fits_image(map_file_pointer)
     point_map_order = hp.npix2order(len(point_map))
     if order is None or order == point_map_order:
