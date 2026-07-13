@@ -71,9 +71,11 @@ class Dataset:
 
     def aggregate_column_statistics(
         self,
+        *,
         exclude_hats_columns: bool = True,
         exclude_columns: list[str] = None,
         include_columns: list[str] = None,
+        warn_on_modified_catalog: bool = True,
     ):
         """Read footer statistics in parquet metadata, and report on global min/max values.
 
@@ -87,6 +89,9 @@ class Dataset:
         include_columns : list[str]
             if specified, only return statistics for the column
             names provided. Defaults to None, and returns all non-hats columns.
+        warn_on_modified_catalog : bool
+            if True, this method will warn if the catalog has been modified from its original on-disk
+            state. Defaults to True.
 
         Returns
         -------
@@ -96,7 +101,7 @@ class Dataset:
         if not self.on_disk:
             warnings.warn("Calling aggregate_column_statistics on an in-memory catalog. No results.")
             return pd.DataFrame()
-        if not self.unmodified:
+        if warn_on_modified_catalog and not self.unmodified:
             warnings.warn(
                 "Calling aggregate_column_statistics on a modified catalog. Results may be inaccurate."
             )
@@ -122,6 +127,7 @@ class Dataset:
         include_stats: list[str] | None = None,
         multi_index=False,
         per_row_group: bool = False,
+        warn_on_modified_catalog: bool = True,
     ):
         """Read footer statistics in parquet metadata, and report on statistics about
         each pixel partition."""
@@ -133,6 +139,7 @@ class Dataset:
             include_stats=include_stats,
             multi_index=multi_index,
             per_row_group=per_row_group,
+            warn_on_modified_catalog=warn_on_modified_catalog,
         )
 
     def per_partition_statistics(
@@ -145,6 +152,7 @@ class Dataset:
         include_stats: list[str] = None,
         multi_index=False,
         per_row_group: bool = False,
+        warn_on_modified_catalog: bool = True,
     ):
         """Read footer statistics in parquet metadata, and report on statistics about
         each pixel partition.
@@ -166,6 +174,9 @@ class Dataset:
             pixel, then on column name? Default is False, and instead indexes on pixel, with
             separate columns per-data-column and stat value combination.
             (Default value = False)
+        warn_on_modified_catalog : bool
+            if True, this method will warn if the catalog has been modified from its original on-disk
+            state. Defaults to True.
 
         Returns
         -------
@@ -175,7 +186,7 @@ class Dataset:
         if not self.on_disk:
             warnings.warn("Calling per_partition_statistics on an in-memory catalog. No results.")
             return pd.DataFrame()
-        if not self.unmodified:
+        if warn_on_modified_catalog and not self.unmodified:
             warnings.warn(
                 "Calling per_partition_statistics on a modified catalog. Results may be inaccurate."
             )
