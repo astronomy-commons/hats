@@ -310,11 +310,13 @@ class HealpixDataset(Dataset):
 
     def aggregate_column_statistics(
         self,
+        *,
         exclude_hats_columns: bool = True,
         exclude_columns: list[str] | None = None,
         include_columns: list[str] | None = None,
         only_numeric_columns: bool = False,
         include_pixels: list[HealpixPixel] | None = None,
+        warn_on_modified_catalog: bool = True,
     ):
         """Read footer statistics in parquet metadata, and report on global min/max values.
 
@@ -334,6 +336,9 @@ class HealpixDataset(Dataset):
             (Default value = False)
         include_pixels: list[HealpixPixel] | None
             (Default value = None)
+        warn_on_modified_catalog : bool
+            if True, this method will warn if the catalog has been modified from its original on-disk
+            state. Defaults to True.
 
         Returns
         -------
@@ -343,7 +348,7 @@ class HealpixDataset(Dataset):
         if not self.on_disk:
             warnings.warn("Calling aggregate_column_statistics on an in-memory catalog. No results.")
             return pd.DataFrame()
-        if not self.unmodified:
+        if warn_on_modified_catalog and not self.unmodified:
             warnings.warn(
                 "Calling aggregate_column_statistics on a modified catalog. Results may be inaccurate."
             )
@@ -374,7 +379,7 @@ class HealpixDataset(Dataset):
         reason="`per_pixel_statistics` will be removed in the future, "
         "use `per_partition_statistics` instead.",
     )
-    def per_pixel_statistics(
+    def per_pixel_statistics(  # pylint: disable=duplicate-code
         self,
         *,
         exclude_hats_columns: bool = True,
@@ -385,6 +390,7 @@ class HealpixDataset(Dataset):
         multi_index=False,
         include_pixels: list[HealpixPixel] | None = None,
         per_row_group: bool = False,
+        warn_on_modified_catalog: bool = True,
     ):
         return self.per_partition_statistics(
             exclude_hats_columns=exclude_hats_columns,
@@ -395,6 +401,7 @@ class HealpixDataset(Dataset):
             multi_index=multi_index,
             include_pixels=include_pixels,
             per_row_group=per_row_group,
+            warn_on_modified_catalog=warn_on_modified_catalog,
         )
 
     def per_partition_statistics(
@@ -408,6 +415,7 @@ class HealpixDataset(Dataset):
         multi_index=False,
         include_pixels: list[HealpixPixel] | None = None,
         per_row_group: bool = False,
+        warn_on_modified_catalog: bool = True,
     ):
         """Read footer statistics in parquet metadata, and report on statistics about
         each pixel partition.
@@ -431,6 +439,9 @@ class HealpixDataset(Dataset):
         include_pixels : list[HealpixPixel] | None
             if specified, only return statistics
             for the pixels indicated. Defaults to none, and returns all pixels.
+        warn_on_modified_catalog : bool
+            if True, this method will warn if the catalog has been modified from its original on-disk
+            state. Defaults to True.
 
         Returns
         -------
@@ -440,7 +451,7 @@ class HealpixDataset(Dataset):
         if not self.on_disk:
             warnings.warn("Calling per_partition_statistics on an in-memory catalog. No results.")
             return pd.DataFrame()
-        if not self.unmodified:
+        if warn_on_modified_catalog and not self.unmodified:
             warnings.warn(
                 "Calling per_partition_statistics on a modified catalog. Results may be inaccurate."
             )

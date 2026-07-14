@@ -1,6 +1,7 @@
 """Tests of catalog functionality"""
 
 import os
+import warnings
 
 import astropy.units as u
 import numpy as np
@@ -134,6 +135,12 @@ def test_catalog_statistics(small_sky_order1_dir):
     assert len(result_frame) == 5
     assert_column_stat_as_floats(result_frame, "dec", min_value=-69.5, max_value=-47.5, row_count=42)
 
+    # No warning is raised on a modified catalog when warn_on_modified_catalog=False.
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        result_frame = filtered_catalog.aggregate_column_statistics(warn_on_modified_catalog=False)
+    assert len(result_frame) == 5
+
     result_frame = cat.per_partition_statistics()
     # 4 = 4 pixels
     # 30 = 5 columns * 6 stats per-column
@@ -155,6 +162,12 @@ def test_catalog_statistics(small_sky_order1_dir):
         result_frame = filtered_catalog.per_partition_statistics()
     # 1 = 1 pixel (the filtered catalog has only one pixel)
     # 30 = 5 columns * 6 stats per-column
+    assert result_frame.shape == (1, 30)
+
+    # No warning is raised on a modified catalog when warn_on_modified_catalog=False.
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        result_frame = filtered_catalog.per_partition_statistics(warn_on_modified_catalog=False)
     assert result_frame.shape == (1, 30)
 
 
