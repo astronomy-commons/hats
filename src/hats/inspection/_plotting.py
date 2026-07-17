@@ -150,9 +150,6 @@ def _merge_too_small_pixels(depth_ipix_d: dict[int, tuple[np.ndarray, np.ndarray
 
     # Combine healpix pixels smaller than 1px in the plot
     if max_depth > depth_res:
-        warnings.warn(
-            "This plot contains HEALPix pixels smaller than a pixel of the plot. Some values may be lost"
-        )
         new_ipix_d = {}
         for d, (ip, vals) in depth_ipix_d.items():
             if d <= depth_res:
