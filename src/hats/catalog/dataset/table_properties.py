@@ -171,6 +171,12 @@ class TableProperties(BaseModel):
         int_list.sort()
         return int_list
 
+    @field_serializer("margin_threshold", "assn_max_separation", "moc_sky_fraction")
+    def serialize_float(self, value: float | None) -> str:
+        if value is None:
+            return None
+        return f"{round(value, 5)}"
+
     @field_serializer("default_columns", "extra_columns", "skymap_alt_orders")
     def serialize_as_space_delimited_list(self, str_list: Iterable) -> str:
         """Convert a python list of strings into a space-delimited string.
