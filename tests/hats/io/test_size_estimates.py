@@ -116,13 +116,13 @@ def test_get_mem_size_of_chunk():
     # Since we have 10 rows, mem_sizes should have length 10
     assert len(mem_sizes) == 10
     # Each entry should be a positive integer (size in bytes)
-    assert all(isinstance(size, int) and size > 0 for size in mem_sizes)
+    assert all(isinstance(size, float) and size > 0 for size in mem_sizes)
 
     # Compare to a smaller DataFrame with fewer columns
     df_small = df[["id", "ra", "dec"]]
     mem_sizes_small = get_mem_size_per_row(df_small)
     assert len(mem_sizes_small) == 10
-    assert all(isinstance(size, int) and size > 0 for size in mem_sizes_small)
+    assert all(isinstance(size, float) and size > 0 for size in mem_sizes_small)
     # Each entry in mem_sizes should be > corresponding entry in mem_sizes_small
     assert all(m > s for m, s in zip(mem_sizes, mem_sizes_small, strict=True))
 
@@ -130,13 +130,13 @@ def test_get_mem_size_of_chunk():
     table = pa.Table.from_pandas(df)
     mem_sizes_table = get_mem_size_per_row(table)
     assert len(mem_sizes_table) == 10
-    assert all(isinstance(size, int) and size > 0 for size in mem_sizes_table)
+    assert all(isinstance(size, float) and size > 0 for size in mem_sizes_table)
 
     # Test with a smaller pyarrow Table
     table_small = pa.Table.from_pandas(df_small)
     mem_sizes_table_small = get_mem_size_per_row(table_small)
     assert len(mem_sizes_table_small) == 10
-    assert all(isinstance(size, int) and size > 0 for size in mem_sizes_table_small)
+    assert all(isinstance(size, float) and size > 0 for size in mem_sizes_table_small)
     # Each entry in mem_sizes_table should be > corresponding entry in mem_sizes_table_small
     assert all(m > s for m, s in zip(mem_sizes_table, mem_sizes_table_small, strict=True))
 
@@ -179,7 +179,7 @@ def test_get_mem_size_of_chunk_nested():
     # Since we have only 3 rows once we nest, mem_sizes should have length 3
     assert len(mem_sizes) == 3
     # Each entry should be a positive integer (size in bytes)
-    assert all(isinstance(size, int) and size > 0 for size in mem_sizes)
+    assert all(isinstance(size, float) and size > 0 for size in mem_sizes)
     # The first two entries should be the same, since they have 3 sub-rows each
     assert mem_sizes[0] == mem_sizes[1]
     # The last entry should be the larger than the other two, since it has 4 sub-rows
@@ -190,15 +190,22 @@ def test_get_mem_size_of_chunk_nested():
 def test_get_mem_size_per_row_pyarrow_list_columns(list_type, offset_width):
     """List columns are sized from the arrow offsets: each row costs its slice of
     the shared values buffer (element count x element width) plus one offset entry.
-    Null rows hold no data but still occupy an offset entry."""
+    Null rows hold no data but still occupy an offset entry, and the null makes
+    the column carry a validity bitmap (one bit = 1/8 byte per row)."""
     lightcurves = [[10.1, 10.3, 9.8], [], None, [4.2] * 100]
     table = pa.table({"lightcurve": pa.array(lightcurves, type=list_type(pa.float64()))})
 
     mem_sizes = get_mem_size_per_row(table)
 
-    expected = [3 * 8 + offset_width, offset_width, offset_width, 100 * 8 + offset_width]
+    bitmap = 0.125
+    expected = [
+        3 * 8 + offset_width + bitmap,
+        offset_width + bitmap,
+        offset_width + bitmap,
+        100 * 8 + offset_width + bitmap,
+    ]
     assert mem_sizes == expected
-    assert all(isinstance(size, int) for size in mem_sizes)
+    assert all(isinstance(size, float) for size in mem_sizes)
 
 
 def test_get_mem_size_per_row_pyarrow_list_of_strings():
@@ -210,17 +217,19 @@ def test_get_mem_size_per_row_pyarrow_list_of_strings():
 
     mem_sizes = get_mem_size_per_row(table)
 
-    assert all(isinstance(size, int) for size in mem_sizes)
+    assert all(isinstance(size, float) for size in mem_sizes)
     # The empty row costs only its offset entry; longer rows cost more.
     assert mem_sizes[0] > mem_sizes[1] > mem_sizes[2] == 4
-    # The total approximates the column's actual loaded buffers (int truncation
-    # per row can lose up to a byte each).
-    assert sum(mem_sizes) == pytest.approx(names.nbytes, abs=len(mem_sizes))
+    # The total approximates the column's actual loaded buffers: the model counts
+    # n offset entries per offsets buffer where the real buffer holds n + 1, so
+    # it undercounts one entry each for the outer and the flattened-string buffer.
+    assert sum(mem_sizes) == pytest.approx(names.nbytes, abs=8)
 
 
 def test_get_mem_size_per_row_pyarrow_strings_and_fixed_widths():
-    """Fixed-width values cost their byte width (bools count as one byte); string
-    values cost their UTF-8 data bytes plus one offset entry."""
+    """Fixed-width values cost their byte width (bit-packed bools count 1/8 byte);
+    string values cost their UTF-8 data bytes plus one offset entry, plus a
+    one-bit validity share since the null makes the column carry a bitmap."""
     table = pa.table(
         {
             "id": pa.array([1, 2, 3], type=pa.int64()),
@@ -231,9 +240,9 @@ def test_get_mem_size_per_row_pyarrow_strings_and_fixed_widths():
 
     mem_sizes = get_mem_size_per_row(table)
 
-    # id: 8 each; flag: 1 each; name: data bytes + 4-byte offset entry,
-    # where "ééé" is 6 UTF-8 bytes and the null row holds no data.
-    assert mem_sizes == [8 + 1 + (4 + 4), 8 + 1 + (0 + 4), 8 + 1 + (6 + 4)]
+    # id: 8 each; flag: 1/8 each; name: data bytes + 4-byte offset entry + 1/8
+    # bitmap, where "ééé" is 6 UTF-8 bytes and the null row holds no data.
+    assert mem_sizes == [8 + 0.125 + (4 + 4 + 0.125), 8 + 0.125 + (0 + 4 + 0.125), 8 + 0.125 + (6 + 4 + 0.125)]
 
 
 def test_get_mem_size_per_row_pyarrow_struct():
