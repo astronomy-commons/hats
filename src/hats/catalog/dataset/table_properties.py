@@ -173,6 +173,19 @@ class TableProperties(BaseModel):
 
     @field_serializer("margin_threshold", "assn_max_separation", "moc_sky_fraction")
     def serialize_float(self, value: float | None) -> str:
+        """Convert a floating point number to a string representation, rounding to
+        5 decimal places.
+
+        Parameters
+        ----------
+        value: float
+            floating point value (or None, if the field is empty)
+
+        Returns
+        -------
+        str
+            string representation of the float, rounded to 5 places, or None if input is None
+        """
         if value is None:
             return None
         return f"{round(value, 5)}"
