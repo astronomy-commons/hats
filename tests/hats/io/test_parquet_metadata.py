@@ -5,6 +5,7 @@ import shutil
 import astropy.units as u
 import nested_pandas as npd
 import numpy as np
+import numpy.testing as npt
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -421,7 +422,6 @@ def test_per_partition_statistics_nested(small_sky_nested_dir):
     assert result_frame.shape == (13, 72)
 
 
-@pytest.mark.xfail(reason="Chicken and egg with import")
 def test_per_partition_statistics_cache_nested(small_sky_nested_dir):
     # 13 = 13 pixels
     partition_info_file = small_sky_nested_dir / "per_partition_statistics.parquet"
@@ -429,6 +429,11 @@ def test_per_partition_statistics_cache_nested(small_sky_nested_dir):
     result_frame = per_partition_statistics_from_cache(partition_info_file)
     # 78 = (5 base columns + 8 nested sub-columns) * 6 stats
     assert result_frame.shape == (13, 78)
+
+    result_frame_by_row_group = per_partition_statistics_from_cache(partition_info_file, per_row_group=True)
+    # 81 = 3 very base columns + (5 base columns + 8 nested sub-columns) * 6 stats
+    assert result_frame_by_row_group.shape == (13, 81)
+    npt.assert_array_equal(result_frame_by_row_group.columns[3:], result_frame.columns)
 
     result_frame = per_partition_statistics_from_cache(partition_info_file, include_columns=["lc", "ra"])
     # 54 = (8 nested sub-columns + "ra") * 6 stats
