@@ -620,7 +620,7 @@ def per_partition_statistics_from_cache(
     stat_col_names = ["row_group_index"] + list(
         itertools.chain.from_iterable(
             [
-                [f"{col_name.replace(".", "___")}: {stat}" for stat in include_stats]
+                [f"{col_name.replace('.', '___')}: {stat}" for stat in include_stats]
                 for col_name in column_names
             ]
         )
