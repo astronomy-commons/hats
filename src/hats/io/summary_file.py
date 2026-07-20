@@ -434,13 +434,9 @@ def generate_summary(
         # sets jinja_template as a file as a path
     match fmt:
         case "markdown":
-            tmpl_str = jinja2_template or importlib.resources.files(templates).joinpath(md_tmpl).read_text(
-                encoding="utf-8"
-            )
+            tmpl_str = jinja2_template or importlib.resources.files(templates).joinpath(md_tmpl).read_text()
         case "html":
-            tmpl_str = jinja2_template or importlib.resources.files(templates).joinpath(html_tmpl).read_text(
-                encoding="utf-8"
-            )
+            tmpl_str = jinja2_template or importlib.resources.files(templates).joinpath(html_tmpl).read_text()
         case None:
             tmpl_str = jinja2_template
         case _:
