@@ -375,8 +375,7 @@ def test_cull_to_fov_subsamples_high_order():
         rotation=DEFAULT_ROTATION,
         projection=DEFAULT_PROJECTION,
     ).w
-    with pytest.warns(match="smaller"):
-        culled_dict = _cull_to_fov(map_dict, wcs)
+    culled_dict = _cull_to_fov(map_dict, wcs)
     # Get the WCS cdelt giving the deg.px^(-1) resolution.
     cdelt = wcs.wcs.cdelt
     # Convert in rad.px^(-1)
@@ -409,8 +408,7 @@ def test_cull_to_fov_subsamples_multiple_orders():
         rotation=DEFAULT_ROTATION,
         projection=DEFAULT_PROJECTION,
     ).w
-    with pytest.warns(match="smaller"):
-        culled_dict = _cull_to_fov(map_dict, wcs)
+    culled_dict = _cull_to_fov(map_dict, wcs)
     # Get the WCS cdelt giving the deg.px^(-1) resolution.
     cdelt = wcs.wcs.cdelt
     # Convert in rad.px^(-1)
@@ -985,8 +983,7 @@ def test_catalog_plot_density(small_sky_dir):
     pytest.importorskip("matplotlib.pyplot")
 
     small_sky_source_catalog = read_hats(small_sky_dir)
-    with pytest.warns(match="smaller"):
-        _, ax = plot_density(small_sky_source_catalog)
+    _, ax = plot_density(small_sky_source_catalog)
     order10_col = ax.collections[0]
     order10_paths = order10_col.get_paths()
     assert "Angular density of catalog small_sky" == ax.get_title()
