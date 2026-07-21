@@ -13,6 +13,7 @@ import pandas as pd
 from upath import UPath
 
 from hats.catalog import CollectionProperties
+from hats.catalog.association_catalog.association_catalog import AssociationCatalog
 from hats.catalog.catalog_collection import CatalogCollection
 from hats.catalog.dataset import Dataset
 from hats.catalog.healpix_dataset.healpix_dataset import HealpixDataset
@@ -26,6 +27,8 @@ from hats.loaders.read_hats import read_hats
 
 def _cone_code_example(column_table: pd.DataFrame, cat_props) -> dict | None:
     if "example" not in column_table:
+        return None
+    if cat_props.ra_column is None or cat_props.dec_column is None:
         return None
     ra = np.round(float(column_table.loc[cat_props.ra_column]["example"]))
     if ra >= 360.0:
@@ -287,7 +290,10 @@ def _get_example_frame(catalog: Dataset, rng: np.random.Generator) -> npd.Nested
     if not healpix_pixels:
         return None
     pixel = rng.choice(healpix_pixels)
-    return catalog.read_pixel_to_pandas(pixel)
+    try:
+        return catalog.read_pixel_to_pandas(pixel)
+    except FileNotFoundError:
+        return None
 
 
 def _get_example_row(catalog: HealpixDataset) -> npd.NestedFrame | None:
@@ -314,8 +320,12 @@ def _generate_sky_coverage_images(catalog, name: str | None = None):
     density_title = f"Angular density of catalog {name}" if name else None
     fig, _ = catalog.plot_pixels(plot_title=pixel_title)
     pixel_map_b64 = _fig_to_webp_base64(fig)
-    fig, _ = plot_density(catalog, norm=LogNorm(), edgecolors="face", plot_title=density_title)
-    density_map_b64 = _fig_to_webp_base64(fig)
+    density_map_b64 = None
+    try:
+        fig, _ = plot_density(catalog, norm=LogNorm(), edgecolors="face", plot_title=density_title)
+        density_map_b64 = _fig_to_webp_base64(fig)
+    except FileNotFoundError:
+        pass
     return pixel_map_b64, density_map_b64
 
 
@@ -431,6 +441,8 @@ def generate_summary(
         md_tmpl, html_tmpl = "margin_md_template.jinja2", "margin_html_template.jinja2"
     elif isinstance(catalog, IndexCatalog):
         md_tmpl, html_tmpl = "index_md_template.jinja2", "index_html_template.jinja2"
+    elif isinstance(catalog, AssociationCatalog):
+        md_tmpl, html_tmpl = "association_md_template.jinja2", "association_html_template.jinja2"
     else:
         md_tmpl, html_tmpl = "catalog_md_template.jinja2", "catalog_html_template.jinja2"
     env = jinja2.Environment(undefined=jinja2.StrictUndefined)
@@ -582,6 +594,11 @@ def write_catalog_summary_file(
     elif isinstance(catalog, Catalog):
         name = name or catalog.catalog_info.catalog_name
         description = description or f"This is the HATS catalog for {name}."
+    elif isinstance(catalog, AssociationCatalog):
+        name = name or catalog.catalog_info.catalog_name
+        primary = catalog.catalog_info.primary_catalog
+        join = catalog.catalog_info.join_catalog
+        description = description or f"This is the association catalog linking {primary} with {join}."
 
     content = generate_summary(
         catalog,
