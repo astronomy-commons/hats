@@ -242,7 +242,11 @@ def test_get_mem_size_per_row_pyarrow_strings_and_fixed_widths():
 
     # id: 8 each; flag: 1/8 each; name: data bytes + 4-byte offset entry + 1/8
     # bitmap, where "ééé" is 6 UTF-8 bytes and the null row holds no data.
-    assert mem_sizes == [8 + 0.125 + (4 + 4 + 0.125), 8 + 0.125 + (0 + 4 + 0.125), 8 + 0.125 + (6 + 4 + 0.125)]
+    assert mem_sizes == [
+        8 + 0.125 + (4 + 4 + 0.125),
+        8 + 0.125 + (0 + 4 + 0.125),
+        8 + 0.125 + (6 + 4 + 0.125),
+    ]
 
 
 def test_get_mem_size_per_row_pyarrow_struct():
@@ -279,3 +283,19 @@ def test_get_mem_size_per_row_pandas_matches_pyarrow():
     )
 
     assert get_mem_size_per_row(frame) == get_mem_size_per_row(table)
+
+
+def test_get_mem_size_per_row_pandas_numpy_scalar_cells():
+    """An object column of numpy scalar cells (e.g. structured np.void records)
+    cannot be converted to arrow, so it falls back to per-item measurement. The
+    cell is sized by its buffer (itemsize), not the Python wrapper's overhead."""
+    record_type = np.dtype([("x", np.float64), ("y", np.float64)])
+    records = np.array([(1.0, 2.0), (3.0, 4.0), (5.0, 6.0)], dtype=record_type)
+    # Each cell is a np.void scalar; a DataFrame keeps them as an object column.
+    frame = pd.DataFrame({"record": pd.Series(list(records), dtype=object)})
+
+    mem_sizes = get_mem_size_per_row(frame)
+
+    # Two float64 fields => 16 bytes per record, regardless of Python overhead.
+    assert mem_sizes == [16.0, 16.0, 16.0]
+    assert all(isinstance(size, float) for size in mem_sizes)

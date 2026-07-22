@@ -156,6 +156,11 @@ def _item_mem_size(item):
         # The loaded data is the array's buffer; the Python object wrapper is
         # not counted.
         return item.nbytes
+    if isinstance(item, np.generic):
+        # A numpy scalar (e.g. a structured np.void record cell that arrow could
+        # not convert): its buffer is itemsize bytes. sys.getsizeof would report
+        # the Python wrapper's overhead instead, which for np.void overcounts.
+        return item.itemsize
     # For other types, sys.getsizeof is the best available approximation.
     return sys.getsizeof(item)
 
@@ -205,9 +210,7 @@ def get_mem_size_per_row(data, cols=None):
                 arrow_column = pa.array(series, from_pandas=True)
             except (pa.ArrowInvalid, pa.ArrowTypeError, pa.ArrowNotImplementedError, ValueError):
                 # Columns arrow can't represent: best-effort per-value measurement.
-                mem_sizes += np.fromiter(
-                    (_item_mem_size(item) for item in series), np.float64, len(series)
-                )
+                mem_sizes += np.fromiter((_item_mem_size(item) for item in series), np.float64, len(series))
                 continue
             mem_sizes += _arrow_column_mem_sizes(arrow_column)
     elif isinstance(data, pa.Table):
