@@ -37,9 +37,7 @@ def test_estimate_dir_size_edge(tmp_path):
 def test_get_mem_size_per_row_pandas(small_sky_dir):
     small_sky_catalog = read_hats(small_sky_dir)
 
-    single_pixel_df = small_sky_catalog.read_pixel_to_pandas(
-        small_sky_catalog.get_healpix_pixels()[0]
-    )
+    single_pixel_df = small_sky_catalog.read_pixel_to_pandas(small_sky_catalog.get_healpix_pixels()[0])
     mem_sizes = get_mem_size_per_row(single_pixel_df)
     assert len(mem_sizes) == len(single_pixel_df)
 
@@ -67,9 +65,7 @@ def test_get_mem_size_per_row_pyarrow(small_sky_dir):
 def test_get_mem_size_per_row_pandas_nested(small_sky_nested_dir):
     small_sky_catalog = read_hats(small_sky_nested_dir)
 
-    single_pixel_df = small_sky_catalog.read_pixel_to_pandas(
-        small_sky_catalog.get_healpix_pixels()[0]
-    )
+    single_pixel_df = small_sky_catalog.read_pixel_to_pandas(small_sky_catalog.get_healpix_pixels()[0])
     mem_sizes = get_mem_size_per_row(single_pixel_df)
     assert len(mem_sizes) == len(single_pixel_df)
 
@@ -144,9 +140,7 @@ def test_get_mem_size_per_row_mixed_frame():
     assert len(mem_sizes_table_small) == 10
     assert all(isinstance(size, float) and size > 0 for size in mem_sizes_table_small)
     # Each entry in mem_sizes_table should be > corresponding entry in mem_sizes_table_small
-    assert all(
-        m > s for m, s in zip(mem_sizes_table, mem_sizes_table_small, strict=True)
-    )
+    assert all(m > s for m, s in zip(mem_sizes_table, mem_sizes_table_small, strict=True))
 
 
 def test_get_mem_size_per_row_nested_frame():
@@ -221,17 +215,13 @@ def test_get_mem_size_per_row_fixed_and_string_columns():
 
     # Fixed-size binary: every value costs its declared byte width (here 4); no
     # nulls, so no bitmap share.
-    fixed_binary = get_mem_size_per_row(
-        pa.table({"fb": pa.array([b"abcd", b"efgh", b"ijkl"], pa.binary(4))})
-    )
+    fixed_binary = get_mem_size_per_row(pa.table({"fb": pa.array([b"abcd", b"efgh", b"ijkl"], pa.binary(4))}))
     assert fixed_binary == [4.0, 4.0, 4.0]
     assert all(isinstance(size, float) for size in fixed_binary)
 
     # Large string: 8-byte offset entries instead of 4; no nulls, so no bitmap.
     # "ab" = 2 data bytes + 8; "cde" = 3 + 8.
-    large_string = get_mem_size_per_row(
-        pa.table({"name": pa.array(["ab", "cde"], pa.large_string())})
-    )
+    large_string = get_mem_size_per_row(pa.table({"name": pa.array(["ab", "cde"], pa.large_string())}))
     assert large_string == [10.0, 11.0]
     assert all(isinstance(size, float) for size in large_string)
 
@@ -244,9 +234,7 @@ def test_get_mem_size_per_row_list_columns():
     bitmap = 0.125
     lightcurves = [[10.1, 10.3, 9.8], [], None, [4.2] * 100]
     for list_type, offset_width in [(pa.list_, 4), (pa.large_list, 8)]:
-        table = pa.table(
-            {"lightcurve": pa.array(lightcurves, type=list_type(pa.float64()))}
-        )
+        table = pa.table({"lightcurve": pa.array(lightcurves, type=list_type(pa.float64()))})
         # Null rows hold no data but still occupy an offset entry.
         assert get_mem_size_per_row(table) == [
             3 * 8 + offset_width + bitmap,
@@ -317,14 +305,9 @@ def test_get_mem_size_per_row_pandas_non_arrow_columns():
     assert get_mem_size_per_row(frame) == [16.0, 32.0]
 
     # Arbitrary Python objects (neither ndarray nor numpy scalar): sys.getsizeof.
-    class Opaque:
-        pass
-
-    opaque = [Opaque(), Opaque()]
+    opaque = [object(), object()]
     frame = pd.DataFrame({"obj": pd.Series(opaque, dtype=object)})
-    assert get_mem_size_per_row(frame) == [
-        float(sys.getsizeof(cell)) for cell in opaque
-    ]
+    assert get_mem_size_per_row(frame) == [float(sys.getsizeof(cell)) for cell in opaque]
 
 
 def test_get_mem_size_per_row_pandas_pyarrow_equivalence_and_cols():
@@ -363,9 +346,7 @@ def test_get_mem_size_per_row_pandas_pyarrow_equivalence_and_cols():
     )
     selected = get_mem_size_per_row(frame, cols=["id", "ra"])
     assert selected == get_mem_size_per_row(frame[["id", "ra"]])
-    assert all(
-        s < full for s, full in zip(selected, get_mem_size_per_row(frame), strict=True)
-    )
+    assert all(s < full for s, full in zip(selected, get_mem_size_per_row(frame), strict=True))
 
     table = pa.table(
         {
@@ -376,9 +357,7 @@ def test_get_mem_size_per_row_pandas_pyarrow_equivalence_and_cols():
     )
     selected = get_mem_size_per_row(table, cols=["id", "ra"])
     assert selected == get_mem_size_per_row(table.select(["id", "ra"]))
-    assert all(
-        s < full for s, full in zip(selected, get_mem_size_per_row(table), strict=True)
-    )
+    assert all(s < full for s, full in zip(selected, get_mem_size_per_row(table), strict=True))
 
 
 def test_get_mem_size_per_row_pyarrow_empty_fixed_width():
