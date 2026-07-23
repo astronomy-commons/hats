@@ -74,7 +74,8 @@ def read_hats(
 def _load_collection(collection_path: UPath, read_moc: bool = True) -> CatalogCollection:
     collection_properties = CollectionProperties.read_from_dir(collection_path)
     main_catalog = _load_catalog(
-        collection_path / collection_properties.hats_primary_table_url, read_moc=read_moc
+        CatalogCollection.resolve_inner_path(collection_path, collection_properties.hats_primary_table_url),
+        read_moc=read_moc,
     )
     return CatalogCollection(collection_path, collection_properties, main_catalog)
 

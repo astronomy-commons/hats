@@ -6,6 +6,7 @@ from hats.catalog.catalog import Catalog
 from hats.catalog.catalog_type import CatalogType
 from hats.catalog.dataset.collection_properties import CollectionProperties
 from hats.catalog.dataset.table_properties import TableProperties
+from hats.io import file_io
 from hats.pixel_math import HealpixPixel
 
 
@@ -43,7 +44,9 @@ class CatalogCollection:
     @property
     def main_catalog_dir(self) -> UPath:
         """Path to the main catalog directory"""
-        return self.collection_path / self.collection_properties.hats_primary_table_url
+        return self.resolve_inner_path(
+            self.collection_path, self.collection_properties.hats_primary_table_url
+        )
 
     @property
     def all_margins(self) -> list[str] | None:
@@ -60,7 +63,7 @@ class CatalogCollection:
         """Path to the default margin catalog directory"""
         if self.default_margin is None:
             return None
-        return self.collection_path / self.default_margin
+        return self.resolve_inner_path(self.collection_path, self.default_margin)
 
     @property
     def all_indexes(self) -> dict[str, str] | None:
@@ -87,7 +90,7 @@ class CatalogCollection:
         if self.all_indexes is None or field_name not in self.all_indexes:
             raise ValueError(f"Index for field `{field_name}` is not specified in all_indexes")
         index_dir = self.all_indexes[field_name]
-        return self.collection_path / index_dir
+        return self.resolve_inner_path(self.collection_path, index_dir)
 
     def get_healpix_pixels(self) -> list[HealpixPixel]:
         """The list of HEALPix pixels of the main catalog"""
@@ -119,3 +122,11 @@ class CatalogCollection:
             thresholds[margin_name] = margin_properties.margin_threshold
 
         return thresholds
+
+    @classmethod
+    def resolve_inner_path(cls, collection_path, path) -> UPath:
+        path = file_io.get_upath(path)
+        if "local" not in path.fs.protocol or path.is_absolute():
+            return path  # remote URL or absolute local path - use as-is
+        collection_path = file_io.get_upath(collection_path)
+        return collection_path / path
