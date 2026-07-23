@@ -188,6 +188,35 @@ def test_read_collection_all_indexes_not_specified(small_sky_collection_dir, tmp
         CollectionProperties.read_from_dir(tmp_path)
 
 
+def test_collection_version_round_trip_with_key(test_data_dir, tmp_path):
+    """A collection.properties file that sets ``collection_version`` round-trips with the value."""
+    collection_path = test_data_dir / "info_only" / "versioned_collection"
+    collection_properties = CollectionProperties.read_from_dir(collection_path)
+    assert collection_properties.collection_version == "v2.1.0"
+
+    collection_properties.to_properties_file(tmp_path)
+    contents = load_text_file(tmp_path / "collection.properties")
+    assert "collection_version=v2.1.0\n" in contents
+
+    round_trip_properties = CollectionProperties.read_from_dir(tmp_path)
+    assert round_trip_properties.collection_version == "v2.1.0"
+    assert collection_properties == round_trip_properties
+
+
+def test_collection_version_absent_is_none(small_sky_collection_dir, tmp_path):
+    """A collection.properties file without the key returns ``None`` and does not gain the key."""
+    collection_properties = CollectionProperties.read_from_dir(small_sky_collection_dir)
+    assert collection_properties.collection_version is None
+
+    # Serialization skips the None field: existing collections do not gain an empty key.
+    collection_properties.to_properties_file(tmp_path)
+    contents = load_text_file(tmp_path / "collection.properties")
+    assert not any("collection_version" in line for line in contents)
+
+    round_trip_properties = CollectionProperties.read_from_dir(tmp_path)
+    assert round_trip_properties.collection_version is None
+
+
 def test_collection_parsing():
     ## Confirm we can pass in already dict- or list-like objects, and get the expected values.
     ## Space-only delimited

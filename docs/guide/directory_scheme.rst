@@ -100,3 +100,24 @@ Here we have additional supplemental tables:
 * ``margin_10arcs`` - a cache of rows that are within a limited angular threshold
   around the primary catalog data partition, useful for cross-matching to catalogs
   with slightly different astrometry.
+
+Properties files
+-------------------------------------------------------------------------------
+
+``hats.properties`` (per catalog) and ``collection.properties`` (per collection) are
+plain-text ``key=value`` files, one property per line, holding the catalog metadata.
+Most keys are required or otherwise well-defined by the HATS format; a few are optional.
+
+``collection_version``
+    *Optional, and lives only in* ``collection.properties``. A **data** version
+    identifying which release of the collection's contents you have loaded (for example,
+    ``v2.1.0`` for a given data release). A data release is a property of the collection
+    as a whole — its main catalog, margins, and indexes are released together — so the
+    version is recorded once, on the collection, rather than on each constituent catalog.
+    It is read back via the ``collection_version`` property on a collection, and returns
+    ``None`` for collections written before the field existed.
+
+    This is independent of ``hats_version``, which is the version of the HATS format
+    specification itself (with respect to the HATS IVOA note) and is expected to be
+    stable. The two fields do not interact: a collection can bump its
+    ``collection_version`` for a new data release without changing ``hats_version``.

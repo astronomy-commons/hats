@@ -57,6 +57,14 @@ class CollectionProperties(BaseModel):
     all_indexes: Annotated[Optional[dict[str, str]], Field(default=None)]
     default_index: Optional[str] = Field(default=None)
 
+    collection_version: Optional[str] = Field(default=None)
+    """Optional data version of this collection (e.g. its data release, ``'v2.1.0'``).
+
+    This is a *data* version that identifies which release of the collection's contents
+    you have loaded. It is distinct from ``hats_version``, which is the version of the
+    HATS format specification and is expected to be stable. Collections written before
+    this field existed simply omit it, and it reads back as ``None``."""
+
     ## Allow any extra keyword args to be stored on the properties object.
     model_config = ConfigDict(extra="allow", populate_by_name=True, use_enum_values=True)
 

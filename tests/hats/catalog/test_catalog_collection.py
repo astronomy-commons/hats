@@ -8,6 +8,24 @@ from hats.catalog.catalog_collection import CatalogCollection
 from hats.loaders import read_hats
 
 
+def test_collection_version_absent(small_sky_collection_dir):
+    """A collection without the key reports ``collection_version`` as None."""
+    collection = read_hats(small_sky_collection_dir)
+    assert isinstance(collection, CatalogCollection)
+    assert collection.collection_version is None
+
+
+def test_collection_version_present(small_sky_collection_dir, tmp_path):
+    """A collection that sets ``collection_version`` reports it."""
+    collection_base_dir = tmp_path / "versioned_collection"
+    shutil.copytree(small_sky_collection_dir, collection_base_dir)
+    props_path = collection_base_dir / "collection.properties"
+    props_path.write_text(props_path.read_text() + "\ncollection_version=v2.1.0\n")
+
+    collection = read_hats(collection_base_dir)
+    assert collection.collection_version == "v2.1.0"
+
+
 def test_get_margin_thresholds(small_sky_collection_dir):
     """Test getting margin thresholds for all margin catalogs in the collection"""
     collection = read_hats(small_sky_collection_dir)

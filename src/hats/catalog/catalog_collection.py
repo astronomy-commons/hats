@@ -46,6 +46,16 @@ class CatalogCollection:
         return self.collection_path / self.collection_properties.hats_primary_table_url
 
     @property
+    def collection_version(self) -> str | None:
+        """Optional data version of this collection (e.g. its data release, ``'v2.1.0'``).
+
+        Returns ``None`` for collections written before this field existed. This is a
+        *data* version, distinct from ``hats_version`` (the HATS format specification
+        version).
+        """
+        return self.collection_properties.collection_version
+
+    @property
     def all_margins(self) -> list[str] | None:
         """The list of margin catalog names in the collection"""
         return self.collection_properties.all_margins
