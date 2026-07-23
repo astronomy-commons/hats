@@ -16,6 +16,8 @@ from hats.io.summary_file import (
     _gen_metadata_table,
     generate_summary,
     write_catalog_summary_file,
+    write_partition_info_png,
+    write_skymap_png,
 )
 from hats.loaders import read_hats
 
@@ -524,6 +526,22 @@ def test_write_catalog_summary_file_contains_images(tmp_path, small_sky_collecti
     assert "![Density Skymap](data:image/webp;base64," in content
 
 
+def test_write_catalog_summary_file_association(tmp_path, association_catalog_path):
+    dest = tmp_path / association_catalog_path.name
+    shutil.copytree(association_catalog_path, dest)
+    output_path = write_catalog_summary_file(dest, fmt="markdown")
+    assert output_path.name == "README.md"
+    assert "HATS Association Catalog" in output_path.read_text()
+
+
+def test_write_catalog_summary_file_association_html(tmp_path, association_catalog_path):
+    dest = tmp_path / association_catalog_path.name
+    shutil.copytree(association_catalog_path, dest)
+    output_path = write_catalog_summary_file(dest, fmt="html")
+    assert output_path.name == "index.html"
+    assert "HATS Association Catalog" in output_path.read_text()
+
+
 def test_write_catalog_summary_file_margin(tmp_path, margin_catalog_path):
     dest = tmp_path / margin_catalog_path.name
     shutil.copytree(margin_catalog_path, dest)
@@ -570,3 +588,77 @@ def test_write_catalog_summary_file_invalid_format_raises(tmp_path, small_sky_co
     shutil.copytree(small_sky_collection_dir, collection_base_dir)
     with pytest.raises(ValueError, match="Unsupported format"):
         write_catalog_summary_file(collection_base_dir, fmt="md")
+
+
+def test_write_catalog_summary_file_fmt_none_template_file_path(tmp_path, small_sky_order1_dir):
+    dest = tmp_path / small_sky_order1_dir.name
+    shutil.copytree(small_sky_order1_dir, dest)
+    tmpl_file = tmp_path / "my_template.xml.jinja2"
+    tmpl_file.write_text("<desc>{{ description }}</desc>")
+    output_path = write_catalog_summary_file(
+        dest,
+        fmt=None,
+        filename="test.xml",
+        jinja2_template=str(tmpl_file),
+    )
+    content = output_path.read_text()
+    assert content.startswith("<desc>")
+    assert "small_sky_order1" in content
+
+
+def test_write_catalog_summary_file_extra_template_vars(tmp_path, small_sky_order1_dir):
+    dest = tmp_path / small_sky_order1_dir.name
+    shutil.copytree(small_sky_order1_dir, dest)
+    output_path = write_catalog_summary_file(
+        dest,
+        fmt=None,
+        filename="test.xml",
+        jinja2_template="<url>{{access_url}}</url><name>{{name}}</name>",
+        extra_template_vars={"access_url": "https://data.lsdb.io/small_sky"},
+    )
+    content = output_path.read_text()
+    assert "<url>https://data.lsdb.io/small_sky</url>" in content
+    assert "<name>small_sky_order1</name>" in content
+
+
+def test_write_catalog_summary_file_fmt_none_requires_template(tmp_path, small_sky_order1_dir):
+    dest = tmp_path / small_sky_order1_dir.name
+    shutil.copytree(small_sky_order1_dir, dest)
+    with pytest.raises(ValueError, match="`jinja2_template` is required"):
+        write_catalog_summary_file(dest, fmt=None, filename="out.xml")
+
+
+def test_write_catalog_summary_file_fmt_none_requires_filename(tmp_path, small_sky_order1_dir):
+    dest = tmp_path / small_sky_order1_dir.name
+    shutil.copytree(small_sky_order1_dir, dest)
+    with pytest.raises(ValueError, match="`filename` is required"):
+        write_catalog_summary_file(dest, fmt=None, jinja2_template="{{name}}")
+
+
+def test_generate_summary_unsupported_fmt_raises(small_sky_order1_dir):
+    catalog = read_hats(small_sky_order1_dir)
+    with pytest.raises(ValueError, match="Unsupported format"):
+        generate_summary(
+            catalog,
+            fmt="xml",
+            name="test",
+            description="test",
+            uri=None,
+            huggingface_metadata=False,
+        )
+
+
+def test_write_skymap_png(tmp_path, small_sky_order1_dir):
+    pytest.importorskip("matplotlib.pyplot")
+    dest = tmp_path / small_sky_order1_dir.name
+    shutil.copytree(small_sky_order1_dir, dest)
+    write_skymap_png(dest)
+    assert (dest / "skymap.png").exists()
+
+
+def test_write_partition_info_png(tmp_path, small_sky_order1_dir):
+    pytest.importorskip("matplotlib.pyplot")
+    dest = tmp_path / small_sky_order1_dir.name
+    shutil.copytree(small_sky_order1_dir, dest)
+    write_partition_info_png(dest)
+    assert (dest / "partition_info.png").exists()

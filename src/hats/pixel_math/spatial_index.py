@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+from numpy.typing import ArrayLike
 
 import hats.pixel_math.healpix_shim as hp
 
@@ -45,14 +46,16 @@ def compute_spatial_index(
 
 
 def spatial_index_to_healpix(
-    ids: list[int], target_order: int = SPATIAL_INDEX_ORDER, spatial_index_order: int = SPATIAL_INDEX_ORDER
+    ids: ArrayLike,
+    target_order: int = SPATIAL_INDEX_ORDER,
+    spatial_index_order: int = SPATIAL_INDEX_ORDER,
 ) -> np.ndarray:
     """Convert healpix index values to the healpix pixel at the specified order
 
     Parameters
     ----------
-    ids : list[int]
-        list of well-formatted _healpix_29 values
+    ids : ArrayLike
+        list (or array) of well-formatted _healpix_29 values
     target_order : int
         Defaults to `SPATIAL_INDEX_ORDER`. The order of the pixel to get from the healpix index.
     spatial_index_order: int

@@ -58,7 +58,7 @@ class HealpixPixel:
             If delta_order is greater than the current order, a pixel cannot be
             generated at a negative order. Or if delta_order is negative
         """
-        new_pixel = get_lower_order_pixel(self.order, self.pixel, delta_order)
+        new_pixel = int(get_lower_order_pixel(self.order, self.pixel, delta_order))
         new_order = self.order - delta_order
         return HealpixPixel(new_order, new_pixel)
 
@@ -107,22 +107,23 @@ class HealpixPixel:
 INVALID_PIXEL = HealpixPixel(-1, -1)
 
 
-def get_lower_order_pixel(order: int, pixel: int, delta_order: int) -> int:
+def get_lower_order_pixel(order: int, pixel: int | np.ndarray, delta_order: int) -> int | np.ndarray:
     """Returns the pixel number at a lower order
 
     Parameters
     ----------
     order : int
         the order of the pixel
-    pixel : int
-        the pixel number of the pixel in NESTED ordering
+    pixel : int | np.ndarray
+        the pixel number of the pixel in NESTED ordering, or an array of pixel numbers
     delta_order : int
         the change in order to the new lower order
 
     Returns
     -------
-    int
-        The pixel number at order (order - delta_order) for the pixel that contains the given pixel
+    int | np.ndarray
+        The pixel number (or array of pixel numbers) at order (order - delta_order) for the
+        pixel(s) that contain the given pixel(s)
     """
     if order - delta_order < 0:
         raise ValueError("Pixel Order cannot be below zero")
