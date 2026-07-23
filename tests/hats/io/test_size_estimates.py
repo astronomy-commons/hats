@@ -1,3 +1,5 @@
+import sys
+
 import nested_pandas as npd
 import numpy as np
 import pandas as pd
@@ -8,6 +10,10 @@ from hats import read_hats
 from hats.io.file_io import read_parquet_file
 from hats.io.paths import pixel_catalog_file
 from hats.io.size_estimates import estimate_dir_size, get_mem_size_per_row
+
+# ---------------------------------------------------------------------------
+# estimate_dir_size
+# ---------------------------------------------------------------------------
 
 
 def test_estimate_dir_size(small_sky_dir):
@@ -30,6 +36,11 @@ def test_estimate_dir_size_edge(tmp_path):
     estimate = estimate_dir_size("")
     assert estimate == 0
     assert isinstance(estimate, int)
+
+
+# ---------------------------------------------------------------------------
+# get_mem_size_per_row: end-to-end on catalog data
+# ---------------------------------------------------------------------------
 
 
 def test_get_mem_size_per_row_pandas(small_sky_dir):
@@ -83,14 +94,14 @@ def test_get_mem_size_per_row_errors(small_sky_dir):
         get_mem_size_per_row(single_pixel_table)
 
 
-def test_get_mem_size_of_chunk():
-    """Test the _get_mem_size_of_chunk function for reasonable outputs."""
-    # Test with an empty DataFrame
+def test_get_mem_size_per_row_mixed_frame():
+    """A realistic multi-column frame: sizes are positive, dropping columns shrinks
+    every row, and a pandas frame measures the same as its equivalent pyarrow table."""
+    # An empty frame has no rows to measure.
     empty_df = pd.DataFrame(columns=["id", "ra", "dec", "value"])
     mem_sizes_empty = get_mem_size_per_row(empty_df)
     assert len(mem_sizes_empty) == 0
 
-    # Test with a small DataFrame
     df = pd.DataFrame(
         {
             "id": [0, 0, 0, 1, 1, 1, 2, 2, 2, 2],
@@ -115,7 +126,7 @@ def test_get_mem_size_of_chunk():
     mem_sizes = get_mem_size_per_row(df)
     # Since we have 10 rows, mem_sizes should have length 10
     assert len(mem_sizes) == 10
-    # Each entry should be a positive integer (size in bytes)
+    # Each entry should be a positive float (size in bytes)
     assert all(isinstance(size, float) and size > 0 for size in mem_sizes)
 
     # Compare to a smaller DataFrame with fewer columns
@@ -141,8 +152,8 @@ def test_get_mem_size_of_chunk():
     assert all(m > s for m, s in zip(mem_sizes_table, mem_sizes_table_small, strict=True))
 
 
-def test_get_mem_size_of_chunk_nested():
-    """Test the _get_mem_size_of_chunk function with nested data."""
+def test_get_mem_size_per_row_nested_frame():
+    """A nested (light-curve) frame: rows with more sub-rows cost more."""
     # Create a small DataFrame and nest it
     df = pd.DataFrame(
         {
@@ -178,12 +189,70 @@ def test_get_mem_size_of_chunk_nested():
 
     # Since we have only 3 rows once we nest, mem_sizes should have length 3
     assert len(mem_sizes) == 3
-    # Each entry should be a positive integer (size in bytes)
+    # Each entry should be a positive float (size in bytes)
     assert all(isinstance(size, float) and size > 0 for size in mem_sizes)
     # The first two entries should be the same, since they have 3 sub-rows each
     assert mem_sizes[0] == mem_sizes[1]
     # The last entry should be the larger than the other two, since it has 4 sub-rows
     assert mem_sizes[2] > mem_sizes[0]
+
+
+# ---------------------------------------------------------------------------
+# get_mem_size_per_row: fixed-width and string/binary columns
+# ---------------------------------------------------------------------------
+
+
+def test_get_mem_size_per_row_pyarrow_strings_and_fixed_widths():
+    """Fixed-width values cost their byte width (bit-packed bools count 1/8 byte);
+    string values cost their UTF-8 data bytes plus one offset entry, plus a
+    one-bit validity share since the null makes the column carry a bitmap."""
+    table = pa.table(
+        {
+            "id": pa.array([1, 2, 3], type=pa.int64()),
+            "flag": pa.array([True, False, True], type=pa.bool_()),
+            "name": pa.array(["1001", None, "ééé"], type=pa.string()),
+        }
+    )
+
+    mem_sizes = get_mem_size_per_row(table)
+
+    # id: 8 each; flag: 1/8 each; name: data bytes + 4-byte offset entry + 1/8
+    # bitmap, where "ééé" is 6 UTF-8 bytes and the null row holds no data.
+    assert mem_sizes == [
+        8 + 0.125 + (4 + 4 + 0.125),
+        8 + 0.125 + (0 + 4 + 0.125),
+        8 + 0.125 + (6 + 4 + 0.125),
+    ]
+
+
+def test_get_mem_size_per_row_pyarrow_fixed_size_binary():
+    """Fixed-size binary is a fixed-width type: every value costs its declared
+    byte width (here 4), read from ``byte_width`` rather than a bit width. No
+    nulls, so there is no validity bitmap share."""
+    table = pa.table({"fb": pa.array([b"abcd", b"efgh", b"ijkl"], type=pa.binary(4))})
+
+    mem_sizes = get_mem_size_per_row(table)
+
+    assert mem_sizes == [4.0, 4.0, 4.0]
+    assert all(isinstance(size, float) for size in mem_sizes)
+
+
+def test_get_mem_size_per_row_pyarrow_large_string():
+    """Large string/binary types index their values with 8-byte offset entries
+    (vs. 4 for their regular counterparts), so each row costs its UTF-8 data
+    bytes plus 8. No nulls, so no bitmap share."""
+    table = pa.table({"name": pa.array(["ab", "cde"], type=pa.large_string())})
+
+    mem_sizes = get_mem_size_per_row(table)
+
+    # "ab" = 2 data bytes + 8-byte offset; "cde" = 3 + 8.
+    assert mem_sizes == [10.0, 11.0]
+    assert all(isinstance(size, float) for size in mem_sizes)
+
+
+# ---------------------------------------------------------------------------
+# get_mem_size_per_row: list columns
+# ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize("list_type,offset_width", [(pa.list_, 4), (pa.large_list, 8)])
@@ -226,27 +295,9 @@ def test_get_mem_size_per_row_pyarrow_list_of_strings():
     assert sum(mem_sizes) == pytest.approx(names.nbytes, abs=8)
 
 
-def test_get_mem_size_per_row_pyarrow_strings_and_fixed_widths():
-    """Fixed-width values cost their byte width (bit-packed bools count 1/8 byte);
-    string values cost their UTF-8 data bytes plus one offset entry, plus a
-    one-bit validity share since the null makes the column carry a bitmap."""
-    table = pa.table(
-        {
-            "id": pa.array([1, 2, 3], type=pa.int64()),
-            "flag": pa.array([True, False, True], type=pa.bool_()),
-            "name": pa.array(["1001", None, "ééé"], type=pa.string()),
-        }
-    )
-
-    mem_sizes = get_mem_size_per_row(table)
-
-    # id: 8 each; flag: 1/8 each; name: data bytes + 4-byte offset entry + 1/8
-    # bitmap, where "ééé" is 6 UTF-8 bytes and the null row holds no data.
-    assert mem_sizes == [
-        8 + 0.125 + (4 + 4 + 0.125),
-        8 + 0.125 + (0 + 4 + 0.125),
-        8 + 0.125 + (6 + 4 + 0.125),
-    ]
+# ---------------------------------------------------------------------------
+# get_mem_size_per_row: struct columns
+# ---------------------------------------------------------------------------
 
 
 def test_get_mem_size_per_row_pyarrow_struct():
@@ -284,6 +335,63 @@ def test_get_mem_size_per_row_pandas_struct_matches_pyarrow():
     assert all(isinstance(size, float) for size in mem_sizes)
 
 
+# ---------------------------------------------------------------------------
+# get_mem_size_per_row: pandas columns arrow can't represent (per-item fallback)
+# ---------------------------------------------------------------------------
+
+
+def test_get_mem_size_per_row_pandas_numpy_scalar_cells():
+    """An object column of numpy scalar cells (e.g. structured np.void records)
+    cannot be converted to arrow, so it falls back to per-item measurement. The
+    cell is sized by its buffer (itemsize), not the Python wrapper's overhead."""
+    record_type = np.dtype([("x", np.float64), ("y", np.float64)])
+    records = np.array([(1.0, 2.0), (3.0, 4.0), (5.0, 6.0)], dtype=record_type)
+    # Each cell is a np.void scalar; a DataFrame keeps them as an object column.
+    frame = pd.DataFrame({"record": pd.Series(list(records), dtype=object)})
+
+    mem_sizes = get_mem_size_per_row(frame)
+
+    # Two float64 fields => 16 bytes per record, regardless of Python overhead.
+    assert mem_sizes == [16.0, 16.0, 16.0]
+    assert all(isinstance(size, float) for size in mem_sizes)
+
+
+def test_get_mem_size_per_row_pandas_ndarray_cells():
+    """An object column of ragged ndarray cells cannot be converted to a single
+    arrow type, so it falls back to per-item measurement. An ndarray cell is
+    sized by its buffer (``nbytes``), excluding the Python wrapper's overhead."""
+    # A 1-D and a 2-D array in one object column: arrow cannot unify the shapes.
+    cells = [np.array([1, 2], dtype=np.int64), np.array([[1, 2], [3, 4]], dtype=np.int64)]
+    frame = pd.DataFrame({"arr": pd.Series(cells, dtype=object)})
+
+    mem_sizes = get_mem_size_per_row(frame)
+
+    # 2 x int64 = 16 bytes; 4 x int64 = 32 bytes.
+    assert mem_sizes == [16.0, 32.0]
+    assert all(isinstance(size, float) for size in mem_sizes)
+
+
+def test_get_mem_size_per_row_pandas_unconvertible_object_cells():
+    """An object column of arbitrary Python objects (neither ndarray nor numpy
+    scalar) that arrow cannot represent falls back to ``sys.getsizeof`` per cell."""
+
+    class Opaque:
+        pass
+
+    cells = [Opaque(), Opaque()]
+    frame = pd.DataFrame({"obj": pd.Series(cells, dtype=object)})
+
+    mem_sizes = get_mem_size_per_row(frame)
+
+    assert mem_sizes == [float(sys.getsizeof(cell)) for cell in cells]
+    assert all(isinstance(size, float) for size in mem_sizes)
+
+
+# ---------------------------------------------------------------------------
+# get_mem_size_per_row: pandas/pyarrow equivalence and column selection
+# ---------------------------------------------------------------------------
+
+
 def test_get_mem_size_per_row_pandas_matches_pyarrow():
     """A pandas chunk (numerics, strings, ndarray list cells) measures the same as
     the equivalent arrow table, since pandas columns are converted before measuring."""
@@ -305,17 +413,50 @@ def test_get_mem_size_per_row_pandas_matches_pyarrow():
     assert get_mem_size_per_row(frame) == get_mem_size_per_row(table)
 
 
-def test_get_mem_size_per_row_pandas_numpy_scalar_cells():
-    """An object column of numpy scalar cells (e.g. structured np.void records)
-    cannot be converted to arrow, so it falls back to per-item measurement. The
-    cell is sized by its buffer (itemsize), not the Python wrapper's overhead."""
-    record_type = np.dtype([("x", np.float64), ("y", np.float64)])
-    records = np.array([(1.0, 2.0), (3.0, 4.0), (5.0, 6.0)], dtype=record_type)
-    # Each cell is a np.void scalar; a DataFrame keeps them as an object column.
-    frame = pd.DataFrame({"record": pd.Series(list(records), dtype=object)})
+def test_get_mem_size_per_row_pandas_cols_selection():
+    """Passing ``cols`` restricts the pandas measurement to those columns, giving
+    the same result as measuring the pre-selected frame and less than the full frame."""
+    frame = pd.DataFrame(
+        {
+            "id": pa.array([1, 2, 3], type=pa.int64()).to_pandas(),
+            "ra": [10.0, 15.0, 12.1],
+            "name": ["aaaa", "bb", "c"],
+        }
+    )
 
-    mem_sizes = get_mem_size_per_row(frame)
+    selected = get_mem_size_per_row(frame, cols=["id", "ra"])
 
-    # Two float64 fields => 16 bytes per record, regardless of Python overhead.
-    assert mem_sizes == [16.0, 16.0, 16.0]
-    assert all(isinstance(size, float) for size in mem_sizes)
+    assert selected == get_mem_size_per_row(frame[["id", "ra"]])
+    # Dropping the string column lowers every row's size.
+    assert all(s < full for s, full in zip(selected, get_mem_size_per_row(frame), strict=True))
+
+
+def test_get_mem_size_per_row_pyarrow_cols_selection():
+    """Passing ``cols`` restricts the pyarrow measurement to those columns, giving
+    the same result as selecting them on the table and less than the full table."""
+    table = pa.table(
+        {
+            "id": pa.array([1, 2, 3], type=pa.int64()),
+            "ra": pa.array([10.0, 15.0, 12.1], type=pa.float64()),
+            "name": pa.array(["aaaa", "bb", "c"], type=pa.string()),
+        }
+    )
+
+    selected = get_mem_size_per_row(table, cols=["id", "ra"])
+
+    assert selected == get_mem_size_per_row(table.select(["id", "ra"]))
+    # Dropping the string column lowers every row's size.
+    assert all(s < full for s, full in zip(selected, get_mem_size_per_row(table), strict=True))
+
+
+# ---------------------------------------------------------------------------
+# get_mem_size_per_row: edge cases
+# ---------------------------------------------------------------------------
+
+
+def test_get_mem_size_per_row_pyarrow_empty_fixed_width():
+    """An empty fixed-width column has no rows to share a validity bitmap, so the
+    bitmap share is zero and the per-row list is empty."""
+    table = pa.table({"id": pa.array([], type=pa.int64())})
+
+    assert get_mem_size_per_row(table) == []
