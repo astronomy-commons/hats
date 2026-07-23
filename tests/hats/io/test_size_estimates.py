@@ -264,6 +264,26 @@ def test_get_mem_size_per_row_pyarrow_struct():
     assert mem_sizes == [(3 * 8 + 4) + (1 + 4), (1 * 8 + 4) + (2 + 4)]
 
 
+def test_get_mem_size_per_row_pandas_struct_matches_pyarrow():
+    """An object column of dict cells converts to an arrow struct, so it is measured
+    with the same struct model (sum of fields) as the equivalent arrow table. Field
+    order may differ after inference, but the per-row totals do not."""
+    struct_rows = [
+        {"time": [1.0, 2.0, 3.0], "band": "g"},
+        {"time": [4.0], "band": "rr"},
+    ]
+    struct_type = pa.struct([("time", pa.list_(pa.float64())), ("band", pa.string())])
+    frame = pd.DataFrame({"lc": pd.Series(struct_rows, dtype=object)})
+    table = pa.table({"lc": pa.array(struct_rows, type=struct_type)})
+
+    mem_sizes = get_mem_size_per_row(frame)
+
+    # Same field arithmetic as the pyarrow struct test: no nulls, so no bitmap share.
+    assert mem_sizes == [(3 * 8 + 4) + (1 + 4), (1 * 8 + 4) + (2 + 4)]
+    assert mem_sizes == get_mem_size_per_row(table)
+    assert all(isinstance(size, float) for size in mem_sizes)
+
+
 def test_get_mem_size_per_row_pandas_matches_pyarrow():
     """A pandas chunk (numerics, strings, ndarray list cells) measures the same as
     the equivalent arrow table, since pandas columns are converted before measuring."""
