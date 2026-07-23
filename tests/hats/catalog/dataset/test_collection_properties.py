@@ -32,9 +32,7 @@ def test_collection_properties_string():
     )
 
     ## str representation should not include additional properties.
-    assert (
-        str(expected_properties)
-        == """  name small_sky_01
+    assert str(expected_properties) == """  name small_sky_01
   hats_primary_table_url small_sky_order1
 """
     )
