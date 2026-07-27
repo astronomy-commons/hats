@@ -28,8 +28,8 @@ catalog data:
         fmt="markdown",
     )
 
-The function inspects the catalog type automatically and calls the appropriate
-generation function.
+The function inspects the catalog type automatically (catalog, collection,
+margin, index, or association) and calls the appropriate generation function.
 
 **catalog_path**
     Path to the root of any HATS catalog or collection directory.
@@ -98,12 +98,14 @@ included or omitted:
 **Sky coverage images may be absent**
     Pixel-map and density-map images require ``matplotlib`` to be installed
     (``pip install hats[visualization]``).  When it is not available, both
-    images are silently omitted.
+    images are silently omitted.  They are also skipped entirely for margin
+    and index catalogs.
 
 **Cone-search code example**
     A ready-to-run cone-search snippet is included only when the column table
     contains at least one sample value for the RA/Dec columns, so that a
-    representative coordinate can be shown.
+    representative coordinate can be shown.  Association catalogs don't
+    declare RA/Dec columns, so this snippet never appears for them.
 
 **Default-column annotations**
     The "Default?" row in the column table appears only when ``hats.properties``
@@ -118,6 +120,13 @@ included or omitted:
     Margin and index sub-catalogs are listed only when ``collection.properties``
     records them.  A collection with no margins and no indexes will omit those
     sections.
+
+**Association catalogs**
+    Association catalogs render a dedicated template that adds a
+    cross-match relationship section (primary/join catalogs and columns, max
+    separation) ahead of the usual column table.  They never show a
+    cone-search example or a "Default?" column row — see
+    `Association catalog additional variables`_.
 
 Custom templates
 -------------------------------------------------------------------------------
@@ -214,7 +223,9 @@ These variables are present for every catalog type.
 
   * ``catalog_name`` *(str)* — value of ``obs_collection``.
   * ``catalog_type`` *(CatalogType)* — one of ``OBJECT``, ``SOURCE``,
-    ``MARGIN``, ``INDEX``, ``MAP``, or ``ASSOCIATION``.
+    ``MARGIN``, ``INDEX``, ``MAP``, or ``ASSOCIATION``.  See
+    `Association catalog additional variables`_ for the fields specific to
+    ``ASSOCIATION``.
   * ``total_rows`` *(int or None)* — total row count, or ``None`` if not
     recorded.
   * ``ra_column`` / ``dec_column`` *(str or None)* — names of the spatial
@@ -325,3 +336,34 @@ These variables are added for standalone
   ``None`` without ``matplotlib``.
 * ``density_map_b64`` *(str or None)* — base64-encoded WebP density-map image;
   ``None`` without ``matplotlib``.
+
+Association catalog additional variables
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+These variables describe the fields specific to
+:class:`~hats.catalog.association_catalog.association_catalog.AssociationCatalog`
+summaries (``catalog_type=ASSOCIATION``).  An association catalog is a
+cross-match join table between two other HATS catalogs and is not meant to be
+read as a standalone dataset — the default description text reflects this
+(``"This is the association catalog linking {primary} with {join}."``).
+
+* ``cat_props.primary_catalog`` *(str)* — relative path to the primary catalog
+  being joined.
+* ``cat_props.primary_column`` *(str)* — join-key column name in the primary
+  catalog.
+* ``cat_props.join_catalog`` *(str)* — relative path to the secondary
+  (joined) catalog.
+* ``cat_props.join_column`` *(str)* — join-key column name in the joined
+  catalog.
+* ``cat_props.assn_max_separation`` *(float or None)* — maximum cross-match
+  separation in arcseconds, when recorded.
+
+Association catalogs are still a HEALPix-partitioned dataset, so
+``pixel_map_b64`` (and ``density_map_b64``) may still be computed when
+``matplotlib`` is installed and the catalog has HEALPix pixels — the built-in
+templates render a "Sky coverage" section using ``pixel_map_b64`` only.
+However, ``ra_column`` and ``dec_column`` are not part of the required
+``ASSOCIATION`` schema, so ``cone_code_example`` is always ``None``. Likewise
+``has_default_columns`` is still computed but always ``False`` (association
+catalogs never declare ``default_columns``), and the built-in templates don't
+render a "Default?" column-table row for it.
