@@ -1,23 +1,23 @@
 Catalog Summary Files
 ===============================================================================
 
-HATS can generate human-readable summary documents for any catalog  
-collection.  These are rendered as Markdown (``README.md``) or HTML
-(``index.html``) and are suitable for display on platforms such as GitHub,
-Hugging Face, or a website.
+Every HATS catalog or collection can generate its own human-readable summary
+document, a ``README.md`` or an ``index.html``,  so it's immediately
+presentable on GitHub, Hugging Face, or any static site, without you having to
+write that page by hand.
 
-Documents are produced by rendering `Jinja2 <https://jinja.palletsprojects.com/>`__
-templates against a set of context variables derived from the catalog's metadata
-and data files.  You can pass a fully custom template string to every generation
-function, which lets you control every aspect of the output while still relying
-on HATS to gather all the catalog metadata.
+Under the hood, this works by rendering a `Jinja2 <https://jinja.palletsprojects.com/>`__
+template against a set of context variables that HATS pulls from the catalog's
+metadata and data files.  If the built-in layout isn't what you want, you can
+hand in your own template string instead, and HATS will still do the work of
+gathering the metadata for you: you just control how it's displayed.
 
 Generating a summary file
 -------------------------------------------------------------------------------
 
-The main function used is :func:`hats.io.summary_file.write_catalog_summary_file`.
-It accepts any HATS catalog path and writes a summary document next to the
-catalog data:
+The main function you'll use is :func:`hats.io.summary_file.write_catalog_summary_file`.
+Point it at any HATS catalog path and it writes a summary document right next
+to the catalog data:
 
 .. code-block:: python
 
@@ -28,8 +28,8 @@ catalog data:
         fmt="markdown",
     )
 
-The function inspects the catalog type automatically (catalog, collection,
-margin, index, or association) and calls the appropriate generation function.
+It figures out the catalog type on its own — catalog, collection, margin,
+index, or association,and calls the right generation function accordingly.
 
 **catalog_path**
     Path to the root of any HATS catalog or collection directory.
@@ -70,7 +70,7 @@ margin, index, or association) and calls the appropriate generation function.
 **jinja2_template**
     A Jinja2 template string **or a path to a** ``.jinja2`` **file** — the file
     is read automatically if the path exists on disk.  When ``None`` the
-    built-in default template for the catalog type is used (requires ``fmt`` to
+    built-in template for the catalog type is used (requires ``fmt`` to
     be ``"markdown"`` or ``"html"``).  See `Custom templates`_ for details.
 
 **extra_template_vars**
@@ -82,57 +82,60 @@ margin, index, or association) and calls the appropriate generation function.
 Why output varies between catalogs
 -------------------------------------------------------------------------------
 
-Summary documents are generated from *whatever information is available* in the
-catalog at the time the function is called.  Several sections are conditionally
-included or omitted:
+Summary documents only describe *whatever's actually there* when the function
+runs, so depending on the catalog, some sections show up and others don't.
+Here's why:
 
 **Column table may be absent or incomplete**
-    The column table is built from two sources: a schema read from
-    ``dataset/_common_metadata`` (always present in a well-formed catalog),
-    and a sample row read from ``dataset/data_thumbnail.parquet`` when it
-    exists, or from a randomly-selected partition otherwise.  If neither
-    source is accessible, the example-value column is omitted.  Column
-    statistics (min, max, null count) are populated only when
-    ``hats-import`` computed them during import.
+    The column table draws from two sources: the schema in
+    ``dataset/_common_metadata`` (which a well-formed catalog always has),
+    and a sample row pulled from ``dataset/data_thumbnail.parquet`` if it
+    exists, or a randomly-selected partition if it doesn't.  When neither
+    source is reachable, the example-value column just gets left out.  Column
+    statistics like min, max, and null count only show up if ``hats-import``
+    actually computed them at import time.
 
 **Sky coverage images may be absent**
-    Pixel-map and density-map images require ``matplotlib`` to be installed
-    (``pip install hats[visualization]``).  When it is not available, both
-    images are silently omitted.  They are also skipped entirely for margin
-    and index catalogs.
+    Pixel-map and density-map images need ``matplotlib`` installed to render
+    at all.  Without it, both images are quietly left out — and for margin
+    and index catalogs, they're skipped regardless, since those catalog
+    types don't get sky-coverage images in the first place.
 
 **Cone-search code example**
-    A ready-to-run cone-search snippet is included only when the column table
-    contains at least one sample value for the RA/Dec columns, so that a
-    representative coordinate can be shown.  Association catalogs don't
-    declare RA/Dec columns, so this snippet never appears for them.
+    You'll only see a ready-to-run cone-search snippet when the column table
+    has at least one sample RA/Dec value to work with: that's what lets
+    HATS show a real, representative coordinate.  Association catalogs never
+    declare RA/Dec columns to begin with, so this snippet never shows up for
+    them.
 
 **Default-column annotations**
-    The "Default?" row in the column table appears only when ``hats.properties``
-    specifies a ``hats_cols_default`` list.  Catalogs without default columns
-    omit this row entirely.
+    The "Default?" row only appears when ``hats.properties`` actually
+    specifies a ``hats_cols_default`` list: if a catalog has no default
+    columns, that row is left out entirely rather than shown empty.
 
 **Nested-column annotations**
-    The "Nested?" row appears only when the catalog contains at least one
-    ``NestedDtype`` column (a column backed by nested Parquet structs).
+    Same idea for the "Nested?" row: it only shows up if the catalog has at
+    least one ``NestedDtype`` column (a column backed by nested Parquet
+    structs).
 
 **Collection-specific sections**
-    Margin and index sub-catalogs are listed only when ``collection.properties``
-    records them.  A collection with no margins and no indexes will omit those
-    sections.
+    Margin and index sub-catalogs only get listed if ``collection.properties``
+    actually records them.  No margins and no indexes means those sections
+    just don't appear.
 
 **Association catalogs**
-    Association catalogs render a dedicated template that adds a
-    cross-match relationship section (primary/join catalogs and columns, max
-    separation) ahead of the usual column table.  They never show a
-    cone-search example or a "Default?" column row — see
+    Association catalogs get their own dedicated template, since they're
+    describing a relationship rather than a dataset — it adds a cross-match
+    section up front (primary/join catalogs and columns, max separation)
+    before the usual column table.  Because of that, you'll never see a
+    cone-search example or a "Default?" row for these — see
     `Association catalog additional variables`_.
 
 Custom templates
 -------------------------------------------------------------------------------
 
-Pass a Jinja2 template string as ``jinja2_template`` to replace the built-in
-template entirely:
+Want full control over the layout? Pass a Jinja2 template string in as
+``jinja2_template`` and it replaces the built-in template entirely:
 
 .. code-block:: python
 
@@ -149,25 +152,25 @@ template entirely:
         jinja2_template=my_template,
     )
 
-The template is rendered with
+Templates render with
 `Jinja2's StrictUndefined <https://jinja.palletsprojects.com/en/stable/api/#jinja2.StrictUndefined>`__,
-which means referencing an undefined variable raises an error immediately rather
-than silently producing an empty string.  Use ``{% if variable %}`` guards for
-optional context variables (see the reference below).
+so referencing a variable that isn't there fails loudly instead of silently
+rendering blank.  That's exactly why you'll want to guard optional context
+variables with ``{% if variable %}`` (see the reference below).
 
-You can also call :func:`hats.io.summary_file.generate_summary` directly if
-you only need a rendered string without writing a file.
+If you just need the rendered string and don't need it written to disk, call
+:func:`hats.io.summary_file.generate_summary` directly instead.
 
-The built-in templates in ``src/hats/io/templates/`` are a good starting point
-for understanding how to use the context variables.
+Honestly, the easiest way to learn the context variables is to open up the
+built-in templates in ``src/hats/io/templates/`` and see how they're used.
 
 Generating a custom-format file (e.g. VO registry XML)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Set ``fmt=None`` to bypass the built-in templates entirely.  HATS still reads
-all catalog metadata and makes it available as Jinja2 context variables, but
-the output format and filename are fully under your control.  Both
-``jinja2_template`` and ``filename`` are required in this mode:
+Set ``fmt=None`` and HATS steps out of the way entirely.  It still reads all
+the catalog metadata for you, but the output format and filename are
+completely yours to define.  Both ``jinja2_template`` and ``filename`` become
+required here, since there's no built-in default to fall back on:
 
 .. code-block:: python
 
@@ -184,16 +187,16 @@ the output format and filename are fully under your control.  Both
         },
     )
 
-The ``extra_template_vars`` dict is unpacked directly into ``template.render()``
-alongside the standard HATS context variables (``name``, ``description``,
-``cat_props``, etc.), so your template can reference both.
+Whatever you put in ``extra_template_vars`` gets unpacked straight into
+``template.render()`` next to the standard HATS context variables (``name``,
+``description``, ``cat_props``, etc.), so your template can use either.
 
 Jinja2 context variable reference
 -------------------------------------------------------------------------------
 
-The sections below describe every variable available inside a template.
-Variables marked *optional* may be ``None`` or absent for some catalogs —
-always guard them with ``{% if variable %}`` before use.
+What follows is the full list of variables available inside a template.
+Some are marked *optional*, meaning they may be ``None`` or absent for some
+catalogs, so always guard them with ``{% if variable %}`` before use.
 
 Common variables (all catalog types)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -324,9 +327,8 @@ These variables are added to the context when generating a summary for a
 Catalog additional variables
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-These variables are added for standalone
-:class:`~hats.catalog.catalog.Catalog` summaries (``catalog_type=OBJECT`` or
-``SOURCE``):
+These get added for standalone :class:`~hats.catalog.catalog.Catalog`
+summaries (``catalog_type=OBJECT`` or ``SOURCE``):
 
 * ``has_default_columns`` *(bool)* — ``True`` when the catalog declares default
   columns.
@@ -340,11 +342,11 @@ These variables are added for standalone
 Association catalog additional variables
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-These variables describe the fields specific to
+These are the fields specific to
 :class:`~hats.catalog.association_catalog.association_catalog.AssociationCatalog`
-summaries (``catalog_type=ASSOCIATION``).  An association catalog is a
-cross-match join table between two other HATS catalogs and is not meant to be
-read as a standalone dataset — the default description text reflects this
+summaries (``catalog_type=ASSOCIATION``).  An association catalog exists to
+cross-match two other HATS catalogs together.  It's not meant to be read on
+its own, and the auto-generated description reflects that directly
 (``"This is the association catalog linking {primary} with {join}."``).
 
 * ``cat_props.primary_catalog`` *(str)* — relative path to the primary catalog
@@ -358,12 +360,14 @@ read as a standalone dataset — the default description text reflects this
 * ``cat_props.assn_max_separation`` *(float or None)* — maximum cross-match
   separation in arcseconds, when recorded.
 
-Association catalogs are still a HEALPix-partitioned dataset, so
-``pixel_map_b64`` (and ``density_map_b64``) may still be computed when
-``matplotlib`` is installed and the catalog has HEALPix pixels — the built-in
-templates render a "Sky coverage" section using ``pixel_map_b64`` only.
-However, ``ra_column`` and ``dec_column`` are not part of the required
-``ASSOCIATION`` schema, so ``cone_code_example`` is always ``None``. Likewise
-``has_default_columns`` is still computed but always ``False`` (association
-catalogs never declare ``default_columns``), and the built-in templates don't
-render a "Default?" column-table row for it.
+Even though an association catalog is really about the relationship between
+two datasets, it's still a HEALPix-partitioned dataset underneath, so
+``pixel_map_b64`` (and ``density_map_b64``) can still get computed as long as
+``matplotlib`` is installed and the catalog actually has HEALPix pixels.  The
+built-in templates only put ``pixel_map_b64`` to use, in a "Sky coverage"
+section.  ``cone_code_example``, on the other hand, is always ``None`` here,
+because ``ra_column`` and ``dec_column`` were never part of the required
+``ASSOCIATION`` schema to begin with.  ``has_default_columns`` follows the
+same pattern: it's still computed, just always ``False``, since association
+catalogs never declare ``default_columns``, which is why you won't see a
+"Default?" row rendered for them either.
