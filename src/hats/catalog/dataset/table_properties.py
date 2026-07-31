@@ -26,6 +26,7 @@ CATALOG_TYPE_REQUIRED_FIELDS = {
     CatalogType.INDEX: ["primary_catalog", "indexing_column"],
     CatalogType.MARGIN: ["primary_catalog", "margin_threshold"],
     CatalogType.MAP: [],
+    CatalogType.IMAGE: ["ra_column", "dec_column"],
 }
 
 
@@ -78,6 +79,13 @@ class TableProperties(BaseModel):
 
     indexing_column: Optional[str] = Field(default=None, alias="hats_index_column")
     """Column that we provide an index over."""
+
+    image_format: Optional[str] = Field(default=None, alias="hats_image_format")
+    """Default storage format of the images referenced by an image catalog (e.g. fits, zarr).
+    Can be overridden per image via a ``format`` column."""
+
+    image_moc_order: Optional[int] = Field(default=None, alias="hats_image_moc_order")
+    """HEALPix order at which image footprint MOCs were computed in an image catalog."""
 
     extra_columns: Optional[list[str]] = Field(default=None, alias="hats_index_extra_column")
     """Any additional payload columns included in index."""

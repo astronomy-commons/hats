@@ -26,6 +26,7 @@ DATASET_TYPE_TO_CLASS = {
     CatalogType.INDEX: IndexCatalog,
     CatalogType.MARGIN: MarginCatalog,
     CatalogType.MAP: MapCatalog,
+    CatalogType.IMAGE: Catalog,
 }
 
 
@@ -106,6 +107,7 @@ def _is_healpix_dataset(dataset_type):
         CatalogType.ASSOCIATION,
         CatalogType.MARGIN,
         CatalogType.MAP,
+        CatalogType.IMAGE,
     )
 
 

@@ -2,6 +2,7 @@ from importlib.metadata import version
 
 import pytest
 
+from hats.catalog.catalog_type import CatalogType
 from hats.catalog.dataset.table_properties import TableProperties
 from hats.io.file_io.file_io import load_text_file
 
@@ -217,3 +218,23 @@ def test_provenance_dict(small_sky_dir, tmp_path):
 def test_datatype_parsing(small_sky_dir):
     properties = TableProperties.read_from_dir(small_sky_dir)
     assert isinstance(properties.moc_sky_fraction, float)
+
+
+def test_image_catalog_properties():
+    """IMAGE catalogs require ra/dec columns and support image-specific properties."""
+    table_properties = TableProperties(
+        catalog_name="images",
+        catalog_type="image",
+        total_rows=10,
+        ra_column="ra",
+        dec_column="dec",
+        image_format="fits",
+        image_moc_order=11,
+    )
+    assert table_properties.catalog_type == CatalogType.IMAGE
+    assert table_properties.image_format == "fits"
+    assert table_properties.image_moc_order == 11
+
+    # ra/dec are required for image catalogs
+    with pytest.raises(ValueError, match="Missing required property"):
+        TableProperties(catalog_name="images", catalog_type="image", total_rows=10)

@@ -10,6 +10,7 @@ class CatalogType(str, Enum):
     INDEX = "index"
     MARGIN = "margin"
     MAP = "map"
+    IMAGE = "image"
 
     @classmethod
     def all_types(cls):
