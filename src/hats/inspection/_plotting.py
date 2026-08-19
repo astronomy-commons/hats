@@ -238,7 +238,7 @@ def _cull_from_pixel_map(depth_ipix_d: dict[int, tuple[np.ndarray, np.ndarray]],
         # split too large ipix into next order, with each child getting the same map value as parent
 
         too_large_child_ipix = np.repeat(too_large_ipix << 2, 4) + np.tile(
-            np.array([0, 1, 2, 3]), len(too_large_ipix)
+            np.arange(4, dtype=too_large_ipix.dtype), len(too_large_ipix)
         )
         too_large_child_vals = np.repeat(too_large_vals, 4)
 

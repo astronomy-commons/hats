@@ -131,6 +131,19 @@ def test_plot_healpix_pixels():
     assert ax.frame_class == EllipticalFrame
 
 
+@pytest.mark.parametrize("ipix_dtype", [np.int64, np.uint64])
+def test_plot_healpix_pixels_integer_ipix_dtypes(ipix_dtype):
+    pytest.importorskip("matplotlib.pyplot")
+
+    ipix = np.array([0], dtype=ipix_dtype)
+    pix_map = np.array([0.0])
+    depth = np.array([2], dtype=np.uint8)
+
+    _, ax = plot_healpix_map(pix_map, ipix=ipix, depth=depth, projection="MOL", cbar=False)
+
+    assert len(ax.collections) > 0
+
+
 def test_plot_healpix_pixels_different_order():
     pytest.importorskip("matplotlib.pyplot")
 
