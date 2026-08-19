@@ -238,7 +238,7 @@ def _cull_from_pixel_map(depth_ipix_d: dict[int, tuple[np.ndarray, np.ndarray]],
         # split too large ipix into next order, with each child getting the same map value as parent
 
         too_large_child_ipix = np.repeat(too_large_ipix << 2, 4) + np.tile(
-            np.array([0, 1, 2, 3]), len(too_large_ipix)
+            np.arange(4, dtype=too_large_ipix.dtype), len(too_large_ipix)
         )
         too_large_child_vals = np.repeat(too_large_vals, 4)
 
@@ -405,6 +405,10 @@ def _plot_healpix_value_map(ipix, depth, values, ax, wcs, cmap="viridis", norm=N
     depth_ipix_d = {}
     values = np.array(values)
     ipix = np.array(ipix)
+    if np.issubdtype(ipix.dtype, np.unsignedinteger):
+        ipix = ipix.astype(np.uint64, copy=False)
+    elif np.issubdtype(ipix.dtype, np.signedinteger):
+        ipix = ipix.astype(np.int64, copy=False)
 
     for d in np.unique(depth):
         mask = depth == d

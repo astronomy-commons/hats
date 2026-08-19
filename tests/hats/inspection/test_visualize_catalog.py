@@ -192,12 +192,13 @@ def test_order_0_pixel_plots_with_step():
     np.testing.assert_array_equal(col.get_array(), np.full(length, fill_value=map_value))
 
 
-def test_edge_pixels_split_to_order_7():
+@pytest.mark.parametrize("ipix_dtype", [np.int8, np.uint8, np.int16, np.int64, np.uint64])
+def test_edge_pixels_split_to_order_7(ipix_dtype):
     pytest.importorskip("matplotlib.pyplot")
 
     map_value = 0.5
     order_0_pix = 2
-    ipix = np.array([order_0_pix])
+    ipix = np.array([order_0_pix], dtype=ipix_dtype)
     pix_map = np.array([map_value])
     depth = np.array([0])
     fig, ax = plot_healpix_map(pix_map, ipix=ipix, depth=depth)
