@@ -405,6 +405,10 @@ def _plot_healpix_value_map(ipix, depth, values, ax, wcs, cmap="viridis", norm=N
     depth_ipix_d = {}
     values = np.array(values)
     ipix = np.array(ipix)
+    if np.issubdtype(ipix.dtype, np.unsignedinteger):
+        ipix = ipix.astype(np.uint64, copy=False)
+    elif np.issubdtype(ipix.dtype, np.signedinteger):
+        ipix = ipix.astype(np.int64, copy=False)
 
     for d in np.unique(depth):
         mask = depth == d
