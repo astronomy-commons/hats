@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+import pyarrow as pa
 from numpy.typing import ArrayLike
 
 import hats.pixel_math.healpix_shim as hp
@@ -97,3 +98,44 @@ def healpix_to_spatial_index(
     pixel = np.int64(pixel)
     pixel_higher_order = pixel * (4 ** (spatial_index_order - order))
     return pixel_higher_order
+
+
+def split_to_row_groups(table, row_group_kwargs, pixel_order):
+    """Split the pixel table into its row group chunks according to the specified splitting strategy.
+
+    Parameters
+    ----------
+    table : pa.Table
+        Pixel table.
+    row_group_kwargs : dict
+        if "num_rows" (int >= 1) in row_group_kwargs, limit each chunk to a maximum of this many rows.
+            e.g. if the input table has 32 rows and num_rows == 10, then the chunks will have
+            [10, 10, 10, 2] rows.
+        if "subtile_order_delta" (int >= 0) in row_group_kwargs, create row groups corresponding to angular
+            proximity, approximated by HEALPix pixels.
+            If subtile_order_delta == 0, then each row group contains objects in the same HEALPix pixel of
+            order pixel_order. If subtile_order_delta == 1, then the row groups are split by HEALPix pixels
+            at order pixel_order + 1, etc. Higher numbers correspond to a finer grid (smaller pixels, fewer
+            rows per pixel).
+    pixel_order : int
+        The HEALPix order to split when using subtile_order_delta.
+
+    Returns
+    -------
+    split_tables : list[pa.Table]
+        The input table split into row group chunks.
+    """
+    if "num_rows" in row_group_kwargs:
+        chunk_size = row_group_kwargs["num_rows"]
+        return [table.slice(i, chunk_size) for i in range(0, len(table), chunk_size)]
+    if "subtile_order_delta" in row_group_kwargs:
+        split_tables = []
+        parent_pixels = table[SPATIAL_INDEX_COLUMN].to_numpy()
+        target_order = row_group_kwargs["subtile_order_delta"] + pixel_order
+        child_pixs = spatial_index_to_healpix(parent_pixels, target_order=target_order)
+        for child_pix in np.unique(child_pixs):
+            indices = np.where(child_pixs == child_pix)[0]
+            row_group = table.take(pa.array(indices))
+            split_tables.append(row_group)
+        return split_tables
+    return [table]
