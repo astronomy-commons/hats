@@ -176,7 +176,7 @@ def test_split_to_row_groups():
     assert [len(t) for t in split_tables] == [27]
 
     # row_group_kwargs = dict()
-    split_tables = split_to_row_groups(table, dict(), None)
+    split_tables = split_to_row_groups(table, {}, None)
     assert [len(t) for t in split_tables] == [27]
 
     # row_group_kwargs = {"unused": 1234}
