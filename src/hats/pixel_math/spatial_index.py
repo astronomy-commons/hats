@@ -100,6 +100,11 @@ def healpix_to_spatial_index(
     return pixel_higher_order
 
 
+def _is_int_like(x):
+    """Return whether x is an int or a numpy integer."""
+    return isinstance(x, (int, np.integer))
+
+
 # TODO I'm not sure this is the best place for this, move?
 def split_to_row_groups(table: pa.Table, row_group_kwargs: dict | None, pixel_order: int | None = None):
     """Split the pixel table into its row group chunks according to the specified splitting strategy.
@@ -130,16 +135,16 @@ def split_to_row_groups(table: pa.Table, row_group_kwargs: dict | None, pixel_or
         return [table]
     if "num_rows" in row_group_kwargs:
         chunk_size = row_group_kwargs["num_rows"]
-        if not (isinstance(chunk_size, int) and (chunk_size >= 1)):
+        if not (_is_int_like(chunk_size) and (chunk_size >= 1)):
             raise ValueError("num_rows should be an integer >= 1")
         return [table.slice(i, chunk_size) for i in range(0, len(table), chunk_size)]
     if "subtile_order_delta" in row_group_kwargs:
         if not (
-            isinstance(row_group_kwargs["subtile_order_delta"], int)
+            _is_int_like(row_group_kwargs["subtile_order_delta"])
             and (row_group_kwargs["subtile_order_delta"] >= 0)
         ):
             raise ValueError("subtile_order_delta should be an integer >= 0")
-        if not (isinstance(pixel_order, int) and (pixel_order >= 0)):
+        if not (_is_int_like(pixel_order) and (pixel_order >= 0)):
             raise ValueError("pixel_order should be an integer >= 0")
         if SPATIAL_INDEX_COLUMN not in table.schema.names:
             raise ValueError(
