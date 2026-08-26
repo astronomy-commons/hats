@@ -251,6 +251,3 @@ def test_split_to_row_groups():
     # (num_rows takes precedence over subtile_order_delta)
     split_tables = split_to_row_groups(spatial_table, {"num_rows": 1, "subtile_order_delta": 0}, 0)
     assert [len(t) for t in split_tables] == [1, 1, 1, 1]
-
-
-# TODO should probably add a test in test_parquet_metadata as well

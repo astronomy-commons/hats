@@ -105,7 +105,6 @@ def _is_int_like(x):
     return isinstance(x, (int, np.integer))
 
 
-# TODO I'm not sure this is the best place for this, move?
 def split_to_row_groups(table: pa.Table, row_group_kwargs: dict | None, pixel_order: int | None = None):
     """Split the pixel table into its row group chunks according to the specified splitting strategy.
 
