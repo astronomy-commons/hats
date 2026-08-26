@@ -100,7 +100,8 @@ def healpix_to_spatial_index(
     return pixel_higher_order
 
 
-def split_to_row_groups(table, row_group_kwargs, pixel_order):
+# TODO I'm not sure this is the best place for this, move?
+def split_to_row_groups(table: pa.Table, row_group_kwargs: dict | None, pixel_order: int | None = None):
     """Split the pixel table into its row group chunks according to the specified splitting strategy.
 
     Parameters
@@ -117,7 +118,7 @@ def split_to_row_groups(table, row_group_kwargs, pixel_order):
             order pixel_order. If subtile_order_delta == 1, then the row groups are split by HEALPix pixels
             at order pixel_order + 1, etc. Higher numbers correspond to a finer grid (smaller pixels, fewer
             rows per pixel).
-    pixel_order : int
+    pixel_order : int | None
         The HEALPix order to split when using subtile_order_delta.
 
     Returns
@@ -125,10 +126,25 @@ def split_to_row_groups(table, row_group_kwargs, pixel_order):
     split_tables : list[pa.Table]
         The input table split into row group chunks.
     """
+    if (row_group_kwargs is None) or (row_group_kwargs == {}):
+        return [table]
     if "num_rows" in row_group_kwargs:
         chunk_size = row_group_kwargs["num_rows"]
+        if not (isinstance(chunk_size, int) and (chunk_size >= 1)):
+            raise ValueError("num_rows should be an integer >= 1")
         return [table.slice(i, chunk_size) for i in range(0, len(table), chunk_size)]
     if "subtile_order_delta" in row_group_kwargs:
+        if not (
+            isinstance(row_group_kwargs["subtile_order_delta"], int)
+            and (row_group_kwargs["subtile_order_delta"] >= 0)
+        ):
+            raise ValueError("subtile_order_delta should be an integer >= 0")
+        if not (isinstance(pixel_order, int) and (pixel_order >= 0)):
+            raise ValueError("pixel_order should be an integer >= 0")
+        if SPATIAL_INDEX_COLUMN not in table.schema.names:
+            raise ValueError(
+                "table has no spatial index column. You can generate one using compute_spatial_index()."
+            )
         split_tables = []
         parent_pixels = table[SPATIAL_INDEX_COLUMN].to_numpy()
         target_order = row_group_kwargs["subtile_order_delta"] + pixel_order

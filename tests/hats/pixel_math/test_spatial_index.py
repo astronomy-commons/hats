@@ -2,14 +2,17 @@
 
 import numpy as np
 import numpy.testing as npt
+import pyarrow as pa
 import pytest
 
 import hats.pixel_math.healpix_shim as hp
 from hats.pixel_math.spatial_index import (
+    SPATIAL_INDEX_COLUMN,
     SPATIAL_INDEX_ORDER,
     compute_spatial_index,
     healpix_to_spatial_index,
     spatial_index_to_healpix,
+    split_to_row_groups,
 )
 
 
@@ -150,3 +153,104 @@ def test_healpix_to_spatial_index_array():
     actual_spatial_indices = compute_spatial_index(ra, dec)
     test_spatial_indices = healpix_to_spatial_index(orders, pixels)
     assert np.all(test_spatial_indices == actual_spatial_indices)
+
+
+def test_split_to_row_groups():
+    # table with no spatial index
+    table = pa.Table.from_arrays([[1.0] * 27], names=["data"])
+    # table with spatial index
+    # data | pixel index, order = (0, 1, 2)
+    # -----|-------------------------------
+    #  1.0 | (0, 0, 0)
+    #  2.0 | (0, 1, 4)
+    #  3.0 | (0, 2, 8)
+    #  4.0 | (0, 2, 9)
+    data = [1.0, 2.0, 3.0, 4.0]
+    orders = [2, 2, 2, 2]
+    pixels = [0, 4, 8, 9]
+    spatial_index = healpix_to_spatial_index(orders, pixels, spatial_index_order=SPATIAL_INDEX_ORDER)
+    spatial_table = pa.Table.from_arrays([data, spatial_index], names=["data", SPATIAL_INDEX_COLUMN])
+
+    # row_group_kwargs is None
+    split_tables = split_to_row_groups(table, None, None)
+    assert [len(t) for t in split_tables] == [27]
+
+    # row_group_kwargs = dict()
+    split_tables = split_to_row_groups(table, dict(), None)
+    assert [len(t) for t in split_tables] == [27]
+
+    # row_group_kwargs = {"unused": 1234}
+    split_tables = split_to_row_groups(table, {"unused": 1234}, None)
+    assert [len(t) for t in split_tables] == [27]
+
+    # row_group_kwargs["num_rows"] == 10
+    split_tables = split_to_row_groups(table, {"num_rows": 10}, None)
+    assert [len(t) for t in split_tables] == [10, 10, 7]
+
+    # row_group_kwargs["num_rows"] == 1000
+    split_tables = split_to_row_groups(table, {"num_rows": 1000}, None)
+    assert [len(t) for t in split_tables] == [27]
+
+    # row_group_kwargs["num_rows"] == 0
+    with pytest.raises(ValueError, match="num_rows should be an integer >= 1"):
+        split_tables = split_to_row_groups(table, {"num_rows": 0}, None)
+
+    # row_group_kwargs["num_rows"] < 0
+    with pytest.raises(ValueError, match="num_rows should be an integer >= 1"):
+        split_tables = split_to_row_groups(table, {"num_rows": -0}, None)
+
+    # row_group_kwargs["num_rows"] is not an integer
+    with pytest.raises(ValueError, match="num_rows should be an integer >= 1"):
+        split_tables = split_to_row_groups(table, {"num_rows": 0.123}, None)
+
+    # row_group_kwargs["subtile_order_delta"] < 0
+    with pytest.raises(ValueError, match="subtile_order_delta should be an integer >= 0"):
+        split_tables = split_to_row_groups(table, {"subtile_order_delta": -1}, None)
+
+    # row_group_kwargs["subtile_order_delta"] is not an integer
+    with pytest.raises(ValueError, match="subtile_order_delta should be an integer >= 0"):
+        split_tables = split_to_row_groups(table, {"subtile_order_delta": 0.123}, None)
+
+    # row_group_kwargs["subtile_order_delta"] == 0, pixel_order = 0
+    # rows split at order 0 => all rows in the same group
+    split_tables = split_to_row_groups(spatial_table, {"subtile_order_delta": 0}, 0)
+    assert [len(t) for t in split_tables] == [4]
+
+    # row_group_kwargs["subtile_order_delta"] == 0, pixel_order = 1
+    # rows split at order 1
+    split_tables = split_to_row_groups(spatial_table, {"subtile_order_delta": 0}, 1)
+    assert [len(t) for t in split_tables] == [1, 1, 2]
+
+    # row_group_kwargs["subtile_order_delta"] == 0, pixel_order = 2
+    # rows split at order 2
+    split_tables = split_to_row_groups(spatial_table, {"subtile_order_delta": 0}, 2)
+    assert [len(t) for t in split_tables] == [1, 1, 1, 1]
+
+    # row_group_kwargs["subtile_order_delta"] == 1, pixel_order = 0
+    # rows split at order 1
+    split_tables = split_to_row_groups(spatial_table, {"subtile_order_delta": 1}, 0)
+    assert [len(t) for t in split_tables] == [1, 1, 2]
+
+    # row_group_kwargs["subtile_order_delta"] == 0, pixel_order is None
+    with pytest.raises(ValueError, match="pixel_order should be an integer >= 0"):
+        split_tables = split_to_row_groups(spatial_table, {"subtile_order_delta": 0}, None)
+
+    # row_group_kwargs["subtile_order_delta"] == 0, pixel_order < 0
+    with pytest.raises(ValueError, match="pixel_order should be an integer >= 0"):
+        split_tables = split_to_row_groups(spatial_table, {"subtile_order_delta": 0}, -1)
+
+    # row_group_kwargs["subtile_order_delta"] == 0, pixel_order is not an integer
+    with pytest.raises(ValueError, match="pixel_order should be an integer >= 0"):
+        split_tables = split_to_row_groups(spatial_table, {"subtile_order_delta": 0}, 0.123)
+
+    # row_group_kwargs["subtile_order_delta"] == 0 but there's no spatial index column
+    with pytest.raises(ValueError, match="table has no spatial index column"):
+        split_tables = split_to_row_groups(table, {"subtile_order_delta": 0}, 0)
+
+    # row_group_kwargs["num_rows"] == 1 and row_group_kwargs["subtile_order_delta"] == 0
+    # (num_rows takes precedence over subtile_order_delta)
+    split_tables = split_to_row_groups(spatial_table, {"num_rows": 1, "subtile_order_delta": 0}, 0)
+    assert [len(t) for t in split_tables] == [1, 1, 1, 1]
+
+
+# TODO should probably add a test in test_parquet_metadata as well
