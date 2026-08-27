@@ -1,4 +1,5 @@
 from __future__ import annotations
+from numbers import Integral
 
 import numpy as np
 import pandas as pd
@@ -100,11 +101,6 @@ def healpix_to_spatial_index(
     return pixel_higher_order
 
 
-def _is_int_like(x):
-    """Return whether x is an int or a numpy integer."""
-    return isinstance(x, (int, np.integer))
-
-
 def split_to_row_groups(
     table: pa.Table, row_group_kwargs: dict | None, pixel_order: int | None = None
 ) -> list[pa.Table]:
@@ -136,16 +132,16 @@ def split_to_row_groups(
         return [table]
     if "num_rows" in row_group_kwargs:
         chunk_size = row_group_kwargs["num_rows"]
-        if not (_is_int_like(chunk_size) and (chunk_size >= 1)):
+        if not (isinstance(chunk_size, Integral) and (chunk_size >= 1)):
             raise ValueError("num_rows should be an integer >= 1")
         return [table.slice(i, chunk_size) for i in range(0, len(table), chunk_size)]
     if "subtile_order_delta" in row_group_kwargs:
         if not (
-            _is_int_like(row_group_kwargs["subtile_order_delta"])
+            isinstance(row_group_kwargs["subtile_order_delta"], Integral)
             and (row_group_kwargs["subtile_order_delta"] >= 0)
         ):
             raise ValueError("subtile_order_delta should be an integer >= 0")
-        if not (_is_int_like(pixel_order) and (pixel_order >= 0)):
+        if not (isinstance(pixel_order, Integral) and (pixel_order >= 0)):
             raise ValueError("pixel_order should be an integer >= 0")
         if SPATIAL_INDEX_COLUMN not in table.schema.names:
             raise ValueError(
