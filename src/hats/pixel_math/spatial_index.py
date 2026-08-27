@@ -130,6 +130,10 @@ def split_to_row_groups(
     """
     if (row_group_kwargs is None) or (row_group_kwargs == {}):
         return [table]
+    if ("num_rows" in row_group_kwargs) and ("subtile_order_delta" in row_group_kwargs):
+        raise ValueError(
+            "row_group_kwargs contains conflicting keys. choose only one: num_rows or subtile_order_delta"
+        )
     if "num_rows" in row_group_kwargs:
         chunk_size = row_group_kwargs["num_rows"]
         if not (isinstance(chunk_size, Integral) and (chunk_size >= 1)):
@@ -156,4 +160,7 @@ def split_to_row_groups(
             row_group = table.take(pa.array(indices))
             split_tables.append(row_group)
         return split_tables
-    return [table]
+    # no valid keys found
+    raise ValueError(
+        "no valid keys in row_group_kwargs. valid options are `num_rows` [int >= 1] or `subtile_order_delta` [int >= 0]."
+    )

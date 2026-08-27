@@ -179,9 +179,13 @@ def test_split_to_row_groups():
     split_tables = split_to_row_groups(table, {}, None)
     assert [len(t) for t in split_tables] == [27]
 
-    # row_group_kwargs = {"unused": 1234}
-    split_tables = split_to_row_groups(table, {"unused": 1234}, None)
-    assert [len(t) for t in split_tables] == [27]
+    # row_group_kwargs contains only invalid keys
+    with pytest.raises(ValueError, match="no valid keys in row_group_kwargs"):
+        split_tables = split_to_row_groups(table, {"unused": 1234}, None)
+
+    # row_group_kwargs contains both valid and invalid keys
+    split_tables = split_to_row_groups(table, {"unused": 1234, "num_rows": 10}, None)
+    assert [len(t) for t in split_tables] == [10, 10, 7]
 
     # row_group_kwargs["num_rows"] == 10
     split_tables = split_to_row_groups(table, {"num_rows": 10}, None)
@@ -247,7 +251,6 @@ def test_split_to_row_groups():
     with pytest.raises(ValueError, match="table has no spatial index column"):
         split_tables = split_to_row_groups(table, {"subtile_order_delta": 0}, 0)
 
-    # row_group_kwargs["num_rows"] == 1 and row_group_kwargs["subtile_order_delta"] == 0
-    # (num_rows takes precedence over subtile_order_delta)
-    split_tables = split_to_row_groups(spatial_table, {"num_rows": 1, "subtile_order_delta": 0}, 0)
-    assert [len(t) for t in split_tables] == [1, 1, 1, 1]
+    # if both num_rows and subtile_order_delta present, raise ValueError
+    with pytest.raises(ValueError, match="row_group_kwargs contains conflicting keys"):
+        split_tables = split_to_row_groups(spatial_table, {"num_rows": 1, "subtile_order_delta": 0}, 0)
