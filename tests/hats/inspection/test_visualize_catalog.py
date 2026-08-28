@@ -1022,6 +1022,9 @@ def test_collection_plot_density(small_sky_collection_dir):
     _, ax = collection.plot_density()
     assert "Angular density of catalog small_sky_order1" == ax.get_title()
 
+    _, ax = plot_density(collection)
+    assert "Angular density of catalog small_sky_order1" == ax.get_title()
+
 
 def test_catalog_plot_density_errors(small_sky_source_dir):
     pytest.importorskip("matplotlib.pyplot")
@@ -1105,6 +1108,10 @@ def test_collection_plot_pixels(small_sky_collection_dir):
     collection = read_hats(small_sky_collection_dir)
     orders = [pixel.order for pixel in sorted(collection.get_healpix_pixels())]
     _, ax = collection.plot_pixels()
+    assert ax.get_title() == "Catalog pixel map - small_sky_order1"
+    np.testing.assert_array_equal(ax.collections[-1].get_array(), orders)
+
+    _, ax = plot_pixels(collection)
     assert ax.get_title() == "Catalog pixel map - small_sky_order1"
     np.testing.assert_array_equal(ax.collections[-1].get_array(), orders)
 
