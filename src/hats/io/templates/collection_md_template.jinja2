@@ -31,11 +31,11 @@ The following code provides a minimal example of opening this catalog:
 import lsdb
 
 # Full sky coverage{% if has_default_columns %}, default columns only{% endif %}.
-catalog = lsdb.open_catalog("{{ uris["collection"] }}")
+catalog = lsdb.open_catalog("{{ uri or '<PATH>' }}")
 {%- if cone_code_example %}
 # One-degree cone{% if has_default_columns %}, all columns{% endif %}.
 catalog = lsdb.open_catalog(
-    "{{ uris["collection"] }}",
+    "{{ uri or '<PATH>' }}",
     search_filter=lsdb.ConeSearch(ra={{ cone_code_example["ra"] }}, dec={{ cone_code_example["dec"] }}, radius_arcsec=3600.0),
     {%- if has_default_columns %}
     columns="all",

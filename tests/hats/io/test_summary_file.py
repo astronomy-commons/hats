@@ -360,6 +360,37 @@ def test_write_catalog_summary_file_custom_uri(tmp_path, small_sky_collection_di
     assert custom_uri in content
 
 
+@pytest.mark.parametrize("fmt", ["markdown", "html"])
+def test_write_catalog_summary_file_no_uri_links_are_relative(tmp_path, small_sky_collection_dir, fmt):
+    """Without a URI, collection links stay relative instead of using the `<PATH>` placeholder."""
+    collection_base_dir = tmp_path / "collection"
+    shutil.copytree(small_sky_collection_dir, collection_base_dir)
+
+    output_path = write_catalog_summary_file(collection_base_dir, fmt=fmt, uri=None)
+
+    content = output_path.read_text()
+    assert "./collection.properties" in content
+    # The placeholder belongs in the `open_catalog` example only, never in a link target.
+    assert "<PATH>/" not in content
+
+
+@pytest.mark.parametrize("fmt", ["markdown", "html"])
+def test_write_catalog_summary_file_uri_prefixes_collection_properties(
+    tmp_path, small_sky_collection_dir, fmt
+):
+    """With a URI, the collection.properties link is anchored to it."""
+    collection_base_dir = tmp_path / "collection"
+    shutil.copytree(small_sky_collection_dir, collection_base_dir)
+
+    custom_uri = "s3://my-bucket/my-catalog"
+
+    output_path = write_catalog_summary_file(collection_base_dir, fmt=fmt, uri=custom_uri)
+
+    content = output_path.read_text()
+    assert f"{custom_uri}/collection.properties" in content
+    assert "./collection.properties" not in content
+
+
 def test_write_catalog_summary_file_custom_jinja2_template(tmp_path, small_sky_collection_dir):
     """Test writing a summary file with a custom jinja2 template"""
     collection_base_dir = tmp_path / "collection"

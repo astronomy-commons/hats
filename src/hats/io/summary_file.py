@@ -253,7 +253,7 @@ def _catalog_uris(properties: CollectionProperties, uri: str | None) -> dict[str
         )
 
     return {
-        "collection": uri or "<PATH>",
+        "collection": uri or ".",
         "primary": {
             "name": properties.hats_primary_table_url,
             "uri": _join_catalog_uri(uri, properties.hats_primary_table_url),
@@ -416,7 +416,8 @@ def generate_summary(
         Description rendered in the summary.
     uri : str | None
         URI of the catalog used for hyperlinks and code-snippet examples.
-        If ``None``, a placeholder is used.
+        If ``None``, code-snippet examples use a ``<PATH>`` placeholder and
+        hyperlinks are relative to the summary file's own directory.
     huggingface_metadata : bool
         Whether to include Hugging Face YAML frontmatter. Only valid when
         ``fmt="markdown"``.
@@ -539,7 +540,8 @@ def write_catalog_summary_file(
         Description. Inferred from catalog metadata if not provided.
     uri : str | None
         URI of the catalog used for hyperlinks and code-snippet examples.
-        If ``None``, a placeholder is used.
+        If ``None``, code-snippet examples use a ``<PATH>`` placeholder and
+        hyperlinks are relative to the summary file's own directory.
     huggingface_metadata : bool
         Whether to include Hugging Face YAML frontmatter. Only valid when
         ``fmt="markdown"``.
