@@ -93,6 +93,41 @@ class CatalogCollection:
         """The list of HEALPix pixels of the main catalog"""
         return self.main_catalog.get_healpix_pixels()
 
+    def plot_pixels(self, **kwargs):
+        """Create a visual map of the pixel density of the collection's main catalog.
+
+        Parameters
+        ----------
+        **kwargs
+            Additional args to pass to `hats.inspection.visualize_catalog.plot_healpix_map`
+        """
+        return self.main_catalog.plot_pixels(**kwargs)
+
+    def plot_density(self, **kwargs):
+        """Create a visual map of the density of input points of the collection's main catalog.
+
+        Parameters
+        ----------
+        **kwargs
+            Additional args to pass to `hats.inspection.visualize_catalog.plot_density`
+
+        Raises
+        ------
+        ValueError
+            if the main catalog is not on disk.
+        """
+        return self.main_catalog.plot_density(**kwargs)
+
+    def plot_moc(self, **kwargs):
+        """Create a visual map of the coverage of the collection's main catalog.
+
+        Parameters
+        ----------
+        **kwargs
+            Additional args to pass to `hats.inspection.visualize_catalog.plot_moc`
+        """
+        return self.main_catalog.plot_moc(**kwargs)
+
     def get_margin_thresholds(self) -> dict[str, float]:
         """Get the margin thresholds for all margin catalogs in the collection.
 

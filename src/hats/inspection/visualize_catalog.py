@@ -5,6 +5,7 @@ NB: Testing validity of generated plots is currently not tested in our unit test
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING, Type
 
 import astropy.units as u
@@ -25,18 +26,25 @@ if TYPE_CHECKING:
     from matplotlib.colors import Colormap, Normalize
     from matplotlib.figure import Figure
 
-    from hats.catalog import Catalog
+    from hats.catalog import CatalogCollection
     from hats.catalog.healpix_dataset.healpix_dataset import HealpixDataset
 
 
 # pylint: disable=import-outside-toplevel,import-error
-def plot_density(catalog: Catalog, *, plot_title: str | None = None, order=None, unit=None, **kwargs):
+def plot_density(
+    catalog: HealpixDataset | CatalogCollection | None,
+    *,
+    plot_title: str | None = None,
+    order=None,
+    unit=None,
+    **kwargs,
+):
     """Create a visual map of the density of input points of a catalog on-disk.
 
     Parameters
     ----------
-    catalog: Catalog
-        on-disk catalog object
+    catalog: HealpixDataset | CatalogCollection | None
+        on-disk catalog object or collection
     plot_title : str | None
         Optional title for the plot
     order : int
@@ -58,8 +66,15 @@ def plot_density(catalog: Catalog, *, plot_title: str | None = None, order=None,
     except ImportError as exc:
         raise ImportError("matplotlib is required to use this method. Install with pip or conda.") from exc
 
+    from hats.catalog.catalog_collection import CatalogCollection
+
+    if isinstance(catalog, CatalogCollection):
+        catalog = catalog.main_catalog
     if catalog is None or not catalog.on_disk:
         raise ValueError("on disk catalog required for point-wise visualization")
+    if not catalog.unmodified:
+        logging.warning("Calling plot_density on a modified catalog. The plot may be inaccurate.")
+
     point_map = skymap.read_skymap(catalog, order)
     order = hp.npix2order(len(point_map))
 
@@ -84,18 +99,23 @@ def plot_density(catalog: Catalog, *, plot_title: str | None = None, order=None,
     return fig, ax
 
 
-def plot_pixels(catalog: HealpixDataset, plot_title: str | None = None, **kwargs):
+# pylint: disable=import-outside-toplevel
+def plot_pixels(catalog: HealpixDataset | CatalogCollection, plot_title: str | None = None, **kwargs):
     """Create a visual map of the pixel density of the catalog.
 
     Parameters
     ----------
     plot_title : str | None
         Optional title for the plot
-    catalog: HealpixDataset
-        on-disk or in-memory catalog, with healpix pixels.
+    catalog: HealpixDataset | CatalogCollection
+        on-disk or in-memory catalog, or collection, with healpix pixels.
     **kwargs
         Additional args to pass to `plot_healpix_map`
     """
+    from hats.catalog.catalog_collection import CatalogCollection
+
+    if isinstance(catalog, CatalogCollection):
+        catalog = catalog.main_catalog
     pixels = catalog.get_healpix_pixels()
     default_title = f"Catalog pixel map - {catalog.catalog_name}"
     title = default_title if plot_title is None else plot_title

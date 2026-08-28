@@ -15,8 +15,7 @@ from hats.catalog.catalog_snapshot import CatalogSnapshot
 from hats.catalog.dataset import Dataset
 from hats.catalog.dataset.table_properties import TableProperties
 from hats.catalog.partition_info import PartitionInfo
-from hats.inspection import plot_pixels
-from hats.inspection.visualize_catalog import plot_moc
+from hats.inspection import plot_density, plot_moc, plot_pixels
 from hats.io import file_io, paths
 from hats.io.parquet_metadata import (
     aggregate_column_statistics,
@@ -294,6 +293,21 @@ class HealpixDataset(Dataset):
             Additional args to pass to `hats.inspection.visualize_catalog.plot_healpix_map`
         """
         return plot_pixels(self, **kwargs)
+
+    def plot_density(self, **kwargs):
+        """Create a visual map of the density of input points of the catalog on-disk.
+
+        Parameters
+        ----------
+        **kwargs
+            Additional args to pass to `hats.inspection.visualize_catalog.plot_density`
+
+        Raises
+        ------
+        ValueError
+            if the catalog is not on disk.
+        """
+        return plot_density(self, **kwargs)
 
     def plot_moc(self, **kwargs):
         """Create a visual map of the coverage of the catalog.
