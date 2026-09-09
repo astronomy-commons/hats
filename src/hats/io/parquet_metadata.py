@@ -615,9 +615,14 @@ def per_partition_statistics_from_cache(
         )
     )
 
+    # We also need to replace the dot in nested column names:
+    # for row-group-aggregation, we can only have one dot in the name of the nested stats.
     stat_col_names = ["row_group_index"] + list(
         itertools.chain.from_iterable(
-            [[f"{col_name}: {stat}" for stat in include_stats] for col_name in column_names]
+            [
+                [f"{col_name.replace('.', '___')}: {stat}" for stat in include_stats]
+                for col_name in column_names
+            ]
         )
     )
     mod_col_names = ["Norder", "Npix"] + stat_col_names
@@ -629,6 +634,7 @@ def per_partition_statistics_from_cache(
     frame = frame.set_index(frame["_healpix_pixel"])
 
     frame = frame.rename(columns=renamer)
+
     if include_pixels is not None and len(include_pixels) > 0:
         good_pixels = frame.index.intersection(include_pixels)
         if len(good_pixels) == 0:
@@ -637,8 +643,17 @@ def per_partition_statistics_from_cache(
 
     if not per_row_group:
 
+        frame = npd.NestedFrame.from_flat(
+            frame,
+            on="_healpix_pixel",
+            base_columns=["Norder", "Npix"],
+            nested_columns=stat_col_names,
+            name="stats",
+        )
+
         def aggregator(row):
             ## TODO - This sucks but it works.
+            nonlocal stat_col_names
             returns = {}
             for col_name in stat_col_names:
                 if col_name == "row_group_index":
@@ -652,14 +667,7 @@ def per_partition_statistics_from_cache(
                 returns |= {col_name: single_value}
             return returns
 
-        frame = npd.NestedFrame.from_flat(
-            frame,
-            on="_healpix_pixel",
-            base_columns=["Norder", "Npix"],
-            nested_columns=stat_col_names,
-            name="stats",
-        )
-        frame = frame.map_rows(aggregator)
+        frame = frame.map_rows(aggregator, columns="stats")
         frame = frame.rename_axis(None)
 
         if multi_index:
@@ -674,6 +682,9 @@ def per_partition_statistics_from_cache(
     elif multi_index:
         ## TODO - should this include the row group index in the multi-index? probably yes?
         pass
+    else:
+        frame = frame[mod_col_names]
+    frame = frame.rename(columns=lambda x: x.replace("___", "."))
 
     return frame
 

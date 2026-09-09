@@ -107,6 +107,13 @@ def test_convert_higher_order_fails_above_limit():
         pixel.convert_to_higher_order(SPATIAL_INDEX_ORDER - order + 1)
 
 
+def test_dir_large_pixel_no_precision_loss():
+    # At order 29, pixel indices can reach ~3.5e18, which loses precision
+    # when routed through float division.
+    healpix_pixel = HealpixPixel(order=29, pixel=1243412673254409927)
+    assert healpix_pixel.dir == 1243412673254400000
+
+
 def test_convert_higher_order_fails_negative():
     order = 4
     pixel = 3

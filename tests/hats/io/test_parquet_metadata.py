@@ -5,6 +5,7 @@ import shutil
 import astropy.units as u
 import nested_pandas as npd
 import numpy as np
+import numpy.testing as npt
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -421,7 +422,6 @@ def test_per_partition_statistics_nested(small_sky_nested_dir):
     assert result_frame.shape == (13, 72)
 
 
-@pytest.mark.xfail(reason="Chicken and egg with import")
 def test_per_partition_statistics_cache_nested(small_sky_nested_dir):
     # 13 = 13 pixels
     partition_info_file = small_sky_nested_dir / "per_partition_statistics.parquet"
@@ -429,6 +429,11 @@ def test_per_partition_statistics_cache_nested(small_sky_nested_dir):
     result_frame = per_partition_statistics_from_cache(partition_info_file)
     # 78 = (5 base columns + 8 nested sub-columns) * 6 stats
     assert result_frame.shape == (13, 78)
+
+    result_frame_by_row_group = per_partition_statistics_from_cache(partition_info_file, per_row_group=True)
+    # 81 = 3 very base columns + (5 base columns + 8 nested sub-columns) * 6 stats
+    assert result_frame_by_row_group.shape == (13, 81)
+    npt.assert_array_equal(result_frame_by_row_group.columns[3:], result_frame.columns)
 
     result_frame = per_partition_statistics_from_cache(partition_info_file, include_columns=["lc", "ra"])
     # 54 = (8 nested sub-columns + "ra") * 6 stats
@@ -447,6 +452,96 @@ def test_per_partition_statistics_cache_nested(small_sky_nested_dir):
     result_frame = per_partition_statistics_from_cache(partition_info_file, exclude_columns=["lc.source_ra"])
     # 72 = (5 base columns + 7 nested sub-columns) * 6 stats
     assert result_frame.shape == (13, 72)
+
+
+def test_per_partition_statistics_from_cache_nested_column_values(small_sky_nested_dir):
+    """Nested column names (e.g. "lc.mag") contain a dot themselves, which collides
+    with the dot notation nested-pandas uses for nested column paths. Internally, the
+    dots are swapped out for "___" before packing stats into a NestedFrame, and swapped
+    back before returning.
+    This test checks that round trip: the returned column names should have their dots
+    intact, and the actual values should agree with those computed by the independent,
+    non-cached `per_partition_statistics`, whether the cache is read per-pixel
+    (aggregated) or per-row-group."""
+    partition_info_file = small_sky_nested_dir / "per_partition_statistics.parquet"
+    metadata_file = paths.get_parquet_metadata_pointer(small_sky_nested_dir)
+
+    # NB: small_sky_nested_dir is small enough that every pixel only has one row group
+    # each, so we expect per-row-group to give the same result as per-pixel-aggregated.
+    from_metadata = per_partition_statistics(metadata_file).sort_index()
+    from_cache = per_partition_statistics_from_cache(partition_info_file).sort_index()
+    from_cache_by_row_group = per_partition_statistics_from_cache(
+        partition_info_file, per_row_group=True
+    ).sort_index()
+
+    # Check that there is in fact only one row group per pixel, as expected.
+    npt.assert_array_equal(from_cache_by_row_group["row_group_index"], np.zeros(len(from_cache_by_row_group)))
+
+    numeric_nested_columns = [
+        "lc.source_id",
+        "lc.source_ra",
+        "lc.source_dec",
+        "lc.mjd",
+        "lc.mag",
+        "lc.object_ra",
+        "lc.object_dec",
+    ]
+    string_nested_columns = ["lc.band"]
+    all_nested_columns = numeric_nested_columns + string_nested_columns
+
+    # Check expected cols are present (and all ___'s are re-converted).
+    for frame in (from_cache, from_cache_by_row_group):
+        assert not any("___" in col for col in frame.columns)
+        for nested_col in all_nested_columns:
+            for stat in ["min_value", "max_value", "null_count", "row_count"]:
+                assert f"{nested_col}: {stat}" in frame.columns
+
+    # Check that our results from each branch of the function agree on the index
+    # (pixel, column) pairs.
+    assert from_cache.index.equals(from_cache_by_row_group.index)
+
+    # null_count/row_count are always integers, regardless of the nested column's own
+    # dtype, so every nested column (numeric or string) can be checked the same way here.
+    for col in all_nested_columns:
+        for stat in ["null_count", "row_count"]:
+            column_name = f"{col}: {stat}"
+            # Check that the values from the cache agree with those computed from the metadata.
+            npt.assert_allclose(
+                from_cache[column_name].to_numpy(dtype=float),
+                from_metadata[column_name].to_numpy(dtype=float),
+                err_msg=f"mismatch in {column_name}",
+            )
+            # Check that both branches of the function agree in cases where each pixel
+            # has only a single row group.
+            npt.assert_allclose(
+                from_cache[column_name].to_numpy(dtype=float),
+                from_cache_by_row_group[column_name].to_numpy(dtype=float),
+                err_msg=f"mismatch in {column_name}",
+            )
+
+    # min_value/max_value keep the nested column's own dtype, so numeric and string
+    # columns need to be compared differently here.
+    for col in numeric_nested_columns:
+        for stat in ["min_value", "max_value"]:
+            column_name = f"{col}: {stat}"
+            npt.assert_allclose(
+                from_cache[column_name].to_numpy(dtype=float),
+                from_metadata[column_name].to_numpy(dtype=float),
+                err_msg=f"mismatch in {column_name}",
+            )
+            npt.assert_allclose(
+                from_cache[column_name].to_numpy(dtype=float),
+                from_cache_by_row_group[column_name].to_numpy(dtype=float),
+                err_msg=f"mismatch in {column_name}",
+            )
+
+    for col in string_nested_columns:
+        for stat in ["min_value", "max_value"]:
+            column_name = f"{col}: {stat}"
+            npt.assert_array_equal(from_cache[column_name].to_numpy(), from_metadata[column_name].to_numpy())
+            npt.assert_array_equal(
+                from_cache_by_row_group[column_name].to_numpy(), from_cache[column_name].to_numpy()
+            )
 
 
 def test_per_partition_statistics_cache_with_rowgroups_aggregated(small_sky_source_dir):

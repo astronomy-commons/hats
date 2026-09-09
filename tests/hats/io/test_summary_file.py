@@ -526,6 +526,22 @@ def test_write_catalog_summary_file_contains_images(tmp_path, small_sky_collecti
     assert "![Density Skymap](data:image/webp;base64," in content
 
 
+def test_write_catalog_summary_file_association(tmp_path, association_catalog_path):
+    dest = tmp_path / association_catalog_path.name
+    shutil.copytree(association_catalog_path, dest)
+    output_path = write_catalog_summary_file(dest, fmt="markdown")
+    assert output_path.name == "README.md"
+    assert "HATS Association Catalog" in output_path.read_text()
+
+
+def test_write_catalog_summary_file_association_html(tmp_path, association_catalog_path):
+    dest = tmp_path / association_catalog_path.name
+    shutil.copytree(association_catalog_path, dest)
+    output_path = write_catalog_summary_file(dest, fmt="html")
+    assert output_path.name == "index.html"
+    assert "HATS Association Catalog" in output_path.read_text()
+
+
 def test_write_catalog_summary_file_margin(tmp_path, margin_catalog_path):
     dest = tmp_path / margin_catalog_path.name
     shutil.copytree(margin_catalog_path, dest)
