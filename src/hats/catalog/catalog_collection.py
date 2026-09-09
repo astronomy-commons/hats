@@ -160,6 +160,20 @@ class CatalogCollection:
 
     @classmethod
     def resolve_inner_path(cls, collection_path, path) -> UPath:
+        """Convenience method to find the path of a related catalog, either relative or absolute.
+
+        Parameters
+        ----------
+        collection_path: UPath
+            fully-specified path to the collection root
+        path: UPath | Path | str
+            location of the related catalog
+
+        Returns
+        -------
+        UPath
+            fully-specified path to the related catalog.
+        """
         path = file_io.get_upath(path)
         if "local" not in path.fs.protocol or path.is_absolute():
             return path  # remote URL or absolute local path - use as-is
