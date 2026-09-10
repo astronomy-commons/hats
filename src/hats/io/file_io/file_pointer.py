@@ -32,6 +32,18 @@ def get_upath(path: str | Path | UPath, **kwargs) -> UPath:
     return get_upath_for_protocol(path, **kwargs)
 
 
+def _dictionary_recursive_merge(dict1, dict2):
+    """Recursively merges dict2 into dict1."""
+    for key, value in dict2.items():
+        # If both values are dictionaries, recurse down
+        if key in dict1 and isinstance(dict1[key], dict) and isinstance(value, dict):
+            _dictionary_recursive_merge(dict1[key], value)
+        else:
+            # Otherwise, overwrite or add the value
+            dict1[key] = value
+    return dict1
+
+
 def get_upath_for_protocol(path: str | Path, **kwargs) -> UPath:
     """Create UPath with protocol-specific configurations.
 
@@ -58,10 +70,13 @@ def get_upath_for_protocol(path: str | Path, **kwargs) -> UPath:
         } | kwargs
         upath = UPath(path, **kwargs)
     if upath.protocol in ("http", "https"):
-        kwargs = kwargs | {
-            "block_size": BLOCK_SIZE,
-            "client_kwargs": {"headers": {"User-Agent": f"hats/{version('hats')}"}},
-        }
+        kwargs = _dictionary_recursive_merge(
+            {
+                "block_size": BLOCK_SIZE,
+                "client_kwargs": {"headers": {"User-Agent": f"hats/{version('hats')}"}},
+            },
+            kwargs,
+        )
 
         parts = urlparse(path)
         if parts.netloc == _VIZCAT_HOST:
