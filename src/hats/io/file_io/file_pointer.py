@@ -10,13 +10,15 @@ BLOCK_SIZE = 32 * 1024
 _VIZCAT_HOST = "vizcat.cds.unistra.fr"
 
 
-def get_upath(path: str | Path | UPath) -> UPath:
+def get_upath(path: str | Path | UPath, **kwargs) -> UPath:
     """Returns a UPath file pointer from a path string or other path-like type.
 
     Parameters
     ----------
     path: str | Path | UPath
         base file path to be normalized to UPath
+    **kwargs
+        additional storage options required for the file system backend.
 
     Returns
     -------
@@ -27,10 +29,22 @@ def get_upath(path: str | Path | UPath) -> UPath:
         return None
     if isinstance(path, UPath):
         return path
-    return get_upath_for_protocol(path)
+    return get_upath_for_protocol(path, **kwargs)
 
 
-def get_upath_for_protocol(path: str | Path) -> UPath:
+def _dictionary_recursive_merge(dict1, dict2):
+    """Recursively merges dict2 into dict1."""
+    for key, value in dict2.items():
+        # If both values are dictionaries, recurse down
+        if key in dict1 and isinstance(dict1[key], dict) and isinstance(value, dict):
+            _dictionary_recursive_merge(dict1[key], value)
+        else:
+            # Otherwise, overwrite or add the value
+            dict1[key] = value
+    return dict1
+
+
+def get_upath_for_protocol(path: str | Path, **kwargs) -> UPath:
     """Create UPath with protocol-specific configurations.
 
     If we access pointers on S3 and credentials are not found we assume
@@ -40,20 +54,29 @@ def get_upath_for_protocol(path: str | Path) -> UPath:
     ----------
     path: str | Path | UPath
         base file path to be normalized to UPath
+    **kwargs
+        additional storage options required for the file system backend.
 
     Returns
     -------
     UPath
         Instance of UPath.
     """
-    upath = UPath(path)
+    upath = UPath(path, **kwargs)
     if upath.protocol == "s3":
-        upath = UPath(path, anon=True, default_block_size=BLOCK_SIZE)
-    if upath.protocol in ("http", "https"):
         kwargs = {
-            "block_size": BLOCK_SIZE,
-            "client_kwargs": {"headers": {"User-Agent": f"hats/{version('hats')}"}},
-        }
+            "anon": True,
+            "default_block_size": BLOCK_SIZE,
+        } | kwargs
+        upath = UPath(path, **kwargs)
+    if upath.protocol in ("http", "https"):
+        kwargs = _dictionary_recursive_merge(
+            {
+                "block_size": BLOCK_SIZE,
+                "client_kwargs": {"headers": {"User-Agent": f"hats/{version('hats')}"}},
+            },
+            kwargs,
+        )
 
         parts = urlparse(path)
         if parts.netloc == _VIZCAT_HOST:

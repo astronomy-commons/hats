@@ -30,7 +30,11 @@ DATASET_TYPE_TO_CLASS = {
 
 
 def read_hats(
-    catalog_path: str | Path | UPath, *, single_catalog: bool | None = None, read_moc: bool = True
+    catalog_path: str | Path | UPath,
+    *,
+    single_catalog: bool | None = None,
+    read_moc: bool = True,
+    storage_options: dict | None = None,
 ) -> CatalogCollection | Dataset:
     """Reads a HATS Catalog from a HATS directory
 
@@ -46,6 +50,8 @@ def read_hats(
         If you happen to know that your catalog does not have a MOC (or if
         you know that your use case will not utilize a MOC), then you can
         skip the file read and memory load of the MOC.
+    storage_options: dict or None, default None
+        additional options for connecting to the catalog, or a collection's affiliated tables.
 
     Returns
     -------
@@ -59,24 +65,33 @@ def read_hats(
         from upath import UPath
         catalog = hats.read_hats(UPath(..., anon=True))
     """
-    path = file_io.get_upath(catalog_path)
+    if storage_options is None:
+        storage_options = {}
+    path = file_io.get_upath(catalog_path, **storage_options)
     if single_catalog is not None:
         if single_catalog:
             return _load_catalog(path, read_moc=read_moc)
-        return _load_collection(path, read_moc=read_moc)
+        return _load_collection(path, read_moc=read_moc, storage_options=storage_options)
     if (path / "hats.properties").exists() or (path / "properties").exists():
         return _load_catalog(path, read_moc=read_moc)
     if (path / "collection.properties").exists():
-        return _load_collection(path, read_moc=read_moc)
+        return _load_collection(path, read_moc=read_moc, storage_options=storage_options)
     raise FileNotFoundError(f"Failed to read HATS at location {catalog_path}")
 
 
-def _load_collection(collection_path: UPath, read_moc: bool = True) -> CatalogCollection:
+def _load_collection(
+    collection_path: UPath, read_moc: bool = True, storage_options: dict | None = None
+) -> CatalogCollection:
     collection_properties = CollectionProperties.read_from_dir(collection_path)
     main_catalog = _load_catalog(
-        collection_path / collection_properties.hats_primary_table_url, read_moc=read_moc
+        CatalogCollection.resolve_inner_path(
+            collection_path, collection_properties.hats_primary_table_url, storage_options=storage_options
+        ),
+        read_moc=read_moc,
     )
-    return CatalogCollection(collection_path, collection_properties, main_catalog)
+    return CatalogCollection(
+        collection_path, collection_properties, main_catalog, storage_options=storage_options
+    )
 
 
 def _load_catalog(catalog_path: UPath, read_moc: bool = True) -> Dataset:

@@ -9,6 +9,7 @@ import pyarrow.dataset as pds
 from upath import UPath
 
 from hats.catalog.catalog import Catalog
+from hats.catalog.catalog_collection import CatalogCollection
 from hats.catalog.dataset.collection_properties import CollectionProperties
 from hats.catalog.dataset.table_properties import TableProperties
 from hats.catalog.healpix_dataset.healpix_dataset import HealpixDataset
@@ -115,7 +116,9 @@ def is_valid_collection(
         return False
     if not strict:
         collection_properties = CollectionProperties.read_from_dir(pointer)
-        return is_valid_catalog(pointer / collection_properties.hats_primary_table_url)
+        return is_valid_catalog(
+            CatalogCollection.resolve_inner_path(pointer, collection_properties.hats_primary_table_url)
+        )
 
     # For catalog collections, we will confirm that all the member catalogs listed in the
     # collection properties exist and are valid, according to their expected types.
