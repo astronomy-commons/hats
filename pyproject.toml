@@ -21,6 +21,7 @@ dependencies = [
     "aiohttp>=3.10.0", # http filesystem support
     "astropy>=7.0.0",
     "cdshealpix>=0.8.0",
+    "deprecated>=1.2.0", # Used for @deprecated decorator
     "fsspec>=2023.10.0", # Used for abstract filesystems
     "human_readable", # Used for pretty-printing file sizes
     "jinja2>=3.0.0", # Used for summary file templating
