@@ -31,11 +31,11 @@ The following code provides a minimal example of opening this catalog:
 import lsdb
 
 # Full sky coverage{% if has_default_columns %}, default columns only{% endif %}.
-catalog = lsdb.open_catalog("{{ uris["collection"] }}")
+catalog = lsdb.open_catalog("{{ uris["collection"] or '<PATH>'}}")
 {%- if cone_code_example %}
 # One-degree cone{% if has_default_columns %}, all columns{% endif %}.
 catalog = lsdb.open_catalog(
-    "{{ uris["collection"] }}",
+    "{{ uris["collection"] or '<PATH>' }}",
     search_filter=lsdb.ConeSearch(ra={{ cone_code_example["ra"] }}, dec={{ cone_code_example["dec"] }}, radius_arcsec=3600.0),
     {%- if has_default_columns %}
     columns="all",
@@ -50,7 +50,7 @@ Each catalog in this collection is represented as a separate [Apache Parquet dat
 
 This catalog is represented by the following files and directories:
 
-- [`collection.properties`]({{uris["collection"]}}/collection.properties) — textual metadata file describing the HATS collection of catalogs
+- [`collection.properties`]({{uris["collection"] or '.'}}/collection.properties) — textual metadata file describing the HATS collection of catalogs
 - [`{{uris["primary"]["name"]}}`]({{uris["primary"]["uri"]}}) — main HATS catalog directory
   - [`dataset/`]({{uris["primary"]["uri"]}}/dataset/) — Apache Parquet dataset directory for the main catalog
     - ... parquet metadata and data files in sub directories ...
