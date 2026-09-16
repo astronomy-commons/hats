@@ -1,3 +1,4 @@
+# pylint: disable=import-outside-toplevel,import-error
 def _dict_almost_equal(dict_expected, dict_test):
     try:
         import pytest
