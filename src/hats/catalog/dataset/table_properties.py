@@ -12,7 +12,7 @@ from upath import UPath
 from hats.catalog.catalog_type import CatalogType
 from hats.io import file_io, size_estimates
 
-## catalog_name, catalog_type, and total_rows are required for ALL types
+## catalog_name and catalog_type are required for ALL types
 CATALOG_TYPE_REQUIRED_FIELDS = {
     CatalogType.OBJECT: ["ra_column", "dec_column"],
     CatalogType.SOURCE: ["ra_column", "dec_column"],
@@ -34,7 +34,7 @@ class TableProperties(BaseModel):
 
     catalog_name: str = Field(alias="obs_collection")
     catalog_type: CatalogType = Field(alias="dataproduct_type")
-    total_rows: Optional[int] = Field(default=0, alias="hats_nrows")
+    total_rows: Optional[int] = Field(default=None, alias="hats_nrows")
 
     ra_column: Optional[str] = Field(default=None, alias="hats_col_ra")
     dec_column: Optional[str] = Field(default=None, alias="hats_col_dec")
