@@ -1,5 +1,5 @@
 # pylint: disable=import-outside-toplevel,import-error
-def _dict_almost_equal(dict_expected, dict_test):
+def _dict_almost_equal(dict_expected, dict_test):  # pragma: no cover
     try:
         import pytest
     except ImportError as exc:
@@ -19,7 +19,7 @@ def assert_catalog_info_is_correct(
     do_not_compare: list[str] | None = None,
     check_extra_properties: bool = True,
     **properties_to_update,
-):
+):  # pragma: no cover
     """Check that the catalog properties are similar to the expected ones."""
     if do_not_compare is None:
         do_not_compare = []
