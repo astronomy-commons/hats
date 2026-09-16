@@ -202,7 +202,8 @@ class TableProperties(BaseModel):
         missing_required = required_keys - explicit_keys
         if len(missing_required) > 0:
             raise ValueError(
-                f"Missing required property for table type '{self.catalog_type}': {", ".join(missing_required)}"
+                "Missing required property for table type "
+                f"'{self.catalog_type}': {', '.join(missing_required)}"
             )
 
         return self
