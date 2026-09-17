@@ -248,7 +248,7 @@ def test_split_to_row_groups():
         split_tables = split_to_row_groups(spatial_table, {"subtile_order_delta": 0}, 0.123)
 
     # row_group_kwargs["subtile_order_delta"] == 0 but there's no spatial index column
-    with pytest.raises(ValueError, match="table has no spatial index column"):
+    with pytest.raises(ValueError, match="Table is missing spatial index column"):
         split_tables = split_to_row_groups(table, {"subtile_order_delta": 0}, 0)
 
     # if both num_rows and subtile_order_delta present, raise ValueError

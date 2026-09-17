@@ -153,8 +153,11 @@ def split_to_row_groups(
         if not (isinstance(pixel_order, Integral) and (pixel_order >= 0)):
             raise ValueError("pixel_order should be an integer >= 0")
         if SPATIAL_INDEX_COLUMN not in table.schema.names:
-            raise ValueError("table has no spatial index column. You can \
-                    generate one using compute_spatial_index().")
+            raise ValueError(
+                "Table is missing spatial index column. "
+                f"To use subtile_order_delta, add a spatial index column named {SPATIAL_INDEX_COLUMN}. "
+                "You can generate one using compute_spatial_index()."
+            )
         split_tables = []
         parent_pixels = table[SPATIAL_INDEX_COLUMN].to_numpy()
         target_order = row_group_kwargs["subtile_order_delta"] + pixel_order
