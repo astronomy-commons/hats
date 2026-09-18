@@ -11,37 +11,6 @@ from upath import UPath
 
 from hats.io import file_io
 
-# All additional properties in the HATS recommendation.
-EXTRA_ALLOWED_FIELDS = [
-    "addendum_did",
-    "bib_reference",
-    "bib_reference_url",
-    "creator_did",
-    "data_ucd",
-    "hats_builder",
-    "hats_coordinate_epoch",
-    "hats_copyright",
-    "hats_creation_date",
-    "hats_creator",
-    "hats_estsize",
-    "hats_progenitor_url",
-    "hats_release_date",
-    "hats_service_url",
-    "hats_status",
-    "hats_version",
-    "moc_sky_fraction",
-    "obs_ack",
-    "obs_copyright",
-    "obs_copyright_url",
-    "obs_description",
-    "obs_regime",
-    "obs_title",
-    "prov_progenitor",
-    "publisher_id",
-    "t_max",
-    "t_min",
-]
-
 
 class CollectionProperties(BaseModel):
     """Container class for catalog metadata"""
@@ -160,15 +129,6 @@ class CollectionProperties(BaseModel):
             return ""
         str_list = list(reduce(lambda x, y: x + y, str_dict.items()))
         return " ".join(str_list)
-
-    @model_validator(mode="after")
-    def check_allowed_and_required(self) -> Self:
-        """Check that type-specific fields are appropriate, and required fields are set."""
-        # Check against all known properties - catches typos.
-        non_allowed = set(self.__pydantic_extra__.keys()) - set(EXTRA_ALLOWED_FIELDS)
-        if len(non_allowed) > 0:
-            raise ValueError(f"Unexpected extra property: {non_allowed}")
-        return self
 
     @model_validator(mode="after")
     def check_default_margin_exists(self) -> Self:
