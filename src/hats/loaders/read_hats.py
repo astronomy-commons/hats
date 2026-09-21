@@ -13,6 +13,7 @@ from hats.catalog import AssociationCatalog, Catalog, CatalogType, Dataset, MapC
 from hats.catalog.catalog_collection import CatalogCollection
 from hats.catalog.dataset.collection_properties import CollectionProperties
 from hats.catalog.dataset.table_properties import TableProperties
+from hats.catalog.extension import ExtensionCatalog
 from hats.catalog.index.index_catalog import IndexCatalog
 from hats.catalog.partition_info import PartitionInfo
 from hats.io import file_io, paths
@@ -26,6 +27,7 @@ DATASET_TYPE_TO_CLASS = {
     CatalogType.INDEX: IndexCatalog,
     CatalogType.MARGIN: MarginCatalog,
     CatalogType.MAP: MapCatalog,
+    CatalogType.EXTENSION: ExtensionCatalog,
 }
 
 
@@ -121,6 +123,7 @@ def _is_healpix_dataset(dataset_type):
         CatalogType.ASSOCIATION,
         CatalogType.MARGIN,
         CatalogType.MAP,
+        CatalogType.EXTENSION,
     )
 
 

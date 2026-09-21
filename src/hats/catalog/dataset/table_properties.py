@@ -2,7 +2,7 @@ import re
 from datetime import datetime, timezone
 from importlib.metadata import version
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import Iterable, Literal, Optional
 
 from jproperties import Properties
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_validator
@@ -26,7 +26,19 @@ CATALOG_TYPE_REQUIRED_FIELDS = {
     CatalogType.INDEX: ["primary_catalog", "indexing_column"],
     CatalogType.MARGIN: ["primary_catalog", "margin_threshold"],
     CatalogType.MAP: [],
+    CatalogType.EXTENSION: [
+        "ra_column",
+        "dec_column",
+        "primary_catalog",
+        "primary_column",
+        "extension_catalog",
+        "join_column",
+    ],
 }
+
+
+## Comment written at the top of a properties file. The default is "HATS catalog".
+CATALOG_TYPE_PROPERTIES_FILE_COMMENTS = {CatalogType.EXTENSION: "HATS extension"}
 
 
 class TableProperties(BaseModel):
@@ -50,7 +62,7 @@ class TableProperties(BaseModel):
     what is the fixed, high order. A typicaly value would be 29, but can vary."""
 
     primary_catalog: Optional[str] = Field(default=None, alias="hats_primary_table_url")
-    """Reference to object catalog. Relevant for nested, margin, association, and index."""
+    """Reference to object catalog. Relevant for nested, margin, association, index and extension."""
 
     margin_threshold: Optional[float] = Field(default=None, alias="hats_margin_threshold")
     """Threshold of the pixel boundary, expressed in arcseconds."""
@@ -109,10 +121,24 @@ class TableProperties(BaseModel):
 
     moc_sky_fraction: Optional[float] = Field(default=None)
 
+    extension_catalog: Optional[str] = Field(default=None, alias="hats_extension_table_url")
+    """Reference to the extension table. It can be a relative or absolute path."""
+
+    extension_columns: Optional[list[str]] = Field(default=None, alias="hats_ext_cols")
+    """The list of columns provided by an extension."""
+
+    extension_join_style: Optional[Literal["left", "inner"]] = Field(
+        default=None, alias="hats_ext_join_style"
+    )
+    """The type of join to use when joining an extension to its primary catalog."""
+
+    extension_product_type: Optional[str] = Field(default=None, alias="hats_product_type_served")
+    """Modality of the data that an extension stores."""
+
     ## Allow any extra keyword args to be stored on the properties object.
     model_config = ConfigDict(extra="allow", populate_by_name=True, use_enum_values=True)
 
-    @field_validator("default_columns", "extra_columns", mode="before")
+    @field_validator("default_columns", "extra_columns", "extension_columns", mode="before")
     @classmethod
     def space_delimited_list(cls, str_value: str) -> list[str]:
         """Convert a space-delimited list string into a python list of strings.
@@ -171,7 +197,7 @@ class TableProperties(BaseModel):
         int_list.sort()
         return int_list
 
-    @field_serializer("default_columns", "extra_columns", "skymap_alt_orders")
+    @field_serializer("default_columns", "extra_columns", "extension_columns", "skymap_alt_orders")
     def serialize_as_space_delimited_list(self, str_list: Iterable) -> str:
         """Convert a python list of strings into a space-delimited string.
 
@@ -319,14 +345,15 @@ class TableProperties(BaseModel):
         properties = Properties(process_escapes_in_values=False)
         properties.properties = parameters
         properties._key_order = parameters.keys()
+        file_comment = CATALOG_TYPE_PROPERTIES_FILE_COMMENTS.get(self.catalog_type, "HATS catalog")
 
         catalog_path = file_io.get_upath(catalog_dir)
         file_path = catalog_path / "hats.properties"
         with file_path.open("wb") as _file:
-            properties.store(_file, encoding="utf-8", initial_comments="HATS catalog", timestamp=False)
+            properties.store(_file, encoding="utf-8", initial_comments=file_comment, timestamp=False)
         file_path = catalog_path / "properties"
         with file_path.open("wb") as _file:
-            properties.store(_file, encoding="utf-8", initial_comments="HATS catalog", timestamp=False)
+            properties.store(_file, encoding="utf-8", initial_comments=file_comment, timestamp=False)
 
     @staticmethod
     def new_provenance_dict(
