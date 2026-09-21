@@ -226,7 +226,6 @@ def test_read_extension_properties(small_sky_extension_dir):
     assert properties.extension_columns == ["ra_error", "dec_error"]
     assert properties.extension_join_style == "left"
     assert properties.extension_product_type is None
-    assert properties.join_catalog is None
 
 
 def test_extension_round_trip(tmp_path, extension_catalog_info_data):
@@ -253,7 +252,7 @@ def test_extension_missing_required_fields(extension_catalog_info_data):
     for missing_field in [
         "ra_column",
         "dec_column",
-        "extension_catalog",
+        "join_catalog",
         "primary_catalog",
         "primary_column",
         "join_column",

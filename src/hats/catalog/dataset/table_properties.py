@@ -31,7 +31,7 @@ CATALOG_TYPE_REQUIRED_FIELDS = {
         "dec_column",
         "primary_catalog",
         "primary_column",
-        "extension_catalog",
+        "join_catalog",
         "join_column",
     ],
 }
@@ -74,7 +74,8 @@ class TableProperties(BaseModel):
     """Column name in the association table that matches the primary (left) side of join."""
 
     join_catalog: Optional[str] = Field(default=None, alias="hats_assn_join_table_url")
-    """Catalog name for the joining (right) side of association."""
+    """Catalog name for the joining (right) side of association. For an extension, this is
+    the extension table itself. It can be a relative or absolute path."""
 
     join_column: Optional[str] = Field(default=None, alias="hats_col_assn_join")
     """Column name in the joining (right) side of join."""
@@ -87,6 +88,17 @@ class TableProperties(BaseModel):
 
     contains_leaf_files: Optional[bool] = Field(default=None, alias="hats_assn_leaf_files")
     """Whether or not the association catalog contains leaf parquet files."""
+
+    extension_columns: Optional[list[str]] = Field(default=None, alias="hats_ext_cols")
+    """The list of columns provided by an extension."""
+
+    extension_join_style: Optional[Literal["left", "inner"]] = Field(
+        default=None, alias="hats_ext_join_style"
+    )
+    """The type of join to use when joining an extension to its primary catalog."""
+
+    extension_product_type: Optional[str] = Field(default=None, alias="hats_product_type_served")
+    """Modality of the data that an extension stores."""
 
     indexing_column: Optional[str] = Field(default=None, alias="hats_index_column")
     """Column that we provide an index over."""
@@ -120,20 +132,6 @@ class TableProperties(BaseModel):
     """Estimated size of the catalog on disk, in kilobytes."""
 
     moc_sky_fraction: Optional[float] = Field(default=None)
-
-    extension_catalog: Optional[str] = Field(default=None, alias="hats_extension_table_url")
-    """Reference to the extension table. It can be a relative or absolute path."""
-
-    extension_columns: Optional[list[str]] = Field(default=None, alias="hats_ext_cols")
-    """The list of columns provided by an extension."""
-
-    extension_join_style: Optional[Literal["left", "inner"]] = Field(
-        default=None, alias="hats_ext_join_style"
-    )
-    """The type of join to use when joining an extension to its primary catalog."""
-
-    extension_product_type: Optional[str] = Field(default=None, alias="hats_product_type_served")
-    """Modality of the data that an extension stores."""
 
     ## Allow any extra keyword args to be stored on the properties object.
     model_config = ConfigDict(extra="allow", populate_by_name=True, use_enum_values=True)

@@ -95,11 +95,11 @@ def extension_catalog_info_data() -> dict:
         "total_rows": 131,
         "ra_column": "ra",
         "dec_column": "dec",
-        "extension_catalog": "small_sky_extension",
-        "extension_columns": "ra_error dec_error",
         "primary_catalog": "small_sky_core",
         "primary_column": "id",
+        "join_catalog": "small_sky_extension",
         "join_column": "object_id",
+        "extension_columns": "ra_error dec_error",
     }
 
 
