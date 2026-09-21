@@ -88,6 +88,22 @@ def catalog_info(catalog_info_data) -> TableProperties:
 
 
 @pytest.fixture
+def extension_catalog_info_data() -> dict:
+    return {
+        "catalog_name": "small_sky_extension",
+        "catalog_type": "extension",
+        "total_rows": 131,
+        "ra_column": "ra",
+        "dec_column": "dec",
+        "extension_catalog": "small_sky_extension",
+        "extension_columns": "ra_error dec_error",
+        "primary_catalog": "small_sky_core",
+        "primary_column": "id",
+        "join_column": "object_id",
+    }
+
+
+@pytest.fixture
 def association_catalog_info_data() -> dict:
     return {
         "catalog_name": "test_name",

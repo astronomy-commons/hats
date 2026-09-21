@@ -15,6 +15,7 @@ def test_read_from_file_round_trip(test_data_dir, data_dir, tmp_path):
     round_trip_properties = TableProperties.read_from_dir(tmp_path)
 
     assert table_properties == round_trip_properties
+    assert (tmp_path / "hats.properties").read_text().startswith("#HATS catalog\n")
 
     kwarg_properties = TableProperties(**round_trip_properties.model_dump(by_alias=False, exclude_none=True))
     assert table_properties == kwarg_properties
@@ -217,3 +218,62 @@ def test_provenance_dict(small_sky_dir, tmp_path):
 def test_datatype_parsing(small_sky_dir):
     properties = TableProperties.read_from_dir(small_sky_dir)
     assert isinstance(properties.moc_sky_fraction, float)
+
+
+def test_read_extension_properties(small_sky_extension_dir):
+    properties = TableProperties.read_from_dir(small_sky_extension_dir)
+    assert properties.catalog_name == "small_sky_extension"
+    assert properties.extension_columns == ["ra_error", "dec_error"]
+    assert properties.extension_join_style == "left"
+    assert properties.extension_product_type is None
+    assert properties.join_catalog is None
+
+
+def test_extension_round_trip(tmp_path, extension_catalog_info_data):
+    props = extension_catalog_info_data | {"extension_product_type": "spectra"}
+    properties = TableProperties(**props)
+    assert properties.extension_columns == ["ra_error", "dec_error"]
+    properties.to_properties_file(tmp_path)
+
+    contents = (tmp_path / "hats.properties").read_text()
+    assert contents.startswith("#HATS extension\n")
+    assert "hats_ext_cols=ra_error dec_error" in contents
+    assert "hats_product_type_served=spectra" in contents
+
+    assert TableProperties.read_from_dir(tmp_path) == properties
+
+
+def test_extension_list_of_columns(extension_catalog_info_data):
+    props = extension_catalog_info_data | {"extension_columns": ["ra_error", "dec_error"]}
+    properties = TableProperties(**props)
+    assert properties.extension_columns == ["ra_error", "dec_error"]
+
+
+def test_extension_missing_required_fields(extension_catalog_info_data):
+    for missing_field in [
+        "ra_column",
+        "dec_column",
+        "extension_catalog",
+        "primary_catalog",
+        "primary_column",
+        "join_column",
+    ]:
+        props = extension_catalog_info_data.copy()
+        props.pop(missing_field)
+        with pytest.raises(ValueError, match=missing_field):
+            TableProperties(**props)
+
+
+def test_extension_optional_fields(extension_catalog_info_data):
+    extension_catalog_info_data.pop("extension_columns")
+    properties = TableProperties(**extension_catalog_info_data)
+    assert properties.extension_columns is None
+    assert properties.extension_join_style is None
+    props = extension_catalog_info_data | {"extension_join_style": "inner"}
+    assert TableProperties(**props).extension_join_style == "inner"
+
+
+def test_extension_bad_join_style(extension_catalog_info_data):
+    props = extension_catalog_info_data | {"extension_join_style": "outer"}
+    with pytest.raises(ValueError, match="extension_join_style"):
+        TableProperties(**props)
