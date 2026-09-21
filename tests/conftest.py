@@ -32,6 +32,16 @@ def small_sky_dir(test_data_dir):
 
 
 @pytest.fixture
+def small_sky_core_dir(test_data_dir):
+    return test_data_dir / "small_sky_core"
+
+
+@pytest.fixture
+def small_sky_extension_dir(test_data_dir):
+    return test_data_dir / "small_sky_extension"
+
+
+@pytest.fixture
 def small_sky_npix_alt_suffix_dir(test_data_dir):
     return test_data_dir / SMALL_SKY_NPIX_ALT_SUFFIX_NAME
 
