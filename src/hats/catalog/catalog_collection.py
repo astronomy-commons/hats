@@ -21,6 +21,7 @@ class CatalogCollection:
         ├── main_catalog/
         ├── margin_catalog/
         ├── index_catalog/
+        ├── extension_catalog/
         ├── collection.properties
 
     Margin and index catalogs are optional but there could also be multiple of them. The
@@ -66,6 +67,11 @@ class CatalogCollection:
         if self.default_margin is None:
             return None
         return self.resolve_inner_path(self.collection_path, self.default_margin, self.storage_options)
+
+    @property
+    def all_extensions(self) -> list[str] | None:
+        """The list of extension names in the collection"""
+        return self.collection_properties.all_extensions
 
     @property
     def all_indexes(self) -> dict[str, str] | None:

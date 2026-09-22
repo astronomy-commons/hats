@@ -37,10 +37,6 @@ CATALOG_TYPE_REQUIRED_FIELDS = {
 }
 
 
-## Comment written at the top of a properties file. The default is "HATS catalog".
-CATALOG_TYPE_PROPERTIES_FILE_COMMENTS = {CatalogType.EXTENSION: "HATS extension"}
-
-
 class TableProperties(BaseModel):
     """Container class for catalog metadata"""
 
@@ -330,6 +326,7 @@ class TableProperties(BaseModel):
             p.load(f, "utf-8")
         return cls(**p.properties)
 
+    # pylint: disable=duplicate-code
     def to_properties_file(self, catalog_dir: str | Path | UPath):
         """Write fields to a java-style properties file.
 
@@ -343,15 +340,13 @@ class TableProperties(BaseModel):
         properties = Properties(process_escapes_in_values=False)
         properties.properties = parameters
         properties._key_order = parameters.keys()
-        file_comment = CATALOG_TYPE_PROPERTIES_FILE_COMMENTS.get(self.catalog_type, "HATS catalog")
-
         catalog_path = file_io.get_upath(catalog_dir)
         file_path = catalog_path / "hats.properties"
         with file_path.open("wb") as _file:
-            properties.store(_file, encoding="utf-8", initial_comments=file_comment, timestamp=False)
+            properties.store(_file, encoding="utf-8", initial_comments="HATS catalog", timestamp=False)
         file_path = catalog_path / "properties"
         with file_path.open("wb") as _file:
-            properties.store(_file, encoding="utf-8", initial_comments=file_comment, timestamp=False)
+            properties.store(_file, encoding="utf-8", initial_comments="HATS catalog", timestamp=False)
 
     @staticmethod
     def new_provenance_dict(

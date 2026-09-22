@@ -1,0 +1,14 @@
+#HATS catalog
+obs_collection=small_sky_order1_id_index
+dataproduct_type=index
+hats_nrows=131
+hats_primary_table_url=small_sky_o1_with_extension/small_sky_order1
+hats_index_column=id
+hats_npix_suffix=.parquet
+hats_estsize=8
+hats_builder=hats-import v0.10.5.dev8+g924514a8e.d20260922, hats v0.10.5.dev6+g956b74a97
+hats_creation_date=2026-09-22T16:15UTC
+hats_release_date=2025-08-22
+hats_version=v1.0
+obs_regime=Optical
+default_index=id

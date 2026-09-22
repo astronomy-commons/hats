@@ -221,8 +221,8 @@ def test_datatype_parsing(small_sky_dir):
 
 
 def test_read_extension_properties(small_sky_extension_dir):
-    properties = TableProperties.read_from_dir(small_sky_extension_dir)
-    assert properties.catalog_name == "small_sky_extension"
+    properties = TableProperties.read_from_dir(small_sky_extension_dir / "small_sky_order1_errors")
+    assert properties.catalog_name == "small_sky_order1_errors"
     assert properties.extension_columns == ["ra_error", "dec_error"]
     assert properties.extension_join_style == "left"
     assert properties.extension_product_type is None
@@ -235,7 +235,6 @@ def test_extension_round_trip(tmp_path, extension_catalog_info_data):
     properties.to_properties_file(tmp_path)
 
     contents = (tmp_path / "hats.properties").read_text()
-    assert contents.startswith("#HATS extension\n")
     assert "hats_ext_cols=ra_error dec_error" in contents
     assert "hats_product_type_served=spectra" in contents
 
