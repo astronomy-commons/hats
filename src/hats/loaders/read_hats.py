@@ -5,6 +5,7 @@ from pathlib import Path
 
 import numpy as np
 import pyarrow as pa
+from jproperties import Properties
 from mocpy import MOC
 from upath import UPath
 
@@ -72,6 +73,13 @@ def read_hats(
         if single_catalog:
             return _load_catalog(path, read_moc=read_moc)
         return _load_collection(path, read_moc=read_moc, storage_options=storage_options)
+    properties = _try_properties_file(catalog_path)
+    if properties is not None and isinstance(properties, TableProperties):
+        return _load_catalog(path.parent, properties=properties, read_moc=read_moc)
+    if properties is not None and isinstance(properties, CollectionProperties):
+        return _load_collection(
+            path.parent, properties=properties, read_moc=read_moc, storage_options=storage_options
+        )
     if (path / "hats.properties").exists() or (path / "properties").exists():
         return _load_catalog(path, read_moc=read_moc)
     if (path / "collection.properties").exists():
@@ -79,23 +87,54 @@ def read_hats(
     raise FileNotFoundError(f"Failed to read HATS at location {catalog_path}")
 
 
+def _try_properties_file(path) -> CollectionProperties | TableProperties | None:
+    """Attempt to read the path as though it is a properties file.
+
+    If we fail to read text, that's ok. It likely means that this is a directory.
+    If we parse it as a properties file, but it's not a valid HATS entity, fail.
+
+    Otherwise, return the loaded HATS properties container."""
+
+    try:
+        p = Properties()
+        with path.open("rb") as f:
+            p.load(f, "utf-8")
+    except Exception:  # pylint: disable=broad-exception-caught
+        return None
+    try:
+        return CollectionProperties(**p.properties)
+    except Exception:  # pylint: disable=broad-exception-caught
+        pass
+    try:
+        return TableProperties(**p.properties)
+    except Exception:  # pylint: disable=broad-exception-caught
+        pass
+    raise ValueError(f"Tried to load path {path} as a properties file, " "but contains invalid contents.")
+
+
 def _load_collection(
-    collection_path: UPath, read_moc: bool = True, storage_options: dict | None = None
+    collection_path: UPath,
+    *,
+    properties: CollectionProperties | None = None,
+    read_moc: bool = True,
+    storage_options: dict | None = None,
 ) -> CatalogCollection:
-    collection_properties = CollectionProperties.read_from_dir(collection_path)
+    if properties is None:
+        properties = CollectionProperties.read_from_dir(collection_path)
     main_catalog = _load_catalog(
         CatalogCollection.resolve_inner_path(
-            collection_path, collection_properties.hats_primary_table_url, storage_options=storage_options
+            collection_path, properties.hats_primary_table_url, storage_options=storage_options
         ),
         read_moc=read_moc,
     )
-    return CatalogCollection(
-        collection_path, collection_properties, main_catalog, storage_options=storage_options
-    )
+    return CatalogCollection(collection_path, properties, main_catalog, storage_options=storage_options)
 
 
-def _load_catalog(catalog_path: UPath, read_moc: bool = True) -> Dataset:
-    properties = TableProperties.read_from_dir(catalog_path)
+def _load_catalog(
+    catalog_path: UPath, *, properties: CollectionProperties | None = None, read_moc: bool = True
+) -> Dataset:
+    if properties is None:
+        properties = TableProperties.read_from_dir(catalog_path)
     dataset_type = properties.catalog_type
     if dataset_type not in DATASET_TYPE_TO_CLASS:
         raise NotImplementedError(f"Cannot load catalog of type {dataset_type}")

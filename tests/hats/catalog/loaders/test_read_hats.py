@@ -5,7 +5,8 @@ import pytest
 import hats
 from hats.catalog.catalog_collection import CatalogCollection
 from hats.catalog.dataset.collection_properties import CollectionProperties
-from hats.io.file_io import get_upath_for_protocol
+from hats.io.file_io import get_upath_for_protocol, write_string_to_file
+from hats.io.validation import is_valid_collection
 from hats.loaders import read_hats
 
 
@@ -156,3 +157,43 @@ def test_read_hats_empty_catalog(small_sky_order1_empty_margin_dir, small_sky_or
     assert cat.get_healpix_pixels() == []
     assert cat.schema == small_sky_order1_catalog.schema
     assert cat.catalog_info.total_rows == 0
+
+
+def test_read_hats_from_file(small_sky_order1_dir):
+    read_hats(small_sky_order1_dir / "hats.properties")
+
+
+def test_read_collection_from_file(small_sky_collection_dir):
+    read_hats(small_sky_collection_dir / "collection.properties")
+
+
+def test_read_collection_from_file_with_abs(small_sky_collection_dir, tmp_path):
+    """Create a collection properties file, using the absolute paths to the
+    constituent tables."""
+    cat = read_hats(small_sky_collection_dir)
+
+    test_file_path = tmp_path / "collection.properties"
+
+    all_margin_paths = " ".join(
+        [
+            str(CatalogCollection.resolve_inner_path(small_sky_collection_dir, margin))
+            for margin in cat.all_margins
+        ]
+    )
+    all_index_pairs = " ".join(
+        f"{key} {CatalogCollection.resolve_inner_path(small_sky_collection_dir, value)}"
+        for key, value in cat.all_indexes.items()
+    )
+    file_content = f"""  obs_collection= foo
+  hats_primary_table_url={cat.main_catalog_dir}
+  all_margins={all_margin_paths}
+  default_margin={cat.default_margin_catalog_dir}
+  all_indexes={all_index_pairs}
+"""
+    write_string_to_file(test_file_path, file_content, encoding="utf-8")
+
+    same_cat = read_hats(test_file_path)
+
+    assert str(same_cat.default_margin_catalog_dir) == str(cat.default_margin_catalog_dir)
+
+    assert is_valid_collection(tmp_path, strict=True)
