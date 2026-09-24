@@ -162,6 +162,9 @@ def test_read_hats_empty_catalog(small_sky_order1_empty_margin_dir, small_sky_or
 def test_read_hats_from_file(small_sky_order1_dir):
     read_hats(small_sky_order1_dir / "hats.properties")
 
+    with pytest.raises(ValueError, match="invalid contents"):
+        read_hats(small_sky_order1_dir / "partition_info.csv")
+
 
 def test_read_collection_from_file(small_sky_collection_dir):
     read_hats(small_sky_collection_dir / "collection.properties")
