@@ -105,11 +105,11 @@ def _try_properties_file(path) -> CollectionProperties | TableProperties | None:
     try:
         return CollectionProperties(**p.properties)
     except Exception as err:  # pylint: disable=broad-exception-caught
-        logging.warning(f"Error with collection properties. {err}")
+        logging.warning("Error with collection properties. %s", err)
     try:
         return TableProperties(**p.properties)
     except Exception as err:  # pylint: disable=broad-exception-caught
-        logging.warning(f"Error with catalog properties. {err}")
+        logging.warning("Error with catalog properties. %s", err)
     raise ValueError(f"Tried to load path {path} as a properties file, but contains invalid contents.")
 
 
