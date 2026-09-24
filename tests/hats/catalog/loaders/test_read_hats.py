@@ -187,7 +187,7 @@ def test_read_collection_from_file_with_abs(small_sky_collection_dir, tmp_path):
     file_content = f"""  obs_collection= foo
   hats_primary_table_url={cat.main_catalog_dir}
   all_margins={all_margin_paths}
-  default_margin={cat.default_margin_catalog_dir}
+  default_margin={cat.default_margin_catalog_dir.as_posix()}
   all_indexes={all_index_pairs}
 """
     write_string_to_file(test_file_path, file_content, encoding="utf-8")
