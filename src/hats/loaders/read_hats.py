@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import warnings
 from pathlib import Path
 
@@ -103,13 +104,13 @@ def _try_properties_file(path) -> CollectionProperties | TableProperties | None:
         return None
     try:
         return CollectionProperties(**p.properties)
-    except Exception:  # pylint: disable=broad-exception-caught
-        pass
+    except Exception as err:  # pylint: disable=broad-exception-caught
+        logging.warning(f"Error with collection properties. {err}")
     try:
         return TableProperties(**p.properties)
-    except Exception:  # pylint: disable=broad-exception-caught
-        pass
-    raise ValueError(f"Tried to load path {path} as a properties file, " "but contains invalid contents.")
+    except Exception as err:  # pylint: disable=broad-exception-caught
+        logging.warning(f"Error with catalog properties. {err}")
+    raise ValueError(f"Tried to load path {path} as a properties file, but contains invalid contents.")
 
 
 def _load_collection(

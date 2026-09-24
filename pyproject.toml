@@ -91,6 +91,7 @@ testpaths = [
 ]
 addopts = "--doctest-modules --doctest-glob=*.rst"
 log_cli_level = "INFO"
+log_cli = true
 
 
 [tool.coverage.run]
