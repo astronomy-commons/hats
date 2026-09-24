@@ -32,4 +32,4 @@ jobs:
         uv pip install --system -e .[full]
     - name: Run unit tests with pytest
       run: |
-        python -m pytest --log_cli=true --timeout=0 tests
+        python -m pytest -o log_cli=true --timeout=0 tests
