@@ -176,12 +176,12 @@ def test_read_collection_from_file_with_abs(small_sky_collection_dir, tmp_path):
 
     all_margin_paths = " ".join(
         [
-            str(CatalogCollection.resolve_inner_path(small_sky_collection_dir, margin))
+            CatalogCollection.resolve_inner_path(small_sky_collection_dir, margin).as_posix()
             for margin in cat.all_margins
         ]
     )
     all_index_pairs = " ".join(
-        f"{key} {CatalogCollection.resolve_inner_path(small_sky_collection_dir, value)}"
+        f"{key} {CatalogCollection.resolve_inner_path(small_sky_collection_dir, value).as_posix()}"
         for key, value in cat.all_indexes.items()
     )
     file_content = f"""  obs_collection= foo
