@@ -11,9 +11,10 @@ from upath import UPath
 import hats.pixel_math.healpix_shim as hp
 from hats.catalog import AssociationCatalog, Catalog, CatalogType, Dataset, MapCatalog, MarginCatalog
 from hats.catalog.catalog_collection import CatalogCollection
+from hats.catalog.catalog_extension import CatalogExtension
 from hats.catalog.dataset.collection_properties import CollectionProperties
+from hats.catalog.dataset.extension_properties import ExtensionProperties
 from hats.catalog.dataset.table_properties import TableProperties
-from hats.catalog.extension import ExtensionCatalog
 from hats.catalog.index.index_catalog import IndexCatalog
 from hats.catalog.partition_info import PartitionInfo
 from hats.io import file_io, paths
@@ -27,7 +28,6 @@ DATASET_TYPE_TO_CLASS = {
     CatalogType.INDEX: IndexCatalog,
     CatalogType.MARGIN: MarginCatalog,
     CatalogType.MAP: MapCatalog,
-    CatalogType.EXTENSION: ExtensionCatalog,
 }
 
 
@@ -37,13 +37,14 @@ def read_hats(
     single_catalog: bool | None = None,
     read_moc: bool = True,
     storage_options: dict | None = None,
-) -> CatalogCollection | Dataset:
-    """Reads a HATS Catalog from a HATS directory
+) -> CatalogCollection | CatalogExtension | Dataset:
+    """Reads a HATS Catalog from a HATS directory, or a catalog extension from its
+    ``<extension>.properties`` file
 
     Parameters
     ----------
     catalog_path : str | Path | UPath
-        path to the root directory of the catalog
+        path to the root directory of the catalog, or to an ``<extension>.properties`` file
     single_catalog: bool
         If you happen to already know that the `catalog_path` points to a
         single catalog, instead of a catalog collection, this flag can
@@ -57,8 +58,8 @@ def read_hats(
 
     Returns
     -------
-    CatalogCollection | Dataset
-        HATS catalog found at directory
+    CatalogCollection | CatalogExtension | Dataset
+        HATS catalog found at directory, or the extension described by the file
 
     Examples
     --------
@@ -70,6 +71,9 @@ def read_hats(
     if storage_options is None:
         storage_options = {}
     path = file_io.get_upath(catalog_path, **storage_options)
+    # TODO: Integrate with changes from https://github.com/astronomy-commons/hats/pull/749
+    if path.suffix == ".properties":
+        return _load_extension(path, read_moc=read_moc, storage_options=storage_options)
     if single_catalog is not None:
         if single_catalog:
             return _load_catalog(path, read_moc=read_moc)
@@ -94,6 +98,20 @@ def _load_collection(
     return CatalogCollection(
         collection_path, collection_properties, main_catalog, storage_options=storage_options
     )
+
+
+def _load_extension(
+    extension_path: UPath, read_moc: bool = True, storage_options: dict | None = None
+) -> CatalogExtension:
+    extension_info = ExtensionProperties.read_from_file(extension_path)
+    catalog = read_hats(
+        CatalogCollection.resolve_inner_path(
+            extension_path.parent, extension_info.join_catalog, storage_options=storage_options
+        ),
+        read_moc=read_moc,
+        storage_options=storage_options,
+    )
+    return CatalogExtension(extension_path, extension_info, catalog, storage_options=storage_options)
 
 
 def _load_catalog(catalog_path: UPath, read_moc: bool = True) -> Dataset:
@@ -123,7 +141,6 @@ def _is_healpix_dataset(dataset_type):
         CatalogType.ASSOCIATION,
         CatalogType.MARGIN,
         CatalogType.MAP,
-        CatalogType.EXTENSION,
     )
 
 

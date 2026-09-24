@@ -27,8 +27,9 @@ class CollectionProperties(BaseModel):
     default_index: Optional[str] = Field(default=None)
 
     all_extensions: Annotated[Optional[list[str]], Field(default=None)]
-    """Names of the extensions of the primary catalog, each holding a set of additional
-    columns. An extension is a catalog of its own, or a collection when it has margins."""
+    """Extensions of this collection, each holding a set of additional columns, and described
+    by an ``<extension>.properties`` file. Each is listed by the path to that file, relative to the
+    collection root or absolute. The ``.properties`` suffix may be left out."""
 
     ## Allow any extra keyword args to be stored on the properties object.
     model_config = ConfigDict(extra="allow", populate_by_name=True, use_enum_values=True)

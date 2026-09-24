@@ -37,8 +37,8 @@ def small_sky_o1_with_extension_dir(test_data_dir):
 
 
 @pytest.fixture
-def small_sky_extension_dir(small_sky_o1_with_extension_dir):
-    return small_sky_o1_with_extension_dir / "small_sky_order1_errors"
+def small_sky_extension_file(small_sky_o1_with_extension_dir):
+    return small_sky_o1_with_extension_dir / "small_sky_order1_errors.properties"
 
 
 @pytest.fixture
@@ -88,16 +88,12 @@ def catalog_info(catalog_info_data) -> TableProperties:
 
 
 @pytest.fixture
-def extension_catalog_info_data() -> dict:
+def extension_info_data() -> dict:
     return {
-        "catalog_name": "small_sky_order1_errors",
-        "catalog_type": "extension",
-        "total_rows": 131,
-        "ra_column": "ra",
-        "dec_column": "dec",
-        "primary_catalog": "small_sky_o1_with_extension/small_sky_order1",
+        "name": "small_sky_order1_errors",
+        "primary_catalog": "small_sky_o1_with_extension",
         "primary_column": "id",
-        "join_catalog": "small_sky_o1_with_extension/small_sky_order1_errors/small_sky_order1_errors",
+        "join_catalog": "small_sky_order1_errors",
         "join_column": "object_id",
         "extension_columns": "ra_error dec_error",
     }

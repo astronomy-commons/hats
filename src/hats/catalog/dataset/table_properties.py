@@ -2,7 +2,7 @@ import re
 from datetime import datetime, timezone
 from importlib.metadata import version
 from pathlib import Path
-from typing import Iterable, Literal, Optional
+from typing import Iterable, Optional
 
 from jproperties import Properties
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_validator
@@ -26,14 +26,6 @@ CATALOG_TYPE_REQUIRED_FIELDS = {
     CatalogType.INDEX: ["primary_catalog", "indexing_column"],
     CatalogType.MARGIN: ["primary_catalog", "margin_threshold"],
     CatalogType.MAP: [],
-    CatalogType.EXTENSION: [
-        "ra_column",
-        "dec_column",
-        "primary_catalog",
-        "primary_column",
-        "join_catalog",
-        "join_column",
-    ],
 }
 
 
@@ -58,7 +50,7 @@ class TableProperties(BaseModel):
     what is the fixed, high order. A typicaly value would be 29, but can vary."""
 
     primary_catalog: Optional[str] = Field(default=None, alias="hats_primary_table_url")
-    """Reference to object catalog. Relevant for nested, margin, association, index and extension."""
+    """Reference to object catalog. Relevant for nested, margin, association, and index."""
 
     margin_threshold: Optional[float] = Field(default=None, alias="hats_margin_threshold")
     """Threshold of the pixel boundary, expressed in arcseconds."""
@@ -70,8 +62,7 @@ class TableProperties(BaseModel):
     """Column name in the association table that matches the primary (left) side of join."""
 
     join_catalog: Optional[str] = Field(default=None, alias="hats_assn_join_table_url")
-    """Catalog name for the joining (right) side of association. For an extension, this is
-    the extension table itself. It can be a relative or absolute path."""
+    """Catalog name for the joining (right) side of association."""
 
     join_column: Optional[str] = Field(default=None, alias="hats_col_assn_join")
     """Column name in the joining (right) side of join."""
@@ -84,17 +75,6 @@ class TableProperties(BaseModel):
 
     contains_leaf_files: Optional[bool] = Field(default=None, alias="hats_assn_leaf_files")
     """Whether or not the association catalog contains leaf parquet files."""
-
-    extension_columns: Optional[list[str]] = Field(default=None, alias="hats_ext_cols")
-    """The list of columns provided by an extension."""
-
-    extension_join_style: Optional[Literal["left", "inner"]] = Field(
-        default=None, alias="hats_ext_join_style"
-    )
-    """The type of join to use when joining an extension to its primary catalog."""
-
-    extension_product_type: Optional[str] = Field(default=None, alias="hats_product_type_served")
-    """Modality of the data that an extension stores."""
 
     indexing_column: Optional[str] = Field(default=None, alias="hats_index_column")
     """Column that we provide an index over."""
@@ -132,7 +112,7 @@ class TableProperties(BaseModel):
     ## Allow any extra keyword args to be stored on the properties object.
     model_config = ConfigDict(extra="allow", populate_by_name=True, use_enum_values=True)
 
-    @field_validator("default_columns", "extra_columns", "extension_columns", mode="before")
+    @field_validator("default_columns", "extra_columns", mode="before")
     @classmethod
     def space_delimited_list(cls, str_value: str) -> list[str]:
         """Convert a space-delimited list string into a python list of strings.
@@ -191,7 +171,7 @@ class TableProperties(BaseModel):
         int_list.sort()
         return int_list
 
-    @field_serializer("default_columns", "extra_columns", "extension_columns", "skymap_alt_orders")
+    @field_serializer("default_columns", "extra_columns", "skymap_alt_orders")
     def serialize_as_space_delimited_list(self, str_list: Iterable) -> str:
         """Convert a python list of strings into a space-delimited string.
 
