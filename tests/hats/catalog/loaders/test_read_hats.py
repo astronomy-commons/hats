@@ -162,7 +162,7 @@ def test_read_hats_empty_catalog(small_sky_order1_empty_margin_dir, small_sky_or
 def test_read_hats_from_file(small_sky_order1_dir):
     read_hats(small_sky_order1_dir / "hats.properties")
 
-    with pytest.raises(ValueError, match="invalid contents"):
+    with pytest.raises(FileNotFoundError, match="partition_info.csv"):
         read_hats(small_sky_order1_dir / "partition_info.csv")
 
 
@@ -200,3 +200,10 @@ def test_read_collection_from_file_with_abs(small_sky_collection_dir, tmp_path):
     assert str(same_cat.default_margin_catalog_dir) == str(cat.default_margin_catalog_dir)
 
     assert is_valid_collection(tmp_path, strict=True)
+
+def test_read_hats_none():
+    with pytest.raises(ValueError, match="catalog path is required"):
+        read_hats(None)
+
+    with pytest.raises(ValueError, match="catalog path is required"):
+        read_hats("")
