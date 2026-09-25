@@ -129,7 +129,7 @@ def is_valid_collection(
 
     collection_properties = CollectionProperties.read_from_dir(pointer)
     subcatalog_valid, sub_catalog = _is_valid_catalog_strict(
-        pointer / collection_properties.hats_primary_table_url
+        CatalogCollection.resolve_inner_path(pointer, collection_properties.hats_primary_table_url)
     )
     is_valid &= subcatalog_valid
 
@@ -142,7 +142,8 @@ def is_valid_collection(
 
     if collection_properties.all_margins:
         for margin in collection_properties.all_margins:
-            subcatalog_valid, sub_catalog = _is_valid_catalog_strict(pointer / margin)
+            sub_catalog_path = CatalogCollection.resolve_inner_path(pointer, margin)
+            subcatalog_valid, sub_catalog = _is_valid_catalog_strict(sub_catalog_path)
             is_valid &= subcatalog_valid
 
             if sub_catalog and not isinstance(sub_catalog, MarginCatalog):
@@ -154,7 +155,8 @@ def is_valid_collection(
 
     if collection_properties.all_indexes:
         for index_field, index_dir in collection_properties.all_indexes.items():
-            subcatalog_valid, sub_catalog = _is_valid_catalog_strict(pointer / index_dir)
+            sub_catalog_path = CatalogCollection.resolve_inner_path(pointer, index_dir)
+            subcatalog_valid, sub_catalog = _is_valid_catalog_strict(sub_catalog_path)
             is_valid &= subcatalog_valid
 
             if sub_catalog and not isinstance(sub_catalog, IndexCatalog):

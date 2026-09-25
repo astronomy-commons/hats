@@ -40,7 +40,7 @@ jobs:
         pip list
     - name: Run unit tests with pytest
       run: |
-        python -m pytest
+        python -m pytest -o log_cli=true
     - name: Install FULL dependencies
       run: |
         uv pip install --system -e .[full]
@@ -49,7 +49,7 @@ jobs:
         pip list
     - name: Run FULL unit tests with pytest
       run: |
-        python -m pytest
+        python -m pytest -o log_cli=true
     - name: Send status to Slack app
       if: ${{ failure() && github.event_name != 'workflow_dispatch' }}
       id: slack
