@@ -21,11 +21,15 @@ class CatalogCollection:
         ├── main_catalog/
         ├── margin_catalog/
         ├── index_catalog/
+        ├── extension_catalog.properties
         ├── collection.properties
 
     Margin and index catalogs are optional but there could also be multiple of them. The
     catalogs used by default are specified in the `collection.properties` file in the
-    `default_margin` and `default_index` keywords.
+    `default_margin` and `default_index` keywords. Extensions are optional too, and each is
+    described by an `<extension>.properties` file, listed in the `all_extensions` keyword.
+    That file usually sits at the root of the collection, but it may live elsewhere, e.g.
+    remotely, and be listed by its absolute path.
     """
 
     def __init__(
@@ -66,6 +70,42 @@ class CatalogCollection:
         if self.default_margin is None:
             return None
         return self.resolve_inner_path(self.collection_path, self.default_margin, self.storage_options)
+
+    @property
+    def all_extensions(self) -> list[str] | None:
+        """The list of extensions in the collection, as the paths to their `<extension>.properties`
+        files. The `.properties` suffix may be left out, so a file at the collection root can be
+        listed by the name of its extension."""
+        return self.collection_properties.all_extensions
+
+    def get_extension_path(self, extension_name: str) -> UPath:
+        """Path to the `<extension>.properties` file of an extension in the collection
+
+        The file may be at the collection root, or anywhere else, when it is listed in
+        `all_extensions` by its absolute path.
+
+        Parameters
+        ----------
+        extension_name: str
+            name of the extension, which names its `<extension_name>.properties` file
+
+        Returns
+        -------
+        UPath
+            path to the extension's `<extension_name>.properties` file
+
+        Raises
+        ------
+        ValueError
+            if the extension is not specified in `all_extensions`
+        """
+        for extension in self.all_extensions or []:
+            if not extension.endswith(".properties"):
+                extension = f"{extension}.properties"
+            extension_path = self.resolve_inner_path(self.collection_path, extension, self.storage_options)
+            if extension_path.stem == extension_name:
+                return extension_path
+        raise ValueError(f"Extension `{extension_name}` is not specified in all_extensions")
 
     @property
     def all_indexes(self) -> dict[str, str] | None:

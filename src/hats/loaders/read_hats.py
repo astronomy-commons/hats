@@ -13,7 +13,9 @@ from upath import UPath
 import hats.pixel_math.healpix_shim as hp
 from hats.catalog import AssociationCatalog, Catalog, CatalogType, Dataset, MapCatalog, MarginCatalog
 from hats.catalog.catalog_collection import CatalogCollection
+from hats.catalog.catalog_extension import CatalogExtension
 from hats.catalog.dataset.collection_properties import CollectionProperties
+from hats.catalog.dataset.extension_properties import ExtensionProperties
 from hats.catalog.dataset.table_properties import TableProperties
 from hats.catalog.index.index_catalog import IndexCatalog
 from hats.catalog.partition_info import PartitionInfo
@@ -31,19 +33,21 @@ DATASET_TYPE_TO_CLASS = {
 }
 
 
+# pylint: disable=too-many-return-statements
 def read_hats(
     catalog_path: str | Path | UPath,
     *,
     single_catalog: bool | None = None,
     read_moc: bool = True,
     storage_options: dict | None = None,
-) -> CatalogCollection | Dataset:
-    """Reads a HATS Catalog from a HATS directory
+) -> CatalogCollection | CatalogExtension | Dataset:
+    """Reads a HATS Catalog from a HATS directory, or a catalog extension from its
+    ``<extension>.properties`` file.
 
     Parameters
     ----------
     catalog_path : str | Path | UPath
-        path to the root directory of the catalog
+        path to the root directory of the catalog, or to an ``<extension>.properties`` file
     single_catalog: bool
         If you happen to already know that the `catalog_path` points to a
         single catalog, instead of a catalog collection, this flag can
@@ -57,8 +61,8 @@ def read_hats(
 
     Returns
     -------
-    CatalogCollection | Dataset
-        HATS catalog found at directory
+    CatalogCollection | CatalogExtension | Dataset
+        HATS catalog found at directory, or the extension described by the file
 
     Examples
     --------
@@ -77,6 +81,10 @@ def read_hats(
             return _load_catalog(path, read_moc=read_moc)
         return _load_collection(path, read_moc=read_moc, storage_options=storage_options)
     properties = _try_properties_file(path)
+    if properties is not None and isinstance(properties, ExtensionProperties):
+        return _load_extension(
+            path, properties=properties, read_moc=read_moc, storage_options=storage_options
+        )
     if properties is not None and isinstance(properties, TableProperties):
         return _load_catalog(path.parent, properties=properties, read_moc=read_moc)
     if properties is not None and isinstance(properties, CollectionProperties):
@@ -90,7 +98,7 @@ def read_hats(
     raise FileNotFoundError(f"Failed to read HATS at location {catalog_path}")
 
 
-def _try_properties_file(path) -> CollectionProperties | TableProperties | None:
+def _try_properties_file(path) -> CollectionProperties | TableProperties | ExtensionProperties | None:
     """Attempt to read the path as though it is a properties file.
 
     If we fail to read text, that's ok. It likely means that this is a directory.
@@ -106,6 +114,10 @@ def _try_properties_file(path) -> CollectionProperties | TableProperties | None:
             p.load(f, "utf-8")
     except Exception:  # pylint: disable=broad-exception-caught
         return None
+    try:
+        return ExtensionProperties(**p.properties)
+    except Exception as err:  # pylint: disable=broad-exception-caught
+        logging.warning("Error with extension properties. %s", err)
     try:
         return CollectionProperties(**p.properties)
     except Exception as err:  # pylint: disable=broad-exception-caught
@@ -156,6 +168,25 @@ def _load_catalog(
         if read_moc:
             kwargs["moc"] = _read_moc_from_point_map(catalog_path)
     return loader(**kwargs)
+
+
+def _load_extension(
+    extension_path: UPath,
+    *,
+    properties: ExtensionProperties | None = None,
+    read_moc: bool = True,
+    storage_options: dict | None = None,
+) -> CatalogExtension:
+    if properties is None:
+        properties = ExtensionProperties.read_from_file(extension_path)
+    catalog = read_hats(
+        CatalogCollection.resolve_inner_path(
+            extension_path.parent, properties.join_catalog, storage_options=storage_options
+        ),
+        read_moc=read_moc,
+        storage_options=storage_options,
+    )
+    return CatalogExtension(extension_path, properties, catalog, storage_options=storage_options)
 
 
 def _is_healpix_dataset(dataset_type):

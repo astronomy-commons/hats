@@ -306,6 +306,7 @@ class TableProperties(BaseModel):
             p.load(f, "utf-8")
         return cls(**p.properties)
 
+    # pylint: disable=duplicate-code
     def to_properties_file(self, catalog_dir: str | Path | UPath):
         """Write fields to a java-style properties file.
 
@@ -319,7 +320,6 @@ class TableProperties(BaseModel):
         properties = Properties(process_escapes_in_values=False)
         properties.properties = parameters
         properties._key_order = parameters.keys()
-
         catalog_path = file_io.get_upath(catalog_dir)
         file_path = catalog_path / "hats.properties"
         with file_path.open("wb") as _file:

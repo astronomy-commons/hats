@@ -26,10 +26,15 @@ class CollectionProperties(BaseModel):
     all_indexes: Annotated[Optional[dict[str, str]], Field(default=None)]
     default_index: Optional[str] = Field(default=None)
 
+    all_extensions: Annotated[Optional[list[str]], Field(default=None)]
+    """Extensions of this collection, each holding a set of additional columns, and described
+    by an ``<extension>.properties`` file. Each is listed by the path to that file, relative to the
+    collection root or absolute. The ``.properties`` suffix may be left out."""
+
     ## Allow any extra keyword args to be stored on the properties object.
     model_config = ConfigDict(extra="allow", populate_by_name=True, use_enum_values=True)
 
-    @field_validator("all_margins", mode="before")
+    @field_validator("all_margins", "all_extensions", mode="before")
     @classmethod
     def space_delimited_list(cls, str_value: str) -> list[str]:
         """Convert a space-delimited list string into a python list of strings.
@@ -93,7 +98,7 @@ class CollectionProperties(BaseModel):
             all_index_dict[key] = value
         return all_index_dict
 
-    @field_serializer("all_margins")
+    @field_serializer("all_margins", "all_extensions")
     def serialize_list_as_space_delimited_list(self, str_list: Iterable[str]) -> str:
         """Convert a python list of strings into a space-delimited string.
 
