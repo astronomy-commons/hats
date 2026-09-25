@@ -74,11 +74,13 @@ def read_hats(
     if storage_options is None:
         storage_options = {}
     path = file_io.get_upath(catalog_path, **storage_options)
+    if path is None:
+        raise ValueError("catalog path is required.")
     if single_catalog is not None:
         if single_catalog:
             return _load_catalog(path, read_moc=read_moc)
         return _load_collection(path, read_moc=read_moc, storage_options=storage_options)
-    properties = _try_properties_file(catalog_path)
+    properties = _try_properties_file(path)
     if properties is not None and isinstance(properties, ExtensionProperties):
         return _load_extension(
             path, properties=properties, read_moc=read_moc, storage_options=storage_options
@@ -103,6 +105,8 @@ def _try_properties_file(path) -> CollectionProperties | TableProperties | Exten
     If we parse it as a properties file, but it's not a valid HATS entity, fail.
 
     Otherwise, return the loaded HATS properties container."""
+    if path.suffix != ".properties":
+        return None
 
     try:
         p = Properties()
