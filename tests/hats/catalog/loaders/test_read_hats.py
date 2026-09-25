@@ -201,6 +201,7 @@ def test_read_collection_from_file_with_abs(small_sky_collection_dir, tmp_path):
 
     assert is_valid_collection(tmp_path, strict=True)
 
+
 def test_read_hats_none():
     with pytest.raises(ValueError, match="catalog path is required"):
         read_hats(None)
