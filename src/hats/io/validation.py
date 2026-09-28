@@ -27,12 +27,7 @@ from hats.pixel_math.healpix_pixel_function import sort_pixels
 # pylint: disable=logging-fstring-interpolation
 
 
-def is_valid_catalog(
-    pointer: str | Path | UPath,
-    strict: bool = False,
-    fail_fast: bool = False,
-    verbose: bool = True,
-) -> bool:
+def is_valid_catalog(pointer: str | Path | UPath, strict: bool = False) -> bool:
     """Checks if a catalog is valid for a given base catalog pointer
 
     NB: This method uses logging to issue INFO, WARNING, and ERROR
@@ -48,19 +43,12 @@ def is_valid_catalog(
         file exists, and contains valid, consistent information, AS WELL AS
         all expected data partitions for the catalog's partitions.
         (Default value = False)
-    fail_fast : bool
-        DEPRECATED - will be removed in a future version.
-    verbose : bool
-        DEPRECATED - will be removed in a future version.
 
     Returns
     -------
     bool
         True if both the properties and partition_info files are valid, False otherwise
     """
-    del fail_fast
-    del verbose
-
     pointer = get_upath(pointer)
 
     if is_collection_info_valid(pointer):
@@ -76,12 +64,7 @@ def is_valid_catalog(
     return is_valid
 
 
-def is_valid_collection(
-    pointer: str | Path | UPath,
-    strict: bool = False,
-    fail_fast: bool = False,
-    verbose: bool = True,
-) -> bool:
+def is_valid_collection(pointer: str | Path | UPath, strict: bool = False) -> bool:
     """Checks if a COLLECTION is valid for a given base catalog pointer
 
     NB: This method uses logging to issue INFO, WARNING, and ERROR
@@ -97,10 +80,6 @@ def is_valid_collection(
         file exists, and contains valid, consistent information, AS WELL
         AS strict checking on all sub-catalogs (primary, margin, and index).
         (Default value = False)
-    fail_fast : bool
-        DEPRECATED - will be removed in a future version.
-    verbose : bool
-        DEPRECATED - will be removed in a future version.
 
     Returns
     -------
@@ -108,9 +87,6 @@ def is_valid_collection(
         True if the collection properties are valid, and all sub-catalogs pass
         validation.
     """
-    del fail_fast
-    del verbose
-
     pointer = get_upath(pointer)
     if not is_collection_info_valid(pointer):
         return False
