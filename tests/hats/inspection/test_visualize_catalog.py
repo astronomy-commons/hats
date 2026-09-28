@@ -266,6 +266,31 @@ def test_cull_from_pixel_map():
         np.testing.assert_array_equal(m, pix_map[map_indices])
 
 
+@pytest.mark.parametrize("ipix_dtype", [np.int32, np.int64, np.uint32, np.uint64])
+@pytest.mark.parametrize("val_dtype", [np.int32, np.int64, np.float32, np.float64])
+def test_cull_from_pixel_map_dtype_combinations(ipix_dtype, val_dtype):
+    plt = pytest.importorskip("matplotlib.pyplot")
+
+    order = 5
+    ipix = np.arange(12 * 4**order, dtype=ipix_dtype)
+    pix_map = np.arange(12 * 4**order, dtype=val_dtype)
+    map_dict = {order: (ipix, pix_map)}
+    fig = plt.figure(figsize=(10, 5))
+    wcs = WCS(
+        fig,
+        fov=DEFAULT_FOV,
+        center=DEFAULT_CENTER,
+        coordsys=DEFAULT_COORDSYS,
+        rotation=DEFAULT_ROTATION,
+        projection=DEFAULT_PROJECTION,
+    ).w
+    culled_dict = _cull_from_pixel_map(map_dict, wcs)
+    assert isinstance(culled_dict, dict)
+    for _ord, (pixels, vals) in culled_dict.items():
+        assert pixels.dtype == ipix_dtype
+        assert vals.dtype == val_dtype
+
+
 def test_fov_moc():
     plt = pytest.importorskip("matplotlib.pyplot")
 
