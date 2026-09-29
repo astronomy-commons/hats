@@ -207,6 +207,9 @@ def get_parquet_write_table_kwargs(
 ) -> dict[str, object]:
     """Get the kwargs to pass to pyarrow.parquet.write_table
 
+    See https://github.com/astronomy-commons/hats/issues/742
+    for the details about how these defaults were chosen.
+
     Parameters
     ----------
     arrow_schema : pa.Schema
