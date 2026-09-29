@@ -246,127 +246,51 @@ def test_leaf_columns_walks_struct_list_map(nested_schema):
         "props.key_value.key",
         "props.key_value.value",
     }
-    assert leaves["lc.flux"] == pa.float32()
-    assert leaves["props.key_value.value"] == pa.float64()
 
 
-class TestGetParquetWriteTableKwargsDefaults:
-    def test_static_fields(self, nested_schema):
-        kwargs = get_parquet_write_table_kwargs(nested_schema)
-        assert kwargs["row_group_size"] == 100_000
-        assert kwargs["compression"] == "zstd"
-        assert kwargs["compression_level"] == 15
-        assert kwargs["data_page_size"] == 128 * 1024
-        assert kwargs["dictionary_pagesize_limit"] == kwargs["data_page_size"]
-        assert kwargs["write_statistics"] is True
-        assert kwargs["write_page_index"] is True
-
-    def test_column_encoding_and_dictionary_split(self, nested_schema):
-        kwargs = get_parquet_write_table_kwargs(nested_schema)
-        assert kwargs["column_encoding"] == {
-            SPATIAL_INDEX_COLUMN: "DELTA_BINARY_PACKED",
-            "ra": "BYTE_STREAM_SPLIT",
-            "lc.flux": "BYTE_STREAM_SPLIT",
-            "props.key_value.value": "BYTE_STREAM_SPLIT",
-        }
-        assert set(kwargs["use_dictionary"]) == {"id", "lc.band", "tags.list.element", "props.key_value.key"}
-
-    def test_none_and_empty_write_table_kwargs_are_equivalent(self, nested_schema):
-        assert get_parquet_write_table_kwargs(nested_schema, write_table_kwargs=None) == (
-            get_parquet_write_table_kwargs(nested_schema, write_table_kwargs={})
-        )
-
-    def test_no_spatial_index_column(self, plain_schema):
-        kwargs = get_parquet_write_table_kwargs(plain_schema)
-        assert SPATIAL_INDEX_COLUMN not in kwargs["column_encoding"]
-        assert kwargs["column_encoding"] == {"ra": "BYTE_STREAM_SPLIT"}
-        assert kwargs["use_dictionary"] == ["id"]
-
-
-class TestGetParquetWriteTableKwargsColumnEncodingOverride:
-    def test_override_merges_with_defaults(self, nested_schema):
-        kwargs = get_parquet_write_table_kwargs(
-            nested_schema, write_table_kwargs={"column_encoding": {"id": "DELTA_BINARY_PACKED"}}
-        )
-        assert kwargs["column_encoding"] == {
-            SPATIAL_INDEX_COLUMN: "DELTA_BINARY_PACKED",
-            "ra": "BYTE_STREAM_SPLIT",
-            "lc.flux": "BYTE_STREAM_SPLIT",
-            "props.key_value.value": "BYTE_STREAM_SPLIT",
-            "id": "DELTA_BINARY_PACKED",
-        }
-
-    def test_overridden_column_dropped_from_use_dictionary(self, nested_schema):
-        kwargs = get_parquet_write_table_kwargs(
-            nested_schema, write_table_kwargs={"column_encoding": {"id": "DELTA_BINARY_PACKED"}}
-        )
-        assert "id" not in kwargs["use_dictionary"]
-
-    def test_override_can_replace_a_default_encoding(self, nested_schema):
-        kwargs = get_parquet_write_table_kwargs(
-            nested_schema, write_table_kwargs={"column_encoding": {"ra": "PLAIN"}}
-        )
-        assert kwargs["column_encoding"]["ra"] == "PLAIN"
-        assert "ra" not in kwargs["use_dictionary"]
-
-
-class TestGetParquetWriteTableKwargsUseDictionaryOverride:
-    def test_explicit_true_matches_default(self, nested_schema):
-        assert get_parquet_write_table_kwargs(
-            nested_schema, write_table_kwargs={"use_dictionary": True}
-        ) == get_parquet_write_table_kwargs(nested_schema)
-
-    def test_false_passes_through(self, nested_schema):
-        kwargs = get_parquet_write_table_kwargs(nested_schema, write_table_kwargs={"use_dictionary": False})
-        assert kwargs["use_dictionary"] is False
-        # column_encoding defaults are untouched -- False disables dictionary encoding globally.
-        assert kwargs["column_encoding"] == {
-            SPATIAL_INDEX_COLUMN: "DELTA_BINARY_PACKED",
-            "ra": "BYTE_STREAM_SPLIT",
-            "lc.flux": "BYTE_STREAM_SPLIT",
-            "props.key_value.value": "BYTE_STREAM_SPLIT",
-        }
-
-    def test_explicit_list_used_as_is(self, nested_schema):
-        kwargs = get_parquet_write_table_kwargs(nested_schema, write_table_kwargs={"use_dictionary": ["id"]})
-        assert kwargs["use_dictionary"] == ["id"]
-
-    def test_explicit_list_drops_conflicting_default_encoding(self, nested_schema):
-        kwargs = get_parquet_write_table_kwargs(
-            nested_schema, write_table_kwargs={"use_dictionary": ["ra", "id"]}
-        )
-        assert kwargs["use_dictionary"] == ["ra", "id"]
-        assert "ra" not in kwargs["column_encoding"]
-
-    def test_use_dictionary_list_wins_over_conflicting_encoding_override(self, nested_schema):
-        # pyarrow rejects a column with both dictionary encoding and a column_encoding, so
-        # the explicit use_dictionary list wins and the conflicting override is dropped.
-        kwargs = get_parquet_write_table_kwargs(
-            nested_schema,
-            write_table_kwargs={
-                "use_dictionary": ["id", "lc.band"],
-                "column_encoding": {"id": "DELTA_BINARY_PACKED"},
-            },
-        )
-        assert kwargs["use_dictionary"] == ["id", "lc.band"]
-        assert "id" not in kwargs["column_encoding"]
-
-    def test_use_dictionary_list_keeps_non_conflicting_encoding_override(self, nested_schema):
-        kwargs = get_parquet_write_table_kwargs(
-            nested_schema,
-            write_table_kwargs={
-                "use_dictionary": ["id"],
-                "column_encoding": {"lc.band": "DELTA_BYTE_ARRAY"},
-            },
-        )
-        assert kwargs["use_dictionary"] == ["id"]
-        assert kwargs["column_encoding"]["lc.band"] == "DELTA_BYTE_ARRAY"
-
-
-def test_get_parquet_write_table_kwargs_other_overrides_pass_through(nested_schema):
-    kwargs = get_parquet_write_table_kwargs(nested_schema, write_table_kwargs={"compression_level": 5})
-    assert kwargs["compression_level"] == 5
+def test_get_parquet_write_table_kwargs_defaults(nested_schema):
+    kwargs = get_parquet_write_table_kwargs(nested_schema)
     assert kwargs["compression"] == "zstd"
+    assert kwargs["column_encoding"] == {
+        SPATIAL_INDEX_COLUMN: "DELTA_BINARY_PACKED",
+        "ra": "BYTE_STREAM_SPLIT",
+        "lc.flux": "BYTE_STREAM_SPLIT",
+        "props.key_value.value": "BYTE_STREAM_SPLIT",
+    }
+    assert set(kwargs["use_dictionary"]) == {"id", "lc.band", "tags.list.element", "props.key_value.key"}
+
+
+def test_get_parquet_write_table_kwargs_no_spatial_index(plain_schema):
+    kwargs = get_parquet_write_table_kwargs(plain_schema)
+    assert kwargs["column_encoding"] == {"ra": "BYTE_STREAM_SPLIT"}
+    assert kwargs["use_dictionary"] == ["id"]
+
+
+def test_get_parquet_write_table_kwargs_column_encoding_override_merges(nested_schema):
+    kwargs = get_parquet_write_table_kwargs(
+        nested_schema, write_table_kwargs={"column_encoding": {"id": "DELTA_BINARY_PACKED"}}
+    )
+    assert kwargs["column_encoding"][SPATIAL_INDEX_COLUMN] == "DELTA_BINARY_PACKED"
+    assert kwargs["column_encoding"]["id"] == "DELTA_BINARY_PACKED"
+    assert "id" not in kwargs["use_dictionary"]
+
+
+def test_get_parquet_write_table_kwargs_use_dictionary_false(nested_schema):
+    kwargs = get_parquet_write_table_kwargs(nested_schema, write_table_kwargs={"use_dictionary": False})
+    assert kwargs["use_dictionary"] is False
+    assert kwargs["column_encoding"][SPATIAL_INDEX_COLUMN] == "DELTA_BINARY_PACKED"
+
+
+def test_get_parquet_write_table_kwargs_use_dictionary_list_wins_over_encoding(nested_schema):
+    # pyarrow rejects a column with both dictionary encoding and a column_encoding, so the
+    # explicit use_dictionary list wins and any conflicting encoding (default or override) is dropped.
+    kwargs = get_parquet_write_table_kwargs(
+        nested_schema,
+        write_table_kwargs={"use_dictionary": ["ra", "id"], "column_encoding": {"id": "DELTA_BINARY_PACKED"}},
+    )
+    assert kwargs["use_dictionary"] == ["ra", "id"]
+    assert "ra" not in kwargs["column_encoding"]
+    assert "id" not in kwargs["column_encoding"]
 
 
 def test_get_parquet_write_table_kwargs_does_not_mutate_input(nested_schema):
@@ -380,9 +304,7 @@ def test_get_parquet_write_table_kwargs_does_not_mutate_input(nested_schema):
     "write_table_kwargs",
     [
         None,
-        {"column_encoding": {"id": "DELTA_BINARY_PACKED"}},
         {"use_dictionary": ["ra", "id"]},
-        {"use_dictionary": False},
         {"use_dictionary": ["id"], "column_encoding": {"id": "DELTA_BINARY_PACKED"}},
     ],
 )

@@ -236,9 +236,7 @@ def get_parquet_write_table_kwargs(
     if use_dictionary_override is True:
         dictionary_cols = [path for path, _ in leaves if path not in column_encoding]
     else:
-        # pyarrow rejects a column that's both dictionary-encoded and has a column_encoding,
-        # so an explicit use_dictionary list always wins: drop those columns' encoding, even
-        # if it came from an explicit column_encoding override.
+        # Skip encoding for any columns that are explicitly set to use dictionary encoding
         dictionary_cols = use_dictionary_override
         if isinstance(dictionary_cols, list):
             for path in dictionary_cols:
