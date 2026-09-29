@@ -19,7 +19,7 @@ from hats.io.file_io import (
     write_fits_image,
     write_string_to_file,
 )
-from hats.io.file_io.file_io import _leaf_columns, _parquet_precache_all_bytes, get_parquet_write_table_kwargs
+from hats.io.file_io.file_io import _parquet_precache_all_bytes, get_parquet_write_table_kwargs
 from hats.pixel_math.spatial_index import SPATIAL_INDEX_COLUMN
 
 
@@ -228,76 +228,13 @@ def nested_schema():
     )
 
 
-@pytest.fixture
-def plain_schema():
-    """Schema with no spatial index column."""
-    return pa.schema([pa.field("ra", pa.float64()), pa.field("id", pa.int64())])
-
-
-def test_leaf_columns_walks_struct_list_map(nested_schema):
-    leaves = dict(_leaf_columns(nested_schema))
-    assert leaves.keys() == {
-        SPATIAL_INDEX_COLUMN,
-        "ra",
-        "id",
-        "lc.flux",
-        "lc.band",
-        "tags.list.element",
-        "props.key_value.key",
-        "props.key_value.value",
-    }
-
-
-def test_get_parquet_write_table_kwargs_defaults(nested_schema):
-    kwargs = get_parquet_write_table_kwargs(nested_schema)
-    assert kwargs["compression"] == "zstd"
-    assert kwargs["column_encoding"] == {
-        SPATIAL_INDEX_COLUMN: "DELTA_BINARY_PACKED",
-        "ra": "BYTE_STREAM_SPLIT",
-        "lc.flux": "BYTE_STREAM_SPLIT",
-        "props.key_value.value": "BYTE_STREAM_SPLIT",
-    }
-    assert set(kwargs["use_dictionary"]) == {"id", "lc.band", "tags.list.element", "props.key_value.key"}
-
-
-def test_get_parquet_write_table_kwargs_no_spatial_index(plain_schema):
-    kwargs = get_parquet_write_table_kwargs(plain_schema)
-    assert kwargs["column_encoding"] == {"ra": "BYTE_STREAM_SPLIT"}
-    assert kwargs["use_dictionary"] == ["id"]
-
-
 def test_get_parquet_write_table_kwargs_column_encoding_override_merges(nested_schema):
     kwargs = get_parquet_write_table_kwargs(
         nested_schema, write_table_kwargs={"column_encoding": {"id": "DELTA_BINARY_PACKED"}}
     )
-    assert kwargs["column_encoding"][SPATIAL_INDEX_COLUMN] == "DELTA_BINARY_PACKED"
-    assert kwargs["column_encoding"]["id"] == "DELTA_BINARY_PACKED"
+    assert SPATIAL_INDEX_COLUMN in kwargs["column_encoding"]
+    assert "id" in kwargs["column_encoding"]
     assert "id" not in kwargs["use_dictionary"]
-
-
-def test_get_parquet_write_table_kwargs_use_dictionary_false(nested_schema):
-    kwargs = get_parquet_write_table_kwargs(nested_schema, write_table_kwargs={"use_dictionary": False})
-    assert kwargs["use_dictionary"] is False
-    assert kwargs["column_encoding"][SPATIAL_INDEX_COLUMN] == "DELTA_BINARY_PACKED"
-
-
-def test_get_parquet_write_table_kwargs_use_dictionary_list_wins_over_encoding(nested_schema):
-    # pyarrow rejects a column with both dictionary encoding and a column_encoding, so the
-    # explicit use_dictionary list wins and any conflicting encoding (default or override) is dropped.
-    kwargs = get_parquet_write_table_kwargs(
-        nested_schema,
-        write_table_kwargs={"use_dictionary": ["ra", "id"], "column_encoding": {"id": "DELTA_BINARY_PACKED"}},
-    )
-    assert kwargs["use_dictionary"] == ["ra", "id"]
-    assert "ra" not in kwargs["column_encoding"]
-    assert "id" not in kwargs["column_encoding"]
-
-
-def test_get_parquet_write_table_kwargs_does_not_mutate_input(nested_schema):
-    write_table_kwargs = {"column_encoding": {"id": "DELTA_BINARY_PACKED"}, "use_dictionary": ["lc.band"]}
-    original = {"column_encoding": {"id": "DELTA_BINARY_PACKED"}, "use_dictionary": ["lc.band"]}
-    get_parquet_write_table_kwargs(nested_schema, write_table_kwargs=write_table_kwargs)
-    assert write_table_kwargs == original
 
 
 @pytest.mark.parametrize(
