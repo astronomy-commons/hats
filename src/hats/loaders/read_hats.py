@@ -1,17 +1,21 @@
 from __future__ import annotations
 
+import logging
 import warnings
 from pathlib import Path
 
 import numpy as np
 import pyarrow as pa
+from jproperties import Properties
 from mocpy import MOC
 from upath import UPath
 
 import hats.pixel_math.healpix_shim as hp
 from hats.catalog import AssociationCatalog, Catalog, CatalogType, Dataset, MapCatalog, MarginCatalog
 from hats.catalog.catalog_collection import CatalogCollection
+from hats.catalog.catalog_extension import CatalogExtension
 from hats.catalog.dataset.collection_properties import CollectionProperties
+from hats.catalog.dataset.extension_properties import ExtensionProperties
 from hats.catalog.dataset.table_properties import TableProperties
 from hats.catalog.index.index_catalog import IndexCatalog
 from hats.catalog.partition_info import PartitionInfo
@@ -29,15 +33,21 @@ DATASET_TYPE_TO_CLASS = {
 }
 
 
+# pylint: disable=too-many-return-statements
 def read_hats(
-    catalog_path: str | Path | UPath, *, single_catalog: bool | None = None, read_moc: bool = True
-) -> CatalogCollection | Dataset:
-    """Reads a HATS Catalog from a HATS directory
+    catalog_path: str | Path | UPath,
+    *,
+    single_catalog: bool | None = None,
+    read_moc: bool = True,
+    storage_options: dict | None = None,
+) -> CatalogCollection | CatalogExtension | Dataset:
+    """Reads a HATS Catalog from a HATS directory, or a catalog extension from its
+    ``<extension>.properties`` file.
 
     Parameters
     ----------
     catalog_path : str | Path | UPath
-        path to the root directory of the catalog
+        path to the root directory of the catalog, or to an ``<extension>.properties`` file
     single_catalog: bool
         If you happen to already know that the `catalog_path` points to a
         single catalog, instead of a catalog collection, this flag can
@@ -46,11 +56,13 @@ def read_hats(
         If you happen to know that your catalog does not have a MOC (or if
         you know that your use case will not utilize a MOC), then you can
         skip the file read and memory load of the MOC.
+    storage_options: dict or None, default None
+        additional options for connecting to the catalog, or a collection's affiliated tables.
 
     Returns
     -------
-    CatalogCollection | Dataset
-        HATS catalog found at directory
+    CatalogCollection | CatalogExtension | Dataset
+        HATS catalog found at directory, or the extension described by the file
 
     Examples
     --------
@@ -59,28 +71,87 @@ def read_hats(
         from upath import UPath
         catalog = hats.read_hats(UPath(..., anon=True))
     """
-    path = file_io.get_upath(catalog_path)
+    if storage_options is None:
+        storage_options = {}
+    path = file_io.get_upath(catalog_path, **storage_options)
+    if path is None:
+        raise ValueError("catalog path is required.")
     if single_catalog is not None:
         if single_catalog:
             return _load_catalog(path, read_moc=read_moc)
-        return _load_collection(path, read_moc=read_moc)
+        return _load_collection(path, read_moc=read_moc, storage_options=storage_options)
+    properties = _try_properties_file(path)
+    if properties is not None and isinstance(properties, ExtensionProperties):
+        return _load_extension(
+            path, properties=properties, read_moc=read_moc, storage_options=storage_options
+        )
+    if properties is not None and isinstance(properties, TableProperties):
+        return _load_catalog(path.parent, properties=properties, read_moc=read_moc)
+    if properties is not None and isinstance(properties, CollectionProperties):
+        return _load_collection(
+            path.parent, properties=properties, read_moc=read_moc, storage_options=storage_options
+        )
     if (path / "hats.properties").exists() or (path / "properties").exists():
         return _load_catalog(path, read_moc=read_moc)
     if (path / "collection.properties").exists():
-        return _load_collection(path, read_moc=read_moc)
+        return _load_collection(path, read_moc=read_moc, storage_options=storage_options)
     raise FileNotFoundError(f"Failed to read HATS at location {catalog_path}")
 
 
-def _load_collection(collection_path: UPath, read_moc: bool = True) -> CatalogCollection:
-    collection_properties = CollectionProperties.read_from_dir(collection_path)
+def _try_properties_file(path) -> CollectionProperties | TableProperties | ExtensionProperties | None:
+    """Attempt to read the path as though it is a properties file.
+
+    If we fail to read text, that's ok. It likely means that this is a directory.
+    If we parse it as a properties file, but it's not a valid HATS entity, fail.
+
+    Otherwise, return the loaded HATS properties container."""
+    if path.suffix != ".properties":
+        return None
+
+    try:
+        p = Properties()
+        with path.open("rb") as f:
+            p.load(f, "utf-8")
+    except Exception:  # pylint: disable=broad-exception-caught
+        return None
+    try:
+        return ExtensionProperties(**p.properties)
+    except Exception as err:  # pylint: disable=broad-exception-caught
+        logging.warning("Error with extension properties. %s", err)
+    try:
+        return CollectionProperties(**p.properties)
+    except Exception as err:  # pylint: disable=broad-exception-caught
+        logging.warning("Error with collection properties. %s", err)
+    try:
+        return TableProperties(**p.properties)
+    except Exception as err:  # pylint: disable=broad-exception-caught
+        logging.warning("Error with catalog properties. %s", err)
+    raise ValueError(f"Tried to load path {path} as a properties file, but contains invalid contents.")
+
+
+def _load_collection(
+    collection_path: UPath,
+    *,
+    properties: CollectionProperties | None = None,
+    read_moc: bool = True,
+    storage_options: dict | None = None,
+) -> CatalogCollection:
+    if properties is None:
+        properties = CollectionProperties.read_from_dir(collection_path)
     main_catalog = _load_catalog(
-        collection_path / collection_properties.hats_primary_table_url, read_moc=read_moc
+        CatalogCollection.resolve_inner_path(
+            collection_path, properties.hats_primary_table_url, storage_options=storage_options
+        ),
+        read_moc=read_moc,
     )
-    return CatalogCollection(collection_path, collection_properties, main_catalog)
+    return CatalogCollection(collection_path, properties, main_catalog, storage_options=storage_options)
 
 
-def _load_catalog(catalog_path: UPath, read_moc: bool = True) -> Dataset:
-    properties = TableProperties.read_from_dir(catalog_path)
+def _load_catalog(
+    catalog_path: UPath, *, properties: CollectionProperties | None = None, read_moc: bool = True
+) -> Dataset:
+    if properties is None:
+        properties = TableProperties.read_from_dir(catalog_path)
     dataset_type = properties.catalog_type
     if dataset_type not in DATASET_TYPE_TO_CLASS:
         raise NotImplementedError(f"Cannot load catalog of type {dataset_type}")
@@ -97,6 +168,25 @@ def _load_catalog(catalog_path: UPath, read_moc: bool = True) -> Dataset:
         if read_moc:
             kwargs["moc"] = _read_moc_from_point_map(catalog_path)
     return loader(**kwargs)
+
+
+def _load_extension(
+    extension_path: UPath,
+    *,
+    properties: ExtensionProperties | None = None,
+    read_moc: bool = True,
+    storage_options: dict | None = None,
+) -> CatalogExtension:
+    if properties is None:
+        properties = ExtensionProperties.read_from_file(extension_path)
+    catalog = read_hats(
+        CatalogCollection.resolve_inner_path(
+            extension_path.parent, properties.join_catalog, storage_options=storage_options
+        ),
+        read_moc=read_moc,
+        storage_options=storage_options,
+    )
+    return CatalogExtension(extension_path, properties, catalog, storage_options=storage_options)
 
 
 def _is_healpix_dataset(dataset_type):

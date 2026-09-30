@@ -101,7 +101,7 @@ class HealpixPixel:
 
             (pixel_number/10000)*10000
         """
-        return int(self.pixel / 10_000) * 10_000
+        return (self.pixel // 10_000) * 10_000
 
 
 INVALID_PIXEL = HealpixPixel(-1, -1)

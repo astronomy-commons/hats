@@ -12,7 +12,7 @@ from upath import UPath
 from hats.catalog.catalog_type import CatalogType
 from hats.io import file_io, size_estimates
 
-## catalog_name, catalog_type, and total_rows are required for ALL types
+## catalog_name and catalog_type are required for ALL types
 CATALOG_TYPE_REQUIRED_FIELDS = {
     CatalogType.OBJECT: ["ra_column", "dec_column"],
     CatalogType.SOURCE: ["ra_column", "dec_column"],
@@ -34,7 +34,7 @@ class TableProperties(BaseModel):
 
     catalog_name: str = Field(alias="obs_collection")
     catalog_type: CatalogType = Field(alias="dataproduct_type")
-    total_rows: Optional[int] = Field(alias="hats_nrows")
+    total_rows: Optional[int] = Field(default=None, alias="hats_nrows")
 
     ra_column: Optional[str] = Field(default=None, alias="hats_col_ra")
     dec_column: Optional[str] = Field(default=None, alias="hats_col_dec")
@@ -202,18 +202,8 @@ class TableProperties(BaseModel):
         missing_required = required_keys - explicit_keys
         if len(missing_required) > 0:
             raise ValueError(
-                f"Missing required property for table type {self.catalog_type}: {missing_required}"
-            )
-
-        explicit_none_allowed_keys = set(
-            self.model_dump(by_alias=False, exclude_none=False).keys() - self.__pydantic_extra__.keys()
-        )
-
-        required_none_allowed_keys = set(["total_rows"])
-        missing_required = required_none_allowed_keys - explicit_none_allowed_keys
-        if len(missing_required) > 0:
-            raise ValueError(
-                f"Missing required property for table type {self.catalog_type}: {missing_required}"
+                "Missing required property for table type "
+                f"'{self.catalog_type}': {', '.join(missing_required)}"
             )
 
         return self
@@ -316,6 +306,7 @@ class TableProperties(BaseModel):
             p.load(f, "utf-8")
         return cls(**p.properties)
 
+    # pylint: disable=duplicate-code
     def to_properties_file(self, catalog_dir: str | Path | UPath):
         """Write fields to a java-style properties file.
 
@@ -329,7 +320,6 @@ class TableProperties(BaseModel):
         properties = Properties(process_escapes_in_values=False)
         properties.properties = parameters
         properties._key_order = parameters.keys()
-
         catalog_path = file_io.get_upath(catalog_dir)
         file_path = catalog_path / "hats.properties"
         with file_path.open("wb") as _file:

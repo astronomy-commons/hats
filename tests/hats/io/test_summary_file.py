@@ -358,6 +358,7 @@ def test_write_catalog_summary_file_custom_uri(tmp_path, small_sky_collection_di
 
     content = output_path.read_text()
     assert custom_uri in content
+    assert "<PATH>" not in content
 
 
 def test_write_catalog_summary_file_custom_jinja2_template(tmp_path, small_sky_collection_dir):
@@ -379,6 +380,7 @@ def test_write_catalog_summary_file_custom_jinja2_template(tmp_path, small_sky_c
 
     content = output_path.read_text()
     assert content == "Name: Test Catalog Name\nDescription: Test catalog description."
+    assert "<PATH>" not in content
 
 
 def test_gen_metadata_table(small_sky_collection_dir):

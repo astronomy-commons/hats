@@ -21,7 +21,7 @@ jobs:
     steps:
     - uses: actions/checkout@v7
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@v7
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install uv
@@ -32,4 +32,4 @@ jobs:
         uv pip install --system -e .[full]
     - name: Run unit tests with pytest
       run: |
-        python -m pytest --timeout=0 tests
+        python -m pytest -o log_cli=true --timeout=0 tests

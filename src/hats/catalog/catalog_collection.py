@@ -6,6 +6,7 @@ from hats.catalog.catalog import Catalog
 from hats.catalog.catalog_type import CatalogType
 from hats.catalog.dataset.collection_properties import CollectionProperties
 from hats.catalog.dataset.table_properties import TableProperties
+from hats.io import file_io
 from hats.pixel_math import HealpixPixel
 
 
@@ -20,11 +21,15 @@ class CatalogCollection:
         ├── main_catalog/
         ├── margin_catalog/
         ├── index_catalog/
+        ├── extension_catalog.properties
         ├── collection.properties
 
     Margin and index catalogs are optional but there could also be multiple of them. The
     catalogs used by default are specified in the `collection.properties` file in the
-    `default_margin` and `default_index` keywords.
+    `default_margin` and `default_index` keywords. Extensions are optional too, and each is
+    described by an `<extension>.properties` file, listed in the `all_extensions` keyword.
+    That file usually sits at the root of the collection, but it may live elsewhere, e.g.
+    remotely, and be listed by its absolute path.
     """
 
     def __init__(
@@ -32,6 +37,7 @@ class CatalogCollection:
         collection_path: UPath,
         collection_properties: CollectionProperties,
         main_catalog: Catalog,
+        storage_options: dict | None = None,
     ):
         self.collection_path = collection_path
         self.collection_properties = collection_properties
@@ -39,11 +45,14 @@ class CatalogCollection:
         if not isinstance(main_catalog, Catalog):
             raise TypeError(f"HATS at {main_catalog.catalog_path} is not of type `Catalog`")
         self.main_catalog = main_catalog
+        self.storage_options = storage_options
 
     @property
     def main_catalog_dir(self) -> UPath:
         """Path to the main catalog directory"""
-        return self.collection_path / self.collection_properties.hats_primary_table_url
+        return self.resolve_inner_path(
+            self.collection_path, self.collection_properties.hats_primary_table_url, self.storage_options
+        )
 
     @property
     def all_margins(self) -> list[str] | None:
@@ -60,7 +69,43 @@ class CatalogCollection:
         """Path to the default margin catalog directory"""
         if self.default_margin is None:
             return None
-        return self.collection_path / self.default_margin
+        return self.resolve_inner_path(self.collection_path, self.default_margin, self.storage_options)
+
+    @property
+    def all_extensions(self) -> list[str] | None:
+        """The list of extensions in the collection, as the paths to their `<extension>.properties`
+        files. The `.properties` suffix may be left out, so a file at the collection root can be
+        listed by the name of its extension."""
+        return self.collection_properties.all_extensions
+
+    def get_extension_path(self, extension_name: str) -> UPath:
+        """Path to the `<extension>.properties` file of an extension in the collection
+
+        The file may be at the collection root, or anywhere else, when it is listed in
+        `all_extensions` by its absolute path.
+
+        Parameters
+        ----------
+        extension_name: str
+            name of the extension, which names its `<extension_name>.properties` file
+
+        Returns
+        -------
+        UPath
+            path to the extension's `<extension_name>.properties` file
+
+        Raises
+        ------
+        ValueError
+            if the extension is not specified in `all_extensions`
+        """
+        for extension in self.all_extensions or []:
+            if not extension.endswith(".properties"):
+                extension = f"{extension}.properties"
+            extension_path = self.resolve_inner_path(self.collection_path, extension, self.storage_options)
+            if extension_path.stem == extension_name:
+                return extension_path
+        raise ValueError(f"Extension `{extension_name}` is not specified in all_extensions")
 
     @property
     def all_indexes(self) -> dict[str, str] | None:
@@ -87,11 +132,46 @@ class CatalogCollection:
         if self.all_indexes is None or field_name not in self.all_indexes:
             raise ValueError(f"Index for field `{field_name}` is not specified in all_indexes")
         index_dir = self.all_indexes[field_name]
-        return self.collection_path / index_dir
+        return self.resolve_inner_path(self.collection_path, index_dir, self.storage_options)
 
     def get_healpix_pixels(self) -> list[HealpixPixel]:
         """The list of HEALPix pixels of the main catalog"""
         return self.main_catalog.get_healpix_pixels()
+
+    def plot_pixels(self, **kwargs):
+        """Create a visual map of the pixel density of the collection's main catalog.
+
+        Parameters
+        ----------
+        **kwargs
+            Additional args to pass to `hats.inspection.visualize_catalog.plot_healpix_map`
+        """
+        return self.main_catalog.plot_pixels(**kwargs)
+
+    def plot_density(self, **kwargs):
+        """Create a visual map of the density of input points of the collection's main catalog.
+
+        Parameters
+        ----------
+        **kwargs
+            Additional args to pass to `hats.inspection.visualize_catalog.plot_density`
+
+        Raises
+        ------
+        ValueError
+            if the main catalog is not on disk.
+        """
+        return self.main_catalog.plot_density(**kwargs)
+
+    def plot_moc(self, **kwargs):
+        """Create a visual map of the coverage of the collection's main catalog.
+
+        Parameters
+        ----------
+        **kwargs
+            Additional args to pass to `hats.inspection.visualize_catalog.plot_moc`
+        """
+        return self.main_catalog.plot_moc(**kwargs)
 
     def get_margin_thresholds(self) -> dict[str, float]:
         """Get the margin thresholds for all margin catalogs in the collection.
@@ -119,3 +199,31 @@ class CatalogCollection:
             thresholds[margin_name] = margin_properties.margin_threshold
 
         return thresholds
+
+    @classmethod
+    def resolve_inner_path(cls, collection_path, path, storage_options: dict | None = None) -> UPath:
+        """Convenience method to find the path of a related catalog, either relative or absolute.
+
+        Parameters
+        ----------
+        collection_path: UPath
+            fully-specified path to the collection root
+        path: UPath | Path | str
+            location of the related catalog
+        storage_options: dict
+            dictionary of storage options for the connection to the related catalog
+
+        Returns
+        -------
+        UPath
+            fully-specified path to the related catalog.
+        """
+
+        if storage_options is None:
+            storage_options = {}
+
+        path = file_io.get_upath(path, **storage_options)
+        if "local" not in path.fs.protocol or path.is_absolute():
+            return path  # remote URL or absolute local path - use as-is
+        collection_path = file_io.get_upath(collection_path)
+        return collection_path / path

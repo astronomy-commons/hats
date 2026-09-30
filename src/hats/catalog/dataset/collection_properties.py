@@ -11,37 +11,6 @@ from upath import UPath
 
 from hats.io import file_io
 
-# All additional properties in the HATS recommendation.
-EXTRA_ALLOWED_FIELDS = [
-    "addendum_did",
-    "bib_reference",
-    "bib_reference_url",
-    "creator_did",
-    "data_ucd",
-    "hats_builder",
-    "hats_coordinate_epoch",
-    "hats_copyright",
-    "hats_creation_date",
-    "hats_creator",
-    "hats_estsize",
-    "hats_progenitor_url",
-    "hats_release_date",
-    "hats_service_url",
-    "hats_status",
-    "hats_version",
-    "moc_sky_fraction",
-    "obs_ack",
-    "obs_copyright",
-    "obs_copyright_url",
-    "obs_description",
-    "obs_regime",
-    "obs_title",
-    "prov_progenitor",
-    "publisher_id",
-    "t_max",
-    "t_min",
-]
-
 
 class CollectionProperties(BaseModel):
     """Container class for catalog metadata"""
@@ -57,10 +26,15 @@ class CollectionProperties(BaseModel):
     all_indexes: Annotated[Optional[dict[str, str]], Field(default=None)]
     default_index: Optional[str] = Field(default=None)
 
+    all_extensions: Annotated[Optional[list[str]], Field(default=None)]
+    """Extensions of this collection, each holding a set of additional columns, and described
+    by an ``<extension>.properties`` file. Each is listed by the path to that file, relative to the
+    collection root or absolute. The ``.properties`` suffix may be left out."""
+
     ## Allow any extra keyword args to be stored on the properties object.
     model_config = ConfigDict(extra="allow", populate_by_name=True, use_enum_values=True)
 
-    @field_validator("all_margins", mode="before")
+    @field_validator("all_margins", "all_extensions", mode="before")
     @classmethod
     def space_delimited_list(cls, str_value: str) -> list[str]:
         """Convert a space-delimited list string into a python list of strings.
@@ -124,7 +98,7 @@ class CollectionProperties(BaseModel):
             all_index_dict[key] = value
         return all_index_dict
 
-    @field_serializer("all_margins")
+    @field_serializer("all_margins", "all_extensions")
     def serialize_list_as_space_delimited_list(self, str_list: Iterable[str]) -> str:
         """Convert a python list of strings into a space-delimited string.
 
@@ -160,15 +134,6 @@ class CollectionProperties(BaseModel):
             return ""
         str_list = list(reduce(lambda x, y: x + y, str_dict.items()))
         return " ".join(str_list)
-
-    @model_validator(mode="after")
-    def check_allowed_and_required(self) -> Self:
-        """Check that type-specific fields are appropriate, and required fields are set."""
-        # Check against all known properties - catches typos.
-        non_allowed = set(self.__pydantic_extra__.keys()) - set(EXTRA_ALLOWED_FIELDS)
-        if len(non_allowed) > 0:
-            raise ValueError(f"Unexpected extra property: {non_allowed}")
-        return self
 
     @model_validator(mode="after")
     def check_default_margin_exists(self) -> Self:

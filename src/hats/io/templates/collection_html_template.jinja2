@@ -53,7 +53,7 @@ catalog = lsdb.open_catalog(
 <h3>File structure</h3>
 <p>This catalog is represented by the following files and directories:</p>
 <ul>
-  <li><a href="{{uris["collection"]}}/collection.properties"><code>collection.properties</code></a> — textual metadata file describing the HATS collection of catalogs</li>
+  <li><a href="{{uris["collection"] or '.'}}/collection.properties"><code>collection.properties</code></a> — textual metadata file describing the HATS collection of catalogs</li>
   <li><a href="{{uris["primary"]["uri"]}}"><code>{{uris["primary"]["name"]}}</code></a> — main HATS catalog directory
     <ul>
       <li><a href="{{uris["primary"]["uri"]}}/dataset/"><code>dataset/</code></a> — Apache Parquet dataset directory for the main catalog

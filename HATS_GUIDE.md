@@ -515,7 +515,7 @@ cat.plot_pixels()
 cat.plot_moc()
 
 # Plot point-density map
-hats.inspection.plot_density(cat)
+cat.plot_density()
 ```
 
 ### Filter by pixel or region

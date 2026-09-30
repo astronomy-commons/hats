@@ -176,9 +176,20 @@ def test_read_hats_with_http():
     assert upath_http.fs.client_kwargs["headers"]["User-Agent"].startswith("hats")
     assert not _parquet_precache_all_bytes(upath_http.fs)
 
-    upath_https = get_upath_for_protocol("https://catalog")
+    # Make sure we're not overriding any user-supplied User-Agent.
+    upath_https = get_upath_for_protocol("https://catalog", client_kwargs={"headers": {"User-Agent": "007"}})
+    assert upath_https.fs.block_size == 32 * 1024
+    assert upath_https.fs.client_kwargs["headers"]["User-Agent"] == "007"
+    assert not _parquet_precache_all_bytes(upath_https.fs)
+
+    # Make sure we're not overriding any other user-supplied connection parameters.
+    upath_https = get_upath_for_protocol(
+        "https://catalog", client_kwargs={"headers": {"other_header": "header_value"}, "method": "POST"}
+    )
     assert upath_https.fs.block_size == 32 * 1024
     assert upath_https.fs.client_kwargs["headers"]["User-Agent"].startswith("hats")
+    assert upath_https.fs.client_kwargs["headers"]["other_header"] == "header_value"
+    assert upath_https.fs.client_kwargs["method"] == "POST"
     assert not _parquet_precache_all_bytes(upath_https.fs)
 
     upath_http_full = get_upath_for_protocol("http://catalog.lsdb.org/hats/catalogs/gaia_dr3")

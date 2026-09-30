@@ -1,3 +1,4 @@
+import logging
 from unittest.mock import MagicMock
 
 import astropy.units as u
@@ -263,6 +264,31 @@ def test_cull_from_pixel_map():
         np.testing.assert_array_equal(pixels, mocpy_culled[str(iter_ord)])
         map_indices = pixels >> (2 * (iter_ord - order))
         np.testing.assert_array_equal(m, pix_map[map_indices])
+
+
+@pytest.mark.parametrize("ipix_dtype", [np.int32, np.int64, np.uint32, np.uint64])
+@pytest.mark.parametrize("val_dtype", [np.int32, np.int64, np.float32, np.float64])
+def test_cull_from_pixel_map_dtype_combinations(ipix_dtype, val_dtype):
+    plt = pytest.importorskip("matplotlib.pyplot")
+
+    order = 5
+    ipix = np.arange(12 * 4**order, dtype=ipix_dtype)
+    pix_map = np.arange(12 * 4**order, dtype=val_dtype)
+    map_dict = {order: (ipix, pix_map)}
+    fig = plt.figure(figsize=(10, 5))
+    wcs = WCS(
+        fig,
+        fov=DEFAULT_FOV,
+        center=DEFAULT_CENTER,
+        coordsys=DEFAULT_COORDSYS,
+        rotation=DEFAULT_ROTATION,
+        projection=DEFAULT_PROJECTION,
+    ).w
+    culled_dict = _cull_from_pixel_map(map_dict, wcs)
+    assert isinstance(culled_dict, dict)
+    for _ord, (pixels, vals) in culled_dict.items():
+        assert pixels.dtype == ipix_dtype
+        assert vals.dtype == val_dtype
 
 
 def test_fov_moc():
@@ -999,6 +1025,32 @@ def test_catalog_plot_density(small_sky_dir):
     assert len(order3_paths) < len(order10_paths)
 
 
+@pytest.mark.timeout(20)
+def test_catalog_plot_density_method(small_sky_dir):
+    """Test plotting pixel-density through the catalog method."""
+    pytest.importorskip("matplotlib.pyplot")
+
+    small_sky_catalog = read_hats(small_sky_dir)
+    _, ax = small_sky_catalog.plot_density()
+
+    assert "Angular density of catalog small_sky" == ax.get_title()
+    col = ax.collections[-1]
+    np.testing.assert_array_equal(col.get_edgecolors(), col.get_facecolors())
+
+
+@pytest.mark.timeout(20)
+def test_collection_plot_density(small_sky_collection_dir):
+    """Test plotting pixel-density for a collection, which plots its main catalog."""
+    pytest.importorskip("matplotlib.pyplot")
+
+    collection = read_hats(small_sky_collection_dir)
+    _, ax = collection.plot_density()
+    assert "Angular density of catalog small_sky_order1" == ax.get_title()
+
+    _, ax = plot_density(collection)
+    assert "Angular density of catalog small_sky_order1" == ax.get_title()
+
+
 def test_catalog_plot_density_errors(small_sky_source_dir):
     pytest.importorskip("matplotlib.pyplot")
 
@@ -1011,6 +1063,23 @@ def test_catalog_plot_density_errors(small_sky_source_dir):
 
     with pytest.raises(ValueError, match="catalog required"):
         plot_density(None)
+
+
+def test_catalog_plot_density_modified_catalog(small_sky_order1_catalog, small_sky_order1_pixels, caplog):
+    """Test that plotting the density of a modified catalog warns, as the skymap is read from disk."""
+    pytest.importorskip("matplotlib.pyplot")
+
+    filtered_catalog = small_sky_order1_catalog.filter_from_pixel_list(small_sky_order1_pixels[:1])
+    assert not filtered_catalog.unmodified
+
+    with caplog.at_level(logging.WARNING):
+        plot_density(filtered_catalog)
+    assert "modified catalog" in caplog.text
+
+    caplog.clear()
+    with caplog.at_level(logging.WARNING):
+        plot_density(small_sky_order1_catalog)
+    assert caplog.text == ""
 
 
 def test_plot_pixels_empty_region_or_no_remaining():
@@ -1055,6 +1124,21 @@ def test_catalog_plot(small_sky_order1_catalog):
         np.testing.assert_array_equal(path.codes, codes)
     np.testing.assert_array_equal(col.get_array(), np.array([p.order for p in pixels]))
     assert ax.get_title() == f"Catalog pixel map - {small_sky_order1_catalog.catalog_name}"
+
+
+def test_collection_plot_pixels(small_sky_collection_dir):
+    """Test plotting pixels for a collection, which plots the pixels of its main catalog."""
+    pytest.importorskip("matplotlib.pyplot")
+
+    collection = read_hats(small_sky_collection_dir)
+    orders = [pixel.order for pixel in sorted(collection.get_healpix_pixels())]
+    _, ax = collection.plot_pixels()
+    assert ax.get_title() == "Catalog pixel map - small_sky_order1"
+    np.testing.assert_array_equal(ax.collections[-1].get_array(), orders)
+
+    _, ax = plot_pixels(collection)
+    assert ax.get_title() == "Catalog pixel map - small_sky_order1"
+    np.testing.assert_array_equal(ax.collections[-1].get_array(), orders)
 
 
 def test_catalog_plot_no_color_by_order(small_sky_order1_catalog):
@@ -1107,3 +1191,18 @@ def test_plot_moc_catalog(small_sky_order1_catalog):
     assert small_sky_order1_catalog.moc.fill.call_args[0][0] is ax
     wcs = ax.wcs
     assert small_sky_order1_catalog.moc.fill.call_args[0][1] is wcs
+
+
+def test_collection_plot_moc(small_sky_collection_dir):
+    """Test plotting the coverage of a collection, which plots the moc of its main catalog."""
+    pytest.importorskip("matplotlib.pyplot")
+
+    collection = read_hats(small_sky_collection_dir)
+    main_catalog_moc = collection.main_catalog.moc
+    main_catalog_moc.fill = MagicMock()
+    _, ax = collection.plot_moc()
+
+    main_catalog_moc.fill.assert_called_once()
+    assert main_catalog_moc.fill.call_args[0][0] is ax
+    assert main_catalog_moc.fill.call_args[0][1] is ax.wcs
+    assert ax.get_title() == "Coverage of small_sky_order1"

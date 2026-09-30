@@ -253,7 +253,7 @@ def _catalog_uris(properties: CollectionProperties, uri: str | None) -> dict[str
         )
 
     return {
-        "collection": uri or "<PATH>",
+        "collection": uri,
         "primary": {
             "name": properties.hats_primary_table_url,
             "uri": _join_catalog_uri(uri, properties.hats_primary_table_url),

@@ -118,16 +118,6 @@ def test_read_collection_read_errors(tmp_path):
 
     _ = CollectionProperties.read_from_dir(tmp_path)
 
-    ## Unsupported extra property.
-    file_content = """  name= foo
-  hats_primary_table_url=small_sky_order1
-  hats_col_ra=ra
-"""
-    write_string_to_file(test_file_path, file_content, encoding="utf-8")
-
-    with pytest.raises(ValueError, match="hats_col_ra"):
-        CollectionProperties.read_from_dir(tmp_path)
-
     ## Unmatched index map.
     file_content = """  name= foo
   hats_primary_table_url=small_sky_order1

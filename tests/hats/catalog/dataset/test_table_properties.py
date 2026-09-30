@@ -15,6 +15,7 @@ def test_read_from_file_round_trip(test_data_dir, data_dir, tmp_path):
     round_trip_properties = TableProperties.read_from_dir(tmp_path)
 
     assert table_properties == round_trip_properties
+    assert (tmp_path / "hats.properties").read_text().startswith("#HATS catalog\n")
 
     kwarg_properties = TableProperties(**round_trip_properties.model_dump(by_alias=False, exclude_none=True))
     assert table_properties == kwarg_properties
