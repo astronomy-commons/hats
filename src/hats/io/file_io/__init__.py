@@ -1,5 +1,6 @@
 from .file_io import (
     delete_file,
+    get_parquet_write_table_kwargs,
     load_csv_to_pandas,
     load_csv_to_pandas_generator,
     load_text_file,
