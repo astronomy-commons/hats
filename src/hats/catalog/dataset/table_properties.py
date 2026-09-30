@@ -1,15 +1,14 @@
-import re
 from datetime import datetime, timezone
 from importlib.metadata import version
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import Annotated, Optional
 
-from jproperties import Properties
-from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_validator
+from pydantic import BeforeValidator, Field, PlainSerializer, model_validator
 from typing_extensions import Self
 from upath import UPath
 
 from hats.catalog.catalog_type import CatalogType
+from hats.catalog.dataset.hats_properties import HatsProperties
 from hats.io import file_io, size_estimates
 
 ## catalog_name and catalog_type are required for ALL types
@@ -29,7 +28,7 @@ CATALOG_TYPE_REQUIRED_FIELDS = {
 }
 
 
-class TableProperties(BaseModel):
+class TableProperties(HatsProperties):
     """Container class for catalog metadata"""
 
     catalog_name: str = Field(alias="obs_collection")
@@ -38,7 +37,12 @@ class TableProperties(BaseModel):
 
     ra_column: Optional[str] = Field(default=None, alias="hats_col_ra")
     dec_column: Optional[str] = Field(default=None, alias="hats_col_dec")
-    default_columns: Optional[list[str]] = Field(default=None, alias="hats_cols_default")
+    default_columns: Annotated[
+        Optional[list[str]],
+        Field(default=None, alias="hats_cols_default"),
+        PlainSerializer(HatsProperties.serialize_list_as_space_delimited_list),
+        BeforeValidator(HatsProperties.space_delimited_list),
+    ]
     """Which columns should be read from parquet files, when user doesn't otherwise specify."""
 
     healpix_column: Optional[str] = Field(default=None, alias="hats_col_healpix")
@@ -79,7 +83,12 @@ class TableProperties(BaseModel):
     indexing_column: Optional[str] = Field(default=None, alias="hats_index_column")
     """Column that we provide an index over."""
 
-    extra_columns: Optional[list[str]] = Field(default=None, alias="hats_index_extra_column")
+    extra_columns: Annotated[
+        Optional[list[str]],
+        Field(default=None, alias="hats_index_extra_column"),
+        PlainSerializer(HatsProperties.serialize_list_as_space_delimited_list),
+        BeforeValidator(HatsProperties.space_delimited_list),
+    ]
     """Any additional payload columns included in index."""
 
     npix_suffix: str = Field(default=".parquet", alias="hats_npix_suffix")
@@ -95,7 +104,12 @@ class TableProperties(BaseModel):
     skymap_order: Optional[int] = Field(default=None, alias="hats_skymap_order")
     """Nested Order of the healpix skymap stored in the default skymap.fits."""
 
-    skymap_alt_orders: Optional[list[int]] = Field(default=None, alias="hats_skymap_alt_orders")
+    skymap_alt_orders: Annotated[
+        Optional[list[int]],
+        Field(default=None, alias="hats_skymap_alt_orders"),
+        PlainSerializer(HatsProperties.serialize_list_as_space_delimited_list),
+        BeforeValidator(HatsProperties.space_delimited_int_list),
+    ]
     """Nested Order (K) of the healpix skymaps stored in altnernative skymap.K.fits."""
 
     hats_max_rows: Optional[int] = Field(default=None, alias="hats_max_rows")
@@ -108,86 +122,6 @@ class TableProperties(BaseModel):
     """Estimated size of the catalog on disk, in kilobytes."""
 
     moc_sky_fraction: Optional[float] = Field(default=None)
-
-    ## Allow any extra keyword args to be stored on the properties object.
-    model_config = ConfigDict(extra="allow", populate_by_name=True, use_enum_values=True)
-
-    @field_validator("default_columns", "extra_columns", mode="before")
-    @classmethod
-    def space_delimited_list(cls, str_value: str) -> list[str]:
-        """Convert a space-delimited list string into a python list of strings.
-
-        Parameters
-        ----------
-        str_value: str
-            a space-delimited list string
-
-        Returns
-        -------
-        list[str]
-            python list of strings
-        """
-        if isinstance(str_value, str):
-            # Split on a few kinds of delimiters (just to be safe), and remove duplicates
-            return list(filter(None, re.split(";| |,|\n", str_value)))
-        ## Convert empty strings and empty lists to None
-        return str_value if str_value else None
-
-    @field_validator("skymap_alt_orders", mode="before")
-    @classmethod
-    def space_delimited_int_list(cls, str_value: str | list[int]) -> list[int]:
-        """Convert a space-delimited list string into a python list of integers.
-
-        Parameters
-        ----------
-        str_value : str | list[int]
-            string representation of a list of integers, delimited by
-            space, comma, or semicolon, or a list of integers.
-
-        Returns
-        -------
-        list[int]
-            a python list of integers
-
-        Raises
-        ------
-        ValueError
-            if any non-digit characters are encountered
-        """
-        if not str_value:
-            return None
-        if isinstance(str_value, int):
-            return [str_value]
-        if isinstance(str_value, str):
-            # Split on a few kinds of delimiters (just to be safe)
-            int_list = [int(token) for token in list(filter(None, re.split(";| |,|\n", str_value)))]
-        elif isinstance(str_value, list) and all(isinstance(elem, int) for elem in str_value):
-            int_list = str_value
-        else:
-            raise ValueError(f"Unsupported type of skymap_alt_orders {type(str_value)}")
-        if len(int_list) == 0:
-            return None
-        int_list = list(set(int_list))
-        int_list.sort()
-        return int_list
-
-    @field_serializer("default_columns", "extra_columns", "skymap_alt_orders")
-    def serialize_as_space_delimited_list(self, str_list: Iterable) -> str:
-        """Convert a python list of strings into a space-delimited string.
-
-        Parameters
-        ----------
-        str_list: Iterable
-            a python list of strings
-
-        Returns
-        -------
-        str
-            a space-delimited string.
-        """
-        if str_list is None or len(str_list) == 0:
-            return None
-        return " ".join([str(element) for element in str_list])
 
     @model_validator(mode="after")
     def check_required(self) -> Self:
@@ -225,56 +159,6 @@ class TableProperties(BaseModel):
         TableProperties.model_validate(new_properties)
         return new_properties
 
-    def explicit_dict(self, by_alias=False, exclude_none=True):
-        """Create a dict, based on fields that have been explicitly set, and are not "extra" keys.
-
-        Parameters
-        ----------
-        by_alias : bool
-            (Default value = False)
-        exclude_none : bool
-            (Default value = True)
-
-        Returns
-        -------
-        dict
-            all keys that are attributes of this class and not "extra".
-        """
-        explicit = self.model_dump(by_alias=by_alias, exclude_none=exclude_none)
-        extra_keys = self.__pydantic_extra__.keys()
-        return {key: val for key, val in explicit.items() if key not in extra_keys}
-
-    def extra_dict(self, by_alias=False, exclude_none=True):
-        """Create a dict, based on fields that are "extra" keys.
-
-        Parameters
-        ----------
-        by_alias : bool
-            (Default value = False)
-        exclude_none : bool
-            (Default value = True)
-
-        Returns
-        -------
-        dict
-            all keys that are *not* attributes of this class, e.g. "extra".
-        """
-        explicit = self.model_dump(by_alias=by_alias, exclude_none=exclude_none)
-        extra_keys = self.__pydantic_extra__.keys()
-        return {key: val for key, val in explicit.items() if key in extra_keys}
-
-    def __repr__(self):
-        return self.__str__()
-
-    def __str__(self):
-        """Friendly string representation based on named fields."""
-        parameters = self.explicit_dict()
-        longest_length = max(len(key) for key in parameters.keys())
-        formatted_string = ""
-        for name, value in parameters.items():
-            formatted_string += f"{name.ljust(longest_length)} {value}\n"
-        return formatted_string
-
     @classmethod
     def read_from_dir(cls, catalog_dir: str | Path | UPath) -> Self:
         """Read field values from a java-style properties file.
@@ -301,10 +185,7 @@ class TableProperties(BaseModel):
             file_path = catalog_path / "properties"
             if not file_path.exists():
                 raise FileNotFoundError(f"No properties file found where expected: {str(file_path)}")
-        p = Properties()
-        with file_path.open("rb") as f:
-            p.load(f, "utf-8")
-        return cls(**p.properties)
+        return cls.read_from_file(file_path)
 
     # pylint: disable=duplicate-code
     def to_properties_file(self, catalog_dir: str | Path | UPath):
@@ -315,18 +196,9 @@ class TableProperties(BaseModel):
         catalog_dir: str | Path | UPath
             directory to write the file
         """
-        # pylint: disable=protected-access
-        parameters = self.model_dump(by_alias=True, exclude_none=True)
-        properties = Properties(process_escapes_in_values=False)
-        properties.properties = parameters
-        properties._key_order = parameters.keys()
         catalog_path = file_io.get_upath(catalog_dir)
-        file_path = catalog_path / "hats.properties"
-        with file_path.open("wb") as _file:
-            properties.store(_file, encoding="utf-8", initial_comments="HATS catalog", timestamp=False)
-        file_path = catalog_path / "properties"
-        with file_path.open("wb") as _file:
-            properties.store(_file, encoding="utf-8", initial_comments="HATS catalog", timestamp=False)
+        self.to_properties_file_path(catalog_path / "hats.properties", initial_comments="HATS catalog")
+        self.to_properties_file_path(catalog_path / "properties", initial_comments="HATS catalog")
 
     @staticmethod
     def new_provenance_dict(

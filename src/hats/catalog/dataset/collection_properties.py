@@ -1,18 +1,23 @@
 import re
-from functools import reduce
 from pathlib import Path
-from typing import Annotated, Iterable, Optional
+from typing import Annotated, Optional
 
 import pandas as pd
-from jproperties import Properties
-from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator, model_validator
+from pydantic import (
+    BeforeValidator,
+    Field,
+    PlainSerializer,
+    field_validator,
+    model_validator,
+)
 from typing_extensions import Self
 from upath import UPath
 
+from hats.catalog.dataset.hats_properties import HatsProperties
 from hats.io import file_io
 
 
-class CollectionProperties(BaseModel):
+class CollectionProperties(HatsProperties):
     """Container class for catalog metadata"""
 
     name: str = Field(alias="obs_collection")
@@ -20,44 +25,30 @@ class CollectionProperties(BaseModel):
     hats_primary_table_url: str = Field(..., alias="hats_primary_table_url")
     """Reference to object catalog. Relevant for nested, margin, association, and index."""
 
-    all_margins: Annotated[Optional[list[str]], Field(default=None)]
+    all_margins: Annotated[
+        Optional[list[str]],
+        Field(default=None),
+        PlainSerializer(HatsProperties.serialize_list_as_space_delimited_list),
+        BeforeValidator(HatsProperties.space_delimited_list),
+    ]
     default_margin: Optional[str] = Field(default=None)
 
-    all_indexes: Annotated[Optional[dict[str, str]], Field(default=None)]
+    all_indexes: Annotated[
+        Optional[dict[str, str]],
+        Field(default=None),
+        PlainSerializer(HatsProperties.serialize_dict_as_space_delimited_list),
+    ]
     default_index: Optional[str] = Field(default=None)
 
-    all_extensions: Annotated[Optional[list[str]], Field(default=None)]
+    all_extensions: Annotated[
+        Optional[list[str]],
+        Field(default=None),
+        PlainSerializer(HatsProperties.serialize_list_as_space_delimited_list),
+        BeforeValidator(HatsProperties.space_delimited_list),
+    ]
     """Extensions of this collection, each holding a set of additional columns, and described
     by an ``<extension>.properties`` file. Each is listed by the path to that file, relative to the
     collection root or absolute. The ``.properties`` suffix may be left out."""
-
-    ## Allow any extra keyword args to be stored on the properties object.
-    model_config = ConfigDict(extra="allow", populate_by_name=True, use_enum_values=True)
-
-    @field_validator("all_margins", "all_extensions", mode="before")
-    @classmethod
-    def space_delimited_list(cls, str_value: str) -> list[str]:
-        """Convert a space-delimited list string into a python list of strings.
-
-        Parameters
-        ----------
-        str_value: str
-            a space-delimited list string
-
-        Returns
-        -------
-        list[str]
-            a python list of strings
-        """
-        if str_value is None:
-            return None
-        if pd.api.types.is_list_like(str_value):
-            return list(str_value)
-        if not str_value or not isinstance(str_value, str):
-            ## Convert empty strings and empty lists to None
-            return None
-        # Split on a few kinds of delimiters (just to be safe), and remove duplicates
-        return list(filter(None, re.split(";| |,|\n", str_value)))
 
     @field_validator("all_indexes", mode="before")
     @classmethod
@@ -98,43 +89,6 @@ class CollectionProperties(BaseModel):
             all_index_dict[key] = value
         return all_index_dict
 
-    @field_serializer("all_margins", "all_extensions")
-    def serialize_list_as_space_delimited_list(self, str_list: Iterable[str]) -> str:
-        """Convert a python list of strings into a space-delimited string.
-
-        Parameters
-        ----------
-        str_list: Iterable[str]
-            a python list of strings
-
-        Returns
-        -------
-        str
-            a space-delimited string
-        """
-        if str_list is None or len(str_list) == 0:
-            return ""
-        return " ".join(str_list)
-
-    @field_serializer("all_indexes")
-    def serialize_dict_as_space_delimited_list(self, str_dict: dict[str, str]) -> str:
-        """Convert a python list of strings into a space-delimited string.
-
-        Parameters
-        ----------
-        str_dict: dict[str, str]
-            a python dict of strings
-
-        Returns
-        -------
-        str
-            a space-delimited string
-        """
-        if str_dict is None or len(str_dict) == 0:
-            return ""
-        str_list = list(reduce(lambda x, y: x + y, str_dict.items()))
-        return " ".join(str_list)
-
     @model_validator(mode="after")
     def check_default_margin_exists(self) -> Self:
         """Check that the default margin is in the list of all margins."""
@@ -155,20 +109,6 @@ class CollectionProperties(BaseModel):
                 raise ValueError(f"default_index `{self.default_index}` not found in all_indexes")
         return self
 
-    def explicit_dict(self):
-        """Create a dict, based on fields that have been explicitly set, and are not "extra" keys."""
-        explicit = self.model_dump(by_alias=False, exclude_none=True)
-        extra_keys = self.__pydantic_extra__.keys()
-        return {key: val for key, val in explicit.items() if key not in extra_keys}
-
-    def __str__(self):
-        """Friendly string representation based on named fields."""
-        parameters = self.explicit_dict()
-        formatted_string = ""
-        for name, value in parameters.items():
-            formatted_string += f"  {name} {value}\n"
-        return formatted_string
-
     @classmethod
     def read_from_dir(cls, catalog_dir: str | Path | UPath) -> Self:
         """Read field values from a java-style properties file.
@@ -183,11 +123,7 @@ class CollectionProperties(BaseModel):
         CollectionProperties
             new object from the contents of a ``collection.properties`` file in the directory.
         """
-        file_path = file_io.get_upath(catalog_dir) / "collection.properties"
-        p = Properties()
-        with file_path.open("rb") as f:
-            p.load(f, "utf-8")
-        return cls(**p.properties)
+        return cls.read_from_file(file_io.get_upath(catalog_dir) / "collection.properties")
 
     def to_properties_file(self, catalog_dir: str | Path | UPath):
         """Write fields to a java-style properties file.
@@ -197,11 +133,6 @@ class CollectionProperties(BaseModel):
         catalog_dir: str | Path | UPath
             base directory of catalog.
         """
-        # pylint: disable=protected-access
-        parameters = self.model_dump(by_alias=True, exclude_none=True)
-        properties = Properties(process_escapes_in_values=False)
-        properties.properties = parameters
-        properties._key_order = parameters.keys()
-        file_path = file_io.get_upath(catalog_dir) / "collection.properties"
-        with file_path.open("wb") as _file:
-            properties.store(_file, encoding="utf-8", initial_comments="HATS Collection", timestamp=False)
+        self.to_properties_file_path(
+            file_io.get_upath(catalog_dir) / "collection.properties", initial_comments="HATS Collection"
+        )
