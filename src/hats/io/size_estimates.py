@@ -197,40 +197,40 @@ def get_mem_size_per_row(data, cols=None):
         list[float]: list of memory sizes for each row in the chunk. Values may
         be fractional (bit-packed booleans, bitmap bits); sum before rounding.
     """
-if isinstance(data, pd.DataFrame):
-    if cols is not None:
-        data = data[cols]
-
-    try:
-        # Convert the entire DataFrame at once to ensure Arrow uses
-        # consistent buffer allocation across all columns.
-        arrow_table = pa.Table.from_pandas(data, preserve_index=False)
-        mem_sizes = np.zeros(arrow_table.num_rows, dtype=np.float64)
-        for column in arrow_table.itercolumns():
+    if isinstance(data, pd.DataFrame):
+        if cols is not None:
+            data = data[cols]
+    
+        try:
+            # Convert the entire DataFrame at once to ensure Arrow uses
+            # consistent buffer allocation across all columns.
+            arrow_table = pa.Table.from_pandas(data, preserve_index=False)
+            mem_sizes = np.zeros(arrow_table.num_rows, dtype=np.float64)
+            for column in arrow_table.itercolumns():
+                mem_sizes += _arrow_column_mem_sizes(column)
+        except (pa.ArrowInvalid, pa.ArrowTypeError, pa.ArrowNotImplementedError, ValueError):
+            # Fallback for columns Arrow can't represent: measure each individually.
+            mem_sizes = np.zeros(len(data), dtype=np.float64)
+            for column in data.columns:
+                try:
+                    arrow_column = pa.array(data[column], from_pandas=True)
+                    mem_sizes += _arrow_column_mem_sizes(arrow_column)
+                except (pa.ArrowInvalid, pa.ArrowTypeError, pa.ArrowNotImplementedError, ValueError):
+                    mem_sizes += np.fromiter(
+                        (_item_mem_size(item) for item in data[column]),
+                        np.float64,
+                        len(data[column]),
+                    )
+    
+    elif isinstance(data, pa.Table):
+        if cols is not None:
+            data = data.select(cols)
+    
+        mem_sizes = np.zeros(data.num_rows, dtype=np.float64)
+        for column in data.itercolumns():
             mem_sizes += _arrow_column_mem_sizes(column)
-    except (pa.ArrowInvalid, pa.ArrowTypeError, pa.ArrowNotImplementedError, ValueError):
-        # Fallback for columns Arrow can't represent: measure each individually.
-        mem_sizes = np.zeros(len(data), dtype=np.float64)
-        for column in data.columns:
-            try:
-                arrow_column = pa.array(data[column], from_pandas=True)
-                mem_sizes += _arrow_column_mem_sizes(arrow_column)
-            except (pa.ArrowInvalid, pa.ArrowTypeError, pa.ArrowNotImplementedError, ValueError):
-                mem_sizes += np.fromiter(
-                    (_item_mem_size(item) for item in data[column]),
-                    np.float64,
-                    len(data[column]),
-                )
-
-elif isinstance(data, pa.Table):
-    if cols is not None:
-        data = data.select(cols)
-
-    mem_sizes = np.zeros(data.num_rows, dtype=np.float64)
-    for column in data.itercolumns():
-        mem_sizes += _arrow_column_mem_sizes(column)
-else:
-    raise NotImplementedError(f"Unsupported data type {type(data)} for memory size calculation")
-
-# Back to plain Python floats, matching this function's documented return type.
-return mem_sizes.tolist()
+    else:
+        raise NotImplementedError(f"Unsupported data type {type(data)} for memory size calculation")
+    
+    # Back to plain Python floats, matching this function's documented return type.
+    return mem_sizes.tolist()
