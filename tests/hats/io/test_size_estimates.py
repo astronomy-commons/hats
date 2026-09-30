@@ -326,13 +326,12 @@ def test_get_mem_size_per_row_pandas_pyarrow_equivalence_and_cols():
             ],
         }
     )
-    table = pa.table(
-        {
-            "ra": pa.array(frame["ra"], type=pa.float64()),
-            "id_str": pa.array(frame["id_str"], type=pa.string()),
-            "mags": pa.array([[1.0, 2.0], [3.0], []], type=pa.list_(pa.float64())),
-        }
-    )
+    # The genuinely-equivalent arrow table is the one pandas itself produces:
+    # pandas' str dtype maps to arrow large_string (8-byte offsets) on pandas 3.x
+    # but string (4-byte offsets) on 2.x, so hand-picking a string type would
+    # mismatch the frame's actual conversion. from_pandas keeps both sides equal.
+    table = pa.Table.from_pandas(frame, preserve_index=False)
+
     assert get_mem_size_per_row(frame) == get_mem_size_per_row(table)
 
     # Column selection restricts the measurement to the named columns, matching a
