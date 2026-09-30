@@ -234,6 +234,11 @@ def get_parquet_write_table_kwargs(
     }
     if any(path == SPATIAL_INDEX_COLUMN for path, _ in leaves):
         column_encoding[SPATIAL_INDEX_COLUMN] = DELTA_BINARY_PACKED_ENCODING
+    # Leading sorting column is monotonic, so it would benefit from delta encoding, same as spatial index
+    if sorting_columns := write_table_kwargs.get("sorting_columns"):
+        sort_path, sort_dtype = leaves[sorting_columns[0].column_index]
+        if pa.types.is_integer(sort_dtype):
+            column_encoding[sort_path] = DELTA_BINARY_PACKED_ENCODING
     column_encoding.update(column_encoding_overrides)
 
     if use_dictionary_override is True:

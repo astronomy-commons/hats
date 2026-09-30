@@ -243,6 +243,7 @@ def test_get_parquet_write_table_kwargs_column_encoding_override_merges(nested_s
         None,
         {"use_dictionary": ["ra", "id"]},
         {"use_dictionary": ["id"], "column_encoding": {"id": "DELTA_BINARY_PACKED"}},
+        {"sorting_columns": [pq.SortingColumn(2)]},
     ],
 )
 def test_get_parquet_write_table_kwargs_are_valid_for_pyarrow(tmp_path, nested_schema, write_table_kwargs):
