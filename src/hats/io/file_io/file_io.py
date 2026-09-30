@@ -9,6 +9,7 @@ from pathlib import Path
 import nested_pandas as npd
 import numpy as np
 import pandas as pd
+import pyarrow as pa
 import pyarrow.dataset as pds
 import pyarrow.parquet as pq
 import upath.implementations.http
@@ -17,6 +18,14 @@ from pyarrow.dataset import Dataset
 from upath import UPath
 
 from hats.io.file_io.file_pointer import get_upath
+from hats.pixel_math.spatial_index import SPATIAL_INDEX_COLUMN
+
+DEFAULT_PARQUET_ROW_GROUP_SIZE = 100_000
+DEFAULT_PARQUET_COMPRESSION = "zstd"
+DEFAULT_PARQUET_COMPRESSION_LEVEL = 15
+DEFAULT_PARQUET_DATA_PAGE_SIZE = 128 * 1024
+BYTE_STREAM_SPLIT_ENCODING = "BYTE_STREAM_SPLIT"
+DELTA_BINARY_PACKED_ENCODING = "DELTA_BINARY_PACKED"
 
 
 def make_directory(file_pointer: str | Path | UPath, exist_ok: bool = False):
@@ -170,6 +179,86 @@ def write_dataframe_to_csv(dataframe: pd.DataFrame, file_pointer: str | Path | U
     """
     output = dataframe.to_csv(**kwargs)
     write_string_to_file(file_pointer, output)
+
+
+def _leaf_columns(schema: pa.Schema) -> list[tuple[str, pa.DataType]]:
+    """Enumerate (dotted parquet path, type) for every leaf column of a schema."""
+    leaves = []
+
+    def _walk(dtype: pa.DataType, path: str):
+        if pa.types.is_struct(dtype):
+            for dtype_field in dtype:
+                _walk(dtype_field.type, f"{path}.{dtype_field.name}")
+        elif pa.types.is_list(dtype) or pa.types.is_large_list(dtype) or pa.types.is_fixed_size_list(dtype):
+            _walk(dtype.value_type, f"{path}.list.element")
+        elif pa.types.is_map(dtype):
+            _walk(dtype.key_type, f"{path}.key_value.key")
+            _walk(dtype.item_type, f"{path}.key_value.value")
+        else:
+            leaves.append((path, dtype))
+
+    for schema_field in schema:
+        _walk(schema_field.type, schema_field.name)
+    return leaves
+
+
+def get_parquet_write_table_kwargs(
+    arrow_schema: pa.Schema, *, write_table_kwargs: dict[str, object] | None = None
+) -> dict[str, object]:
+    """Get the kwargs to pass to pyarrow.parquet.write_table
+
+    See https://github.com/astronomy-commons/hats/issues/742
+    for the details about how these defaults were chosen.
+
+    Parameters
+    ----------
+    arrow_schema : pa.Schema
+        pyarrow schema of the table to be written
+    write_table_kwargs : dict | None
+        Additional kwargs to pass to pyarrow.parquet.write_table. These take
+        precedence over the defaults computed from ``arrow_schema``.
+
+    Returns
+    -------
+    dict
+        kwargs to pass to pyarrow.parquet.write_table
+    """
+    leaves = _leaf_columns(arrow_schema)
+
+    write_table_kwargs = write_table_kwargs.copy() if write_table_kwargs else {}
+    use_dictionary_override = write_table_kwargs.pop("use_dictionary", True)
+    column_encoding_overrides = write_table_kwargs.pop("column_encoding", None) or {}
+
+    column_encoding = {
+        path: BYTE_STREAM_SPLIT_ENCODING for path, dtype in leaves if pa.types.is_floating(dtype)
+    }
+    if any(path == SPATIAL_INDEX_COLUMN for path, _ in leaves):
+        column_encoding[SPATIAL_INDEX_COLUMN] = DELTA_BINARY_PACKED_ENCODING
+    column_encoding.update(column_encoding_overrides)
+
+    if use_dictionary_override is True:
+        dictionary_cols = [path for path, _ in leaves if path not in column_encoding]
+    else:
+        # Skip encoding for any columns that are explicitly set to use dictionary encoding
+        dictionary_cols = use_dictionary_override
+        if isinstance(dictionary_cols, list):
+            for path in dictionary_cols:
+                column_encoding.pop(path, None)
+
+    data_page_size = write_table_kwargs.get("data_page_size", DEFAULT_PARQUET_DATA_PAGE_SIZE)
+    kwargs = {
+        "row_group_size": DEFAULT_PARQUET_ROW_GROUP_SIZE,
+        "compression": DEFAULT_PARQUET_COMPRESSION,
+        "compression_level": DEFAULT_PARQUET_COMPRESSION_LEVEL,
+        "column_encoding": column_encoding,
+        "use_dictionary": dictionary_cols,
+        "data_page_size": data_page_size,
+        "dictionary_pagesize_limit": data_page_size,
+        "write_statistics": True,
+        "write_page_index": True,
+    }
+    kwargs.update(write_table_kwargs)
+    return kwargs
 
 
 def write_dataframe_to_parquet(dataframe: pd.DataFrame, file_pointer):

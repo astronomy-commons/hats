@@ -1,5 +1,7 @@
 import numpy as np
 import pandas as pd
+import pyarrow as pa
+import pyarrow.parquet as pq
 import pytest
 
 from hats.io import paths
@@ -17,7 +19,8 @@ from hats.io.file_io import (
     write_fits_image,
     write_string_to_file,
 )
-from hats.io.file_io.file_io import _parquet_precache_all_bytes
+from hats.io.file_io.file_io import _parquet_precache_all_bytes, get_parquet_write_table_kwargs
+from hats.pixel_math.spatial_index import SPATIAL_INDEX_COLUMN
 
 
 def test_make_directory(tmp_path):
@@ -201,3 +204,62 @@ def test_read_hats_with_http():
     assert upath_http_vizier.fs.block_size == 32 * 1024
     assert upath_http_vizier.fs.client_kwargs["headers"]["User-Agent"].startswith("hats")
     assert _parquet_precache_all_bytes(upath_http_vizier)
+
+
+@pytest.fixture
+def nested_schema():
+    return pa.schema(
+        [
+            pa.field(SPATIAL_INDEX_COLUMN, pa.int64()),
+            pa.field("ra", pa.float64()),
+            pa.field("id", pa.int64()),
+            pa.field(
+                "lc",
+                pa.struct(
+                    [
+                        pa.field("flux", pa.float32()),
+                        pa.field("band", pa.string()),
+                    ]
+                ),
+            ),
+            pa.field("tags", pa.list_(pa.string())),
+            pa.field("props", pa.map_(pa.string(), pa.float64())),
+        ]
+    )
+
+
+def test_get_parquet_write_table_kwargs_column_encoding_override_merges(nested_schema):
+    kwargs = get_parquet_write_table_kwargs(
+        nested_schema, write_table_kwargs={"column_encoding": {"id": "DELTA_BINARY_PACKED"}}
+    )
+    assert SPATIAL_INDEX_COLUMN in kwargs["column_encoding"]
+    assert "id" in kwargs["column_encoding"]
+    assert "id" not in kwargs["use_dictionary"]
+
+
+@pytest.mark.parametrize(
+    "write_table_kwargs",
+    [
+        None,
+        {"use_dictionary": ["ra", "id"]},
+        {"use_dictionary": ["id"], "column_encoding": {"id": "DELTA_BINARY_PACKED"}},
+    ],
+)
+def test_get_parquet_write_table_kwargs_are_valid_for_pyarrow(tmp_path, nested_schema, write_table_kwargs):
+    """The computed kwargs should never make pyarrow itself raise a conflict error."""
+    table = pa.table(
+        {
+            SPATIAL_INDEX_COLUMN: pa.array([1, 2], type=pa.int64()),
+            "ra": pa.array([1.0, 2.0], type=pa.float64()),
+            "id": pa.array([1, 2], type=pa.int64()),
+            "lc": pa.array(
+                [{"flux": 1.0, "band": "g"}, {"flux": 2.0, "band": "r"}],
+                type=nested_schema.field("lc").type,
+            ),
+            "tags": pa.array([["a"], ["b", "c"]], type=nested_schema.field("tags").type),
+            "props": pa.array([[("a", 1.0)], [("b", 2.0)]], type=nested_schema.field("props").type),
+        },
+        schema=nested_schema,
+    )
+    kwargs = get_parquet_write_table_kwargs(nested_schema, write_table_kwargs=write_table_kwargs)
+    pq.write_table(table, tmp_path / "test.parquet", **kwargs)
