@@ -263,3 +263,16 @@ def test_get_parquet_write_table_kwargs_are_valid_for_pyarrow(tmp_path, nested_s
     )
     kwargs = get_parquet_write_table_kwargs(nested_schema, write_table_kwargs=write_table_kwargs)
     pq.write_table(table, tmp_path / "test.parquet", **kwargs)
+
+
+@pytest.mark.parametrize(
+    "compression,expected", [("NONE", "UNCOMPRESSED"), ("SNAPPY", "SNAPPY"), ("LZ4", "LZ4")]
+)
+def test_get_parquet_write_table_kwargs_compression_without_level(tmp_path, compression, expected):
+    """Compressions which don't support compression_level should be usable with pyarrow."""
+    schema = pa.schema([pa.field("ra", pa.float64())])
+    table = pa.table({"ra": [1.0, 2.0]}, schema=schema)
+    kwargs = get_parquet_write_table_kwargs(schema, write_table_kwargs={"compression": compression})
+    path = tmp_path / "test.parquet"
+    pq.write_table(table, path, **kwargs)
+    assert pq.read_metadata(path).row_group(0).column(0).compression == expected

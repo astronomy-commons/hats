@@ -257,6 +257,9 @@ def get_parquet_write_table_kwargs(
         "write_statistics": True,
         "write_page_index": True,
     }
+    # Default compression level may be incompatible with user's compression
+    if "compression" in write_table_kwargs:
+        kwargs["compression_level"] = None
     kwargs.update(write_table_kwargs)
     return kwargs
 
