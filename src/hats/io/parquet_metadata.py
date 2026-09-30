@@ -206,7 +206,12 @@ def write_parquet_metadata(
         transposed_lists = [list(row) for row in zip(*leaf_stats)]
         table = pa.Table.from_arrays(transposed_lists, names=mod_col_names)
         output_file = catalog_base_dir / "per_partition_statistics.parquet"
-        pq.write_table(table, output_file.path, filesystem=output_file.fs)
+        pq.write_table(
+            table,
+            output_file.path,
+            filesystem=output_file.fs,
+            **file_io.get_parquet_write_table_kwargs(table.schema),
+        )
 
     # Write out the _common_metadata file.
     common_metadata_file_pointer = paths.get_common_metadata_pointer(catalog_base_dir)
@@ -219,7 +224,9 @@ def write_parquet_metadata(
         if SPATIAL_INDEX_COLUMN in data_thumbnail.column_names:
             data_thumbnail = data_thumbnail.sort_by(SPATIAL_INDEX_COLUMN)
         with data_thumbnail_pointer.open("wb") as f_out:
-            pq.write_table(data_thumbnail, f_out)
+            pq.write_table(
+                data_thumbnail, f_out, **file_io.get_parquet_write_table_kwargs(data_thumbnail.schema)
+            )
 
     return total_rows
 
@@ -923,7 +930,12 @@ def write_per_partition_statistics_from_metadata(catalog_base_dir: str | Path | 
     transposed_lists = [list(row) for row in zip(*leaf_stats)]
     table = pa.Table.from_arrays(transposed_lists, names=mod_col_names)
     output_file = catalog_base_dir / "per_partition_statistics.parquet"
-    pq.write_table(table, output_file.path, filesystem=output_file.fs)
+    pq.write_table(
+        table,
+        output_file.path,
+        filesystem=output_file.fs,
+        **file_io.get_parquet_write_table_kwargs(table.schema),
+    )
 
 
 def pick_metadata_schema_file(catalog_base_dir: str | Path | UPath) -> UPath | None:
