@@ -222,15 +222,15 @@ if isinstance(data, pd.DataFrame):
                     len(data[column]),
                 )
 
-    elif isinstance(data, pa.Table):
-        if cols is not None:
-            data = data.select(cols)
+elif isinstance(data, pa.Table):
+    if cols is not None:
+        data = data.select(cols)
 
-        mem_sizes = np.zeros(data.num_rows, dtype=np.float64)
-        for column in data.itercolumns():
-            mem_sizes += _arrow_column_mem_sizes(column)
-    else:
-        raise NotImplementedError(f"Unsupported data type {type(data)} for memory size calculation")
+    mem_sizes = np.zeros(data.num_rows, dtype=np.float64)
+    for column in data.itercolumns():
+        mem_sizes += _arrow_column_mem_sizes(column)
+else:
+    raise NotImplementedError(f"Unsupported data type {type(data)} for memory size calculation")
 
-    # Back to plain Python floats, matching this function's documented return type.
-    return mem_sizes.tolist()
+# Back to plain Python floats, matching this function's documented return type.
+return mem_sizes.tolist()
