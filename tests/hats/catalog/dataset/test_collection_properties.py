@@ -32,8 +32,8 @@ def test_collection_properties_string():
     )
 
     ## str representation should not include additional properties.
-    assert str(expected_properties) == """  name small_sky_01
-  hats_primary_table_url small_sky_order1
+    assert str(expected_properties) == """name                   small_sky_01
+hats_primary_table_url small_sky_order1
 """
 
 
@@ -66,6 +66,22 @@ def test_read_collection_list_parse(tmp_path):
   hats_primary_table_url=small_sky_order1
   all_margins=
   all_indexes=
+"""
+    write_string_to_file(test_file_path, file_content, encoding="utf-8")
+
+    parsed_properties = CollectionProperties.read_from_dir(tmp_path)
+
+    parsed_properties.to_properties_file(tmp_path)
+
+    contents = load_text_file(test_file_path)
+    assert contents == [
+        "#HATS Collection\n",
+        "obs_collection=foo\n",
+        "hats_primary_table_url=small_sky_order1\n",
+    ]
+
+    file_content = """  name= foo
+  hats_primary_table_url=small_sky_order1
 """
     write_string_to_file(test_file_path, file_content, encoding="utf-8")
 
@@ -156,7 +172,7 @@ def test_read_collection_all_margins_not_specified(small_sky_collection_dir, tmp
     assert table_properties.default_margin == "small_sky_order1_margin"
     table_properties.all_margins = []
     table_properties.to_properties_file(tmp_path)
-    with pytest.raises(ValueError, match="all_margins needs to be set"):
+    with pytest.raises(ValueError, match="not found in all_margins"):
         CollectionProperties.read_from_dir(tmp_path)
 
 

@@ -1,18 +1,19 @@
-import re
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Annotated, Literal, Optional
 
-import pandas as pd
-from jproperties import Properties
-from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
-from typing_extensions import Self
+from pydantic import (
+    BeforeValidator,
+    Field,
+    PlainSerializer,
+)
 from upath import UPath
 
 from hats.catalog.catalog_type import CatalogType
+from hats.catalog.dataset.hats_properties import HatsProperties
 from hats.io import file_io
 
 
-class ExtensionProperties(BaseModel):
+class ExtensionProperties(HatsProperties):
     """Container class for the metadata of a catalog extension.
 
     An extension, described by an ``<extension>.properties`` file, holds additional columns
@@ -46,7 +47,12 @@ class ExtensionProperties(BaseModel):
     join_column: str = Field(alias="hats_col_assn_join")
     """Column name in the extension data that matches ``primary_column``."""
 
-    extension_columns: Optional[list[str]] = Field(default=None, alias="hats_ext_cols")
+    extension_columns: Annotated[
+        Optional[list[str]],
+        Field(default=None, alias="hats_ext_cols"),
+        PlainSerializer(HatsProperties.serialize_list_as_space_delimited_list),
+        BeforeValidator(HatsProperties.space_delimited_list),
+    ]
     """The list of columns provided by the extension."""
 
     extension_join_style: Optional[Literal["left", "inner"]] = Field(
@@ -57,82 +63,6 @@ class ExtensionProperties(BaseModel):
     extension_product_type: Optional[str] = Field(default=None, alias="hats_product_type_served")
     """Modality of the data that the extension stores."""
 
-    ## Allow any extra keyword args to be stored on the properties object.
-    model_config = ConfigDict(extra="allow", populate_by_name=True, use_enum_values=True)
-
-    @field_validator("extension_columns", mode="before")
-    @classmethod
-    def space_delimited_list(cls, str_value: str) -> list[str] | None:
-        """Convert a space-delimited list string into a python list of strings.
-
-        Parameters
-        ----------
-        str_value: str
-            a space-delimited list string
-
-        Returns
-        -------
-        list[str] | None
-            a python list of strings, or None if the string is empty
-        """
-        if str_value is None:
-            return None
-        if pd.api.types.is_list_like(str_value):
-            return list(str_value)
-        if not str_value or not isinstance(str_value, str):
-            ## Convert empty strings and empty lists to None
-            return None
-        # Split on a few kinds of delimiters (just to be safe), and remove duplicates
-        return list(filter(None, re.split(";| |,|\n", str_value)))
-
-    @field_serializer("extension_columns")
-    def serialize_as_space_delimited_list(self, str_list: list[str] | None) -> str | None:
-        """Convert a python list of strings into a space-delimited string.
-
-        Parameters
-        ----------
-        str_list: list[str] | None
-            a python list of strings
-
-        Returns
-        -------
-        str | None
-            a space-delimited string, or None if the list is empty
-        """
-        if str_list is None or len(str_list) == 0:
-            return None
-        return " ".join(str_list)
-
-    def __str__(self):
-        """Friendly string representation based on named fields."""
-        explicit = self.model_dump(by_alias=False, exclude_none=True)
-        extra_keys = self.__pydantic_extra__.keys()
-        formatted_string = ""
-        for name, value in explicit.items():
-            if name not in extra_keys:
-                formatted_string += f"  {name} {value}\n"
-        return formatted_string
-
-    @classmethod
-    def read_from_file(cls, file_path: str | Path | UPath) -> Self:
-        """Read field values from a java-style properties file.
-
-        Parameters
-        ----------
-        file_path: str | Path | UPath
-            path to an ``<extension>.properties`` file.
-
-        Returns
-        -------
-        ExtensionProperties
-            new object from the contents of the file.
-        """
-        file_path = file_io.get_upath(file_path)
-        p = Properties()
-        with file_path.open("rb") as f:
-            p.load(f, "utf-8")
-        return cls(**p.properties)
-
     def to_properties_file(self, catalog_dir: str | Path | UPath):
         """Write fields to a java-style ``<extension>.properties`` file, named after the extension.
 
@@ -141,11 +71,6 @@ class ExtensionProperties(BaseModel):
         catalog_dir: str | Path | UPath
             directory to write the file to.
         """
-        # pylint: disable=protected-access,duplicate-code
-        parameters = self.model_dump(by_alias=True, exclude_none=True)
-        properties = Properties(process_escapes_in_values=False)
-        properties.properties = parameters
-        properties._key_order = parameters.keys()
-        file_path = file_io.get_upath(catalog_dir) / f"{self.name}.properties"
-        with file_path.open("wb") as _file:
-            properties.store(_file, encoding="utf-8", initial_comments="HATS Extension", timestamp=False)
+        self.to_properties_file_path(
+            file_io.get_upath(catalog_dir) / f"{self.name}.properties", initial_comments="HATS Extension"
+        )
