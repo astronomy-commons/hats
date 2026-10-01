@@ -1,5 +1,3 @@
-from datetime import datetime, timezone
-from importlib.metadata import version
 from pathlib import Path
 from typing import Annotated, Optional
 
@@ -9,7 +7,7 @@ from upath import UPath
 
 from hats.catalog.catalog_type import CatalogType
 from hats.catalog.dataset.hats_properties import HatsProperties
-from hats.io import file_io, size_estimates
+from hats.io import file_io
 
 ## catalog_name and catalog_type are required for ALL types
 CATALOG_TYPE_REQUIRED_FIELDS = {
@@ -199,37 +197,3 @@ class TableProperties(HatsProperties):
         catalog_path = file_io.get_upath(catalog_dir)
         self.to_properties_file_path(catalog_path / "hats.properties", initial_comments="HATS catalog")
         self.to_properties_file_path(catalog_path / "properties", initial_comments="HATS catalog")
-
-    @staticmethod
-    def new_provenance_dict(
-        path: str | Path | UPath | None = None, builder: str | None = None, **kwargs
-    ) -> dict:
-        """Constructs the provenance properties for a HATS catalog.
-
-        Parameters
-        ----------
-        path: str | Path | UPath | None
-            The path to the catalog directory.
-        builder : str | None
-            The name and version of the tool that created the catalog.
-        **kwargs
-            Additional properties to include/override in the dictionary.
-
-        Returns
-        -------
-        dict
-            A dictionary with properties for the HATS catalog.
-        """
-        builder_str = ""
-        if builder is not None:
-            builder_str = f"{builder}, "
-        builder_str += f"hats v{version('hats')}"
-
-        properties = {}
-        now = datetime.now(tz=timezone.utc)
-        properties["hats_builder"] = builder_str
-        properties["hats_creation_date"] = now.strftime("%Y-%m-%dT%H:%M%Z")
-        properties["hats_estsize"] = size_estimates.estimate_dir_size(path, divisor=1024)
-        properties["hats_release_date"] = "2025-08-22"
-        properties["hats_version"] = "v1.0"
-        return kwargs | properties

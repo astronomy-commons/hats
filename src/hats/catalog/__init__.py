@@ -8,6 +8,7 @@ from .catalog_type import CatalogType
 from .dataset.collection_properties import CollectionProperties
 from .dataset.dataset import Dataset
 from .dataset.extension_properties import ExtensionProperties
+from .dataset.hats_properties import HatsProperties
 from .dataset.table_properties import TableProperties
 from .index.index_catalog import IndexCatalog
 from .map.map_catalog import MapCatalog

@@ -1,5 +1,8 @@
 import re
+from datetime import datetime, timezone
 from functools import reduce
+from importlib.metadata import version
+from pathlib import Path
 from typing import Iterable
 
 import pandas as pd
@@ -7,6 +10,36 @@ from jproperties import Properties
 from pydantic import BaseModel, ConfigDict
 from typing_extensions import Self
 from upath import UPath
+
+from hats.io import size_estimates
+
+# Fields used by data providers to describe the observations, or creation of
+# the dataset.
+KNOWN_PROVENANCE_FIELDS = [
+    "addendum_description",
+    "addendum_did",
+    "bib_reference",
+    "bib_reference_url",
+    "creator_did",
+    "creator_did",
+    "hats_builder",
+    "hats_copyright",
+    "hats_creation_date",
+    "hats_creator",
+    "hats_data_semver",
+    "hats_progenitor_url",
+    "hats_release_date",
+    "hats_successor_url",
+    "hats_successor_description",
+    "hats_version",
+    "obs_ack",
+    "obs_copyright",
+    "obs_copyright_url",
+    "obs_description",
+    "obs_title",
+    "prov_progenitor",
+    "publisher_id",
+]
 
 
 class HatsProperties(BaseModel):
@@ -132,6 +165,24 @@ class HatsProperties(BaseModel):
         extra_keys = self.__pydantic_extra__.keys()
         return {key: val for key, val in explicit.items() if key not in extra_keys}
 
+    def provenance_dict(self, by_alias=False, exclude_none=True):
+        """Create a dict, based on known provenance fields, that have been explicitly set.
+
+        Parameters
+        ----------
+        by_alias : bool
+            (Default value = False)
+        exclude_none : bool
+            (Default value = True)
+
+        Returns
+        -------
+        dict
+            all keys that are attributes of this class and in a list of known provenance fields.
+        """
+        explicit = self.model_dump(by_alias=by_alias, exclude_none=exclude_none)
+        return {key: val for key, val in explicit.items() if key in KNOWN_PROVENANCE_FIELDS}
+
     def extra_dict(self, by_alias=False, exclude_none=True):
         """Create a dict, based on fields that are "extra" keys.
 
@@ -197,3 +248,37 @@ class HatsProperties(BaseModel):
         properties._key_order = parameters.keys()
         with file_path.open("wb") as _file:
             properties.store(_file, encoding="utf-8", timestamp=False, **kwargs)
+
+    @staticmethod
+    def new_provenance_dict(
+        path: str | Path | UPath | None = None, builder: str | None = None, **kwargs
+    ) -> dict:
+        """Constructs the provenance properties for a HATS catalog.
+
+        Parameters
+        ----------
+        path: str | Path | UPath | None
+            The path to the catalog directory.
+        builder : str | None
+            The name and version of the tool that created the catalog.
+        **kwargs
+            Additional properties to include/override in the dictionary.
+
+        Returns
+        -------
+        dict
+            A dictionary with properties for the HATS catalog.
+        """
+        builder_str = ""
+        if builder is not None:
+            builder_str = f"{builder}, "
+        builder_str += f"hats v{version('hats')}"
+
+        properties = {}
+        now = datetime.now(tz=timezone.utc)
+        properties["hats_builder"] = builder_str
+        properties["hats_creation_date"] = now.strftime("%Y-%m-%dT%H:%M%Z")
+        properties["hats_estsize"] = size_estimates.estimate_dir_size(path, divisor=1024)
+        properties["hats_release_date"] = "2025-08-22"
+        properties["hats_version"] = "v1.0"
+        return kwargs | properties

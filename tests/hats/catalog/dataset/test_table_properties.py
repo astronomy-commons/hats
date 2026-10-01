@@ -173,7 +173,31 @@ def test_extra_dict():
     assert table_properties.extra_dict() == extra_properties
 
 
-def test_provenance_dict(small_sky_dir, tmp_path):
+def test_provenance_dict(small_sky_dir):
+    properties_object = TableProperties(
+        catalog_name="foo",
+        catalog_type="index",
+        total_rows=15,
+        indexing_column="a",
+        primary_catalog="bar",
+        extra_columns="a , b",
+        hats_max_rows=1_000_000,
+        hats_max_bytes=5_000_000,
+        hats_copyright="LINCC Frameworks 2024",
+        **TableProperties.new_provenance_dict(small_sky_dir),
+    )
+
+    provenance_dict = properties_object.provenance_dict()
+    assert "hats_builder" in provenance_dict
+    assert "hats_creation_date" in provenance_dict
+    assert "hats_copyright" in provenance_dict
+    assert "hats_release_date" in provenance_dict
+    assert "hats_version" in provenance_dict
+
+    assert "hats_estsize" not in provenance_dict
+
+
+def test_new_provenance_dict(small_sky_dir, tmp_path):
     properties = TableProperties.new_provenance_dict(small_sky_dir)
     assert list(properties.keys()) == [
         "hats_builder",
