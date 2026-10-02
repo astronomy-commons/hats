@@ -236,7 +236,7 @@ moc_sky_fraction=0.083                          # Fraction of sky covered
 hats_builder=hats-import v0.6.6, hats v0.6.6    # Tool(s) that created the catalog
 hats_version=v1.0                               # HATS format version
 hats_release_date=2025-08-22                    # Release date of the HATS standard
-hats_creation_date=2025-10-06T14:20UTC          # Catalog creation date
+hats_creation_date=2025-10-06T14:20Z            # Catalog creation date
 ```
 
 ### `partition_info.csv`

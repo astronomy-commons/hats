@@ -1,3 +1,4 @@
+from datetime import datetime
 from importlib.metadata import version
 
 import pytest
@@ -208,7 +209,9 @@ def test_new_provenance_dict(small_sky_dir, tmp_path):
     ]
     # Most values are dynamic, but these are some safe assumptions.
     assert properties["hats_builder"] == f"hats v{version('hats')}"
-    assert properties["hats_creation_date"].startswith("20")
+    creation_date = properties["hats_creation_date"]
+    assert creation_date.endswith("Z")
+    assert datetime.fromisoformat(creation_date).utcoffset().total_seconds() == 0
     assert properties["hats_estsize"] >= 0
     assert properties["hats_release_date"].startswith("20")
     assert properties["hats_version"].startswith("v")
@@ -232,7 +235,7 @@ def test_new_provenance_dict(small_sky_dir, tmp_path):
         small_sky_dir, builder="lsdb v0.1", hats_estsize=1000, foo="bar"
     )
     assert properties["hats_builder"] == f"lsdb v0.1, hats v{version('hats')}"
-    assert properties["hats_creation_date"].startswith("20")
+    assert properties["hats_creation_date"].endswith("Z")
     assert properties["hats_estsize"] != 1000
     assert properties["hats_release_date"].startswith("20")
     assert properties["hats_version"].startswith("v")

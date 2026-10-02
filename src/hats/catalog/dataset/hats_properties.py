@@ -277,7 +277,7 @@ class HatsProperties(BaseModel):
         properties = {}
         now = datetime.now(tz=timezone.utc)
         properties["hats_builder"] = builder_str
-        properties["hats_creation_date"] = now.strftime("%Y-%m-%dT%H:%M%Z")
+        properties["hats_creation_date"] = now.strftime("%Y-%m-%dT%H:%MZ")
         properties["hats_estsize"] = size_estimates.estimate_dir_size(path, divisor=1024)
         properties["hats_release_date"] = "2025-08-22"
         properties["hats_version"] = "v1.0"
