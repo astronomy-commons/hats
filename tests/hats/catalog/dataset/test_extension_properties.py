@@ -17,7 +17,9 @@ def test_read_from_file(small_sky_extension_file):
 
 
 def test_round_trip(tmp_path, extension_info_data):
-    properties = ExtensionProperties(**(extension_info_data | {"extension_product_type": "spectra"}))
+    properties = ExtensionProperties(
+        **(extension_info_data | {"extension_product_type": "spectra", "shares_primary_coordinates": True})
+    )
     assert properties.catalog_type == CatalogType.EXTENSION
     properties.to_properties_file(tmp_path)
 
@@ -28,6 +30,7 @@ def test_round_trip(tmp_path, extension_info_data):
     assert "dataproduct_type=extension" in contents
     assert "hats_ext_cols=ra_error dec_error" in contents
     assert "hats_product_type_served=spectra" in contents
+    assert "hats_ext_shares_primary_coords=True" in contents
     assert "hats_primary_table_url=small_sky_o1_with_extension" in contents
 
     assert ExtensionProperties.read_from_file(file_path) == properties
@@ -63,6 +66,7 @@ def test_optional_fields(extension_info_data):
     assert properties.extension_columns is None
     assert properties.extension_join_style is None
     assert properties.extension_product_type is None
+    assert properties.shares_primary_coordinates is None
     props = extension_info_data | {"extension_join_style": "inner"}
     assert ExtensionProperties(**props).extension_join_style == "inner"
 

@@ -60,6 +60,10 @@ class ExtensionProperties(HatsProperties):
     )
     """The type of join to use when joining the extension to its primary catalog."""
 
+    shares_primary_coordinates: Optional[bool] = Field(default=None, alias="hats_ext_shares_primary_coords")
+    """Whether the extension holds the primary catalog's RA and Dec columns, with their values
+    unchanged."""
+
     extension_product_type: Optional[str] = Field(default=None, alias="hats_product_type_served")
     """Modality of the data that the extension stores."""
 
