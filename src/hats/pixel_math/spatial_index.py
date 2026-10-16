@@ -16,17 +16,17 @@ SPATIAL_INDEX_ORDER = 29
 
 
 def compute_spatial_index(
-    ra_values: float | list[float],
-    dec_values: float | list[float],
+    ra_values: float | ArrayLike,
+    dec_values: float | ArrayLike,
     spatial_index_order: int = SPATIAL_INDEX_ORDER,
 ) -> np.ndarray:
     """Compute the healpix index field.
 
     Parameters
     ----------
-    ra_values : float | list[float]
+    ra_values : float | ArrayLike
         celestial coordinates, right ascension in degrees
-    dec_values : float | list[float]
+    dec_values : float | ArrayLike
         celestial coordinates, declination in degrees
     spatial_index_order: int
         (Default value = SPATIAL_INDEX_ORDER = 29) order to use for spatial index

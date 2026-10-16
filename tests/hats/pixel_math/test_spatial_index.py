@@ -2,6 +2,7 @@
 
 import numpy as np
 import numpy.testing as npt
+import pandas as pd
 import pyarrow as pa
 import pytest
 
@@ -64,6 +65,16 @@ def test_list():
     result = compute_spatial_index(ra, dec)
     expected = hp.radec2pix(SPATIAL_INDEX_ORDER, ra, dec)
     npt.assert_array_equal(result, expected)
+
+
+def test_array_like_inputs():
+    """Numpy arrays and pandas Series give the same result as lists."""
+    ra = [5, 5, 5, 1, 5, 5, 5, 1, 5]
+    dec = [5, 5, 5, 1, 5, 5, 5, 1, 5]
+    expected = compute_spatial_index(ra, dec)
+
+    npt.assert_array_equal(compute_spatial_index(np.array(ra), np.array(dec)), expected)
+    npt.assert_array_equal(compute_spatial_index(pd.Series(ra), pd.Series(dec)), expected)
 
 
 def test_load():

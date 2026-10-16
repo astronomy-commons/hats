@@ -6,6 +6,7 @@ import astropy.units as u
 import cdshealpix
 import numpy as np
 from astropy.coordinates import Latitude, Longitude, SkyCoord
+from numpy.typing import ArrayLike
 
 # pylint: disable=missing-function-docstring
 
@@ -58,7 +59,7 @@ def order2pixarea(order: int, *, degrees: bool = False, unit=u.sr) -> float:
     return pix_area_rad.to_value(unit)
 
 
-def radec2pix(order: int, ra: float, dec: float) -> np.ndarray[np.int64]:
+def radec2pix(order: int, ra: float | ArrayLike, dec: float | ArrayLike) -> np.ndarray[np.int64]:
     if not is_order_valid(order):
         raise ValueError("Invalid value for order")
 
