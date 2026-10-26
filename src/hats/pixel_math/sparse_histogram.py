@@ -169,10 +169,9 @@ def supplemental_count_histogram(mapped_pixels, supplemental_count, highest_orde
     if supplemental_count is not None:
         if len(supplemental_count) != len(mapped_pixels):
             raise ValueError("mapped pixels and supplemental counts must be the same length")
-        supplemental_sums = np.zeros(len(mapped_pixel), dtype=np.int64)
-
-        for index, supplemental_value in zip(unique_inverse, supplemental_count, strict=True):
-            supplemental_sums[index] += supplemental_value
+        supplemental_sums = np.bincount(
+            unique_inverse, weights=supplemental_count, minlength=len(mapped_pixel)
+        ).astype(np.int64)
 
         supplemental_count_histo = SparseHistogram(mapped_pixel, supplemental_sums, highest_order)
 
