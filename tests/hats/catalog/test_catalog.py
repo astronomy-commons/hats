@@ -137,7 +137,7 @@ def test_catalog_statistics(small_sky_order1_dir):
 
     # No warning is raised on a modified catalog when warn_on_modified_catalog=False.
     with warnings.catch_warnings():
-        warnings.simplefilter("error")
+        warnings.filterwarnings("error", message=".*modified catalog")
         result_frame = filtered_catalog.aggregate_column_statistics(warn_on_modified_catalog=False)
     assert len(result_frame) == 5
 
@@ -166,7 +166,7 @@ def test_catalog_statistics(small_sky_order1_dir):
 
     # No warning is raised on a modified catalog when warn_on_modified_catalog=False.
     with warnings.catch_warnings():
-        warnings.simplefilter("error")
+        warnings.filterwarnings("error", message=".*modified catalog")
         result_frame = filtered_catalog.per_partition_statistics(warn_on_modified_catalog=False)
     assert result_frame.shape == (1, 30)
 
