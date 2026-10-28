@@ -1,4 +1,7 @@
 # pylint: disable=import-outside-toplevel,import-error
+import numbers
+
+
 def _dict_almost_equal(dict_expected, dict_test):  # pragma: no cover
     try:
         import pytest
@@ -7,8 +10,11 @@ def _dict_almost_equal(dict_expected, dict_test):  # pragma: no cover
 
     assert dict_expected.keys() == dict_test.keys()
     for key in dict_expected:
-        assert dict_expected[key] == pytest.approx(
-            dict_test[key], rel=1e-4
+        test_value = dict_test[key]
+        if isinstance(test_value, numbers.Number):
+            test_value = pytest.approx(test_value, rel=1e-4)
+        assert (
+            dict_expected[key] == test_value
         ), f"Failed approx comparison for {key} (expected: {dict_expected[key]}, test: {dict_test[key]})"
 
 
