@@ -7,6 +7,7 @@ import shutil
 import pytest
 
 from hats.catalog import PartitionInfo
+from hats.io.parquet_metadata import write_parquet_metadata
 from hats.io.validation import is_valid_catalog, is_valid_collection
 
 
@@ -108,6 +109,25 @@ def test_is_valid_catalog_fail_with_missing_partitions(small_sky_source_dir, tmp
 
     captured = caplog.text
     assert "Partition pixels differ" in captured
+
+
+def test_is_valid_catalog_strict_npix_dir_multiple_files(small_sky_npix_as_dir_dir, tmp_path):
+    """Test that a leaf pixel directory may hold several parquet files, but a pixel has one directory"""
+    shutil.copytree(small_sky_npix_as_dir_dir, tmp_path, dirs_exist_ok=True)
+    leaf_dir = tmp_path / "dataset" / "Norder=0" / "Dir=0" / "Npix=11"
+    shutil.copy(leaf_dir / "part0.parquet", leaf_dir / "part1.parquet")
+    write_parquet_metadata(tmp_path)
+    assert is_valid_catalog(tmp_path, strict=True)
+
+    shutil.copytree(leaf_dir, leaf_dir.with_name("Npix=11 copy"))
+    assert not is_valid_catalog(tmp_path, strict=True)
+
+
+def test_is_valid_catalog_fail_with_empty_npix_dir(small_sky_npix_as_dir_dir, tmp_path):
+    """Test that an empty leaf pixel directory is a missing partition"""
+    shutil.copytree(small_sky_npix_as_dir_dir, tmp_path, dirs_exist_ok=True)
+    (tmp_path / "dataset" / "Norder=0" / "Dir=0" / "Npix=11" / "part0.parquet").unlink()
+    assert not is_valid_catalog(tmp_path, strict=True)
 
 
 def test_is_valid_catalog_fail_index_missing_metadata(small_sky_source_object_index_dir, tmp_path):

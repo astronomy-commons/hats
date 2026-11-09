@@ -209,16 +209,17 @@ def _is_valid_catalog_strict(pointer):
         # As a side effect, this confirms that we can load the directory as a valid dataset.
         dataset = pds.parquet_dataset(metadata_file.path, filesystem=metadata_file.fs)
 
-        parquet_path_pixels = []
+        # A pixel stored as a leaf directory (npix_suffix="/") may span several files.
+        parquet_path_pixels = set()
         for hats_file in dataset.files:
             hats_fp = UPath(hats_file, protocol=metadata_file.protocol, **metadata_file.storage_options)
             healpix_pixel = paths.get_healpix_from_path(hats_file)
             if healpix_pixel == INVALID_PIXEL:
                 logging.warning(f"Could not derive partition pixel from parquet path: {str(hats_fp)}")
                 is_valid = False
-            parquet_path_pixels.append(healpix_pixel)
+            parquet_path_pixels.add(healpix_pixel)
 
-        parquet_path_pixels = sort_pixels(parquet_path_pixels)
+        parquet_path_pixels = sort_pixels(list(parquet_path_pixels))
 
         if not np.array_equal(expected_pixels, parquet_path_pixels):
             logging.warning(
@@ -235,8 +236,12 @@ def _is_valid_catalog_strict(pointer):
             f"Checking file existence for {len(catalog.get_healpix_pixels())} data partitions."
             " This might take a while."
         )
+    if catalog.catalog_info.npix_suffix == "/":
+        pixel_paths = {file.parent for file in pointer.rglob("Norder*/Dir*/Npix*/*")}
+    else:
+        pixel_paths = pointer.rglob("Norder*/Dir*/Npix*")
     parquet_path_pixels = []
-    for pixel_path in pointer.rglob("Norder*/Dir*/Npix*"):
+    for pixel_path in pixel_paths:
         healpix_pixel = paths.get_healpix_from_path(pixel_path)
         if healpix_pixel == INVALID_PIXEL:
             logging.warning(f"Could not derive partition pixel from parquet path: {str(pixel_path)}")
