@@ -172,6 +172,10 @@ def test_get_healpix_from_path():
     )
     assert result == expected
 
+    # Edge case: in a leaf pixel directory, the directory determines the pixel.
+    result = paths.get_healpix_from_path("/foo/dataset/Norder=5/Dir=0/Npix=34/Npix=7.parquet")
+    assert result == expected
+
 
 def test_get_healpix_from_path_invalid():
     expected = INVALID_PIXEL
@@ -181,4 +185,7 @@ def test_get_healpix_from_path_invalid():
     assert result == expected
 
     result = paths.get_healpix_from_path("NORDER=5/Dir=0/PIXEL=34.pq")
+    assert result == expected
+
+    result = paths.get_healpix_from_path("Norder=5/Dir=0/Npix=.parquet")
     assert result == expected
