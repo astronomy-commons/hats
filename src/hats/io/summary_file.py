@@ -192,7 +192,10 @@ def _gen_column_table(
 
     result = _build_column_table(nf, props.default_columns, fmt_value)
 
-    stats = catalog.aggregate_column_statistics(exclude_hats_columns=False)
+    try:
+        stats = catalog.aggregate_column_statistics(exclude_hats_columns=False)
+    except FileNotFoundError:
+        return result
     if stats.empty:
         return result
 
