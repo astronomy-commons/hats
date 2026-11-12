@@ -175,14 +175,12 @@ class TableProperties(HatsProperties):
         Raises
         ------
         FileNotFoundError
-            if there is no properties or hats.properties file in the directory
+            if there is no hats.properties file in the directory
         """
         catalog_path = file_io.get_upath(catalog_dir)
         file_path = catalog_path / "hats.properties"
         if not file_path.exists():
-            file_path = catalog_path / "properties"
-            if not file_path.exists():
-                raise FileNotFoundError(f"No properties file found where expected: {str(file_path)}")
+            raise FileNotFoundError(f"No properties file found where expected: {str(file_path)}")
         return cls.read_from_file(file_path)
 
     # pylint: disable=duplicate-code
@@ -196,4 +194,3 @@ class TableProperties(HatsProperties):
         """
         catalog_path = file_io.get_upath(catalog_dir)
         self.to_properties_file_path(catalog_path / "hats.properties", initial_comments="HATS catalog")
-        self.to_properties_file_path(catalog_path / "properties", initial_comments="HATS catalog")

@@ -91,7 +91,7 @@ def read_hats(
         return _load_collection(
             path.parent, properties=properties, read_moc=read_moc, storage_options=storage_options
         )
-    if (path / "hats.properties").exists() or (path / "properties").exists():
+    if (path / "hats.properties").exists():
         return _load_catalog(path, read_moc=read_moc)
     if (path / "collection.properties").exists():
         return _load_collection(path, read_moc=read_moc, storage_options=storage_options)
