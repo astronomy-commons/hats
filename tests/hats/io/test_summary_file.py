@@ -95,6 +95,18 @@ def test_write_catalog_summary_file_custom_name_description(tmp_path, small_sky_
     assert custom_description in content
 
 
+def test_write_catalog_summary_missing_metadata(small_sky_order1_dir, tmp_path):
+    temp_path = tmp_path / "catalog"
+    shutil.copytree(
+        small_sky_order1_dir, temp_path, ignore=shutil.ignore_patterns("*_metadata", "*statistics*")
+    )
+
+    output_path = write_catalog_summary_file(temp_path, fmt="markdown")
+
+    assert output_path.exists()
+    assert output_path.name == "README.md"
+
+
 def test_write_catalog_summary_file_with_huggingface_metadata(tmp_path, small_sky_collection_dir):
     """Test writing a markdown summary file with Hugging Face metadata"""
     collection_base_dir = tmp_path / "collection"
