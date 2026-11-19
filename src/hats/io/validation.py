@@ -110,7 +110,7 @@ def is_valid_collection(pointer: str | Path | UPath, strict: bool = False) -> bo
     is_valid &= subcatalog_valid
 
     if sub_catalog and not isinstance(sub_catalog, Catalog):
-        logging.warning(
+        logging.error(
             "Primary catalog is the wrong type (expected Catalog, "
             f"found {sub_catalog.catalog_info.catalog_type})."
         )
@@ -123,7 +123,7 @@ def is_valid_collection(pointer: str | Path | UPath, strict: bool = False) -> bo
             is_valid &= subcatalog_valid
 
             if sub_catalog and not isinstance(sub_catalog, MarginCatalog):
-                logging.warning(
+                logging.error(
                     "Margin catalog is the wrong type (expected margin, "
                     f"found {sub_catalog.catalog_info.catalog_type})."
                 )
@@ -136,13 +136,13 @@ def is_valid_collection(pointer: str | Path | UPath, strict: bool = False) -> bo
             is_valid &= subcatalog_valid
 
             if sub_catalog and not isinstance(sub_catalog, IndexCatalog):
-                logging.warning(
+                logging.error(
                     f"Index catalog is the wrong type (expected index, "
                     f"found {sub_catalog.catalog_info.catalog_type})."
                 )
                 is_valid = False
             if sub_catalog and sub_catalog.catalog_info.indexing_column != index_field:
-                logging.warning(
+                logging.error(
                     f"Index catalog index columns don't match (expected {index_field}, "
                     f"found {sub_catalog.catalog_info.indexing_column})."
                 )
@@ -160,11 +160,11 @@ def _is_valid_catalog_strict(pointer):
 
     is_valid = True
     if not _is_catalog_info_valid(pointer):
-        logging.warning("properties file does not exist or is invalid.")
+        logging.error("properties file does not exist or is invalid.")
         is_valid = False
 
     if not _is_common_metadata_valid(pointer):
-        logging.warning("_common_metadata file does not exist.")
+        logging.error("_common_metadata file does not exist.")
         is_valid = False
 
     if not is_valid:
@@ -174,12 +174,12 @@ def _is_valid_catalog_strict(pointer):
 
     # Load as a catalog object. Confirms that the catalog info matches type.
     catalog = read_hats(pointer, single_catalog=True, read_moc=False)
-    metadata_file = paths.get_parquet_metadata_pointer(pointer)
 
     if not isinstance(catalog, HealpixDataset):
         if not _is_metadata_valid(pointer):
-            logging.warning("_metadata file does not exist.")
+            logging.error("_metadata file does not exist.")
             return (False, catalog)
+        metadata_file = paths.get_parquet_metadata_pointer(pointer)
 
         ## Load as parquet dataset. Allow errors, and check pixel set against _metadata
         # As a side effect, this confirms that we can load the directory as a valid dataset.
@@ -188,21 +188,38 @@ def _is_valid_catalog_strict(pointer):
         return (is_valid, catalog)
 
     if not _is_partition_info_valid(pointer):
-        logging.warning("partition_info.csv file does not exist.")
+        logging.error("partition_info.csv file does not exist.")
         return (False, catalog)
 
+    is_valid &= _check_matching_pixels(catalog)
+    is_valid &= _check_columns_in_schema(catalog)
+    is_valid &= _check_skymaps(catalog)
+
+    # Print a few more stats
+    logging.info(
+        "Approximate coverage is "
+        f"{catalog.partition_info.calculate_fractional_coverage()*100:0.2f} % of the sky."
+    )
+
+    return (is_valid, catalog)
+
+
+def _check_matching_pixels(catalog):
+    is_valid = True
     expected_pixels = sort_pixels(catalog.get_healpix_pixels())
 
     logging.info(f"Found {len(expected_pixels)} partitions.")
 
+    metadata_file = paths.get_parquet_metadata_pointer(catalog.catalog_path)
+
     ## Compare the pixels in _metadata with partition_info.csv
     # We typically warn when reading from _metadata, but it's expected right now.
-    if _is_metadata_valid(pointer):
+    if _is_metadata_valid(catalog.catalog_path):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             metadata_pixels = sort_pixels(PartitionInfo.read_from_file(metadata_file).get_healpix_pixels())
         if not np.array_equal(expected_pixels, metadata_pixels):
-            logging.warning("Partition pixels differ between catalog and _metadata file")
+            logging.error("Partition pixels differ between catalog and _metadata file")
             is_valid = False
 
         ## Load as parquet dataset. Allow errors, and check pixel set against _metadata
@@ -215,14 +232,14 @@ def _is_valid_catalog_strict(pointer):
             hats_fp = UPath(hats_file, protocol=metadata_file.protocol, **metadata_file.storage_options)
             healpix_pixel = paths.get_healpix_from_path(hats_file)
             if healpix_pixel == INVALID_PIXEL:
-                logging.warning(f"Could not derive partition pixel from parquet path: {str(hats_fp)}")
+                logging.error(f"Could not derive partition pixel from parquet path: {str(hats_fp)}")
                 is_valid = False
             parquet_path_pixels.add(healpix_pixel)
 
         parquet_path_pixels = sort_pixels(list(parquet_path_pixels))
 
         if not np.array_equal(expected_pixels, parquet_path_pixels):
-            logging.warning(
+            logging.error(
                 "Partition pixels differ between _metadata and partition_info\n"
                 f"Extra: {set(parquet_path_pixels) - set(expected_pixels)} \n"
                 f"Missing: {set(expected_pixels) - set(parquet_path_pixels)}"
@@ -237,68 +254,78 @@ def _is_valid_catalog_strict(pointer):
             " This might take a while."
         )
     if catalog.catalog_info.npix_suffix == "/":
-        pixel_paths = {file.parent for file in pointer.rglob("Norder*/Dir*/Npix*/*")}
+        pixel_paths = {file.parent for file in catalog.catalog_path.rglob("Norder*/Dir*/Npix*/*")}
     else:
-        pixel_paths = pointer.rglob("Norder*/Dir*/Npix*")
+        pixel_paths = catalog.catalog_path.rglob("Norder*/Dir*/Npix*")
     parquet_path_pixels = []
     for pixel_path in pixel_paths:
         healpix_pixel = paths.get_healpix_from_path(pixel_path)
         if healpix_pixel == INVALID_PIXEL:
-            logging.warning(f"Could not derive partition pixel from parquet path: {str(pixel_path)}")
+            logging.error(f"Could not derive partition pixel from parquet path: {str(pixel_path)}")
             is_valid = False
         parquet_path_pixels.append(healpix_pixel)
 
     parquet_path_pixels = sort_pixels(parquet_path_pixels)
 
     if not np.array_equal(expected_pixels, parquet_path_pixels):
-        logging.warning(
+        logging.error(
             "Partition pixels differ between partition_info and parquet paths\n"
             f"Extra: {sorted(set(parquet_path_pixels) - set(expected_pixels))} \n"
             f"Missing: {sorted(set(expected_pixels) - set(parquet_path_pixels))}"
         )
         is_valid = False
+    return is_valid
 
-    if catalog.schema:
-        nested_schema = from_pyarrow(catalog.schema.empty_table())
-        column_names = set(list(nested_schema.columns) + nested_schema.get_subcolumns())
 
-        if catalog.catalog_info.default_columns:
-            missing_columns = set(catalog.catalog_info.default_columns) - column_names
-            if len(missing_columns):
-                logging.warning(f"Some default columns not found in catalog: {missing_columns}")
-                is_valid = False
+def _check_columns_in_schema(catalog):
+    is_valid = True
 
-        if catalog.catalog_info.ra_column and catalog.catalog_info.ra_column not in column_names:
-            logging.warning(
-                f"Right ascension coordinate column not found in catalog: {catalog.catalog_info.ra_column}"
-            )
-            is_valid = False
-
-        if catalog.catalog_info.dec_column and catalog.catalog_info.dec_column not in column_names:
-            logging.warning(
-                f"Declination coordinate column not found in catalog: {catalog.catalog_info.dec_column}"
-            )
-            is_valid = False
-
-        if catalog.catalog_info.healpix_column and catalog.catalog_info.healpix_column not in column_names:
-            logging.warning(
-                f"HEALPix spatial index column not found in catalog: {catalog.catalog_info.healpix_column}"
-            )
-            is_valid = False
-    else:
+    if catalog.schema is None:
         logging.warning("Could not load schema for catalog.")
+        return is_valid
 
+    nested_schema = from_pyarrow(catalog.schema.empty_table())
+    column_names = set(list(nested_schema.columns) + nested_schema.get_subcolumns())
+
+    if catalog.catalog_info.default_columns:
+        missing_columns = set(catalog.catalog_info.default_columns) - column_names
+        if len(missing_columns):
+            logging.error(f"Some default columns not found in catalog: {missing_columns}")
+            is_valid = False
+
+    if catalog.catalog_info.ra_column and catalog.catalog_info.ra_column not in column_names:
+        logging.error(
+            f"Right ascension coordinate column not found in catalog: {catalog.catalog_info.ra_column}"
+        )
+        is_valid = False
+
+    if catalog.catalog_info.dec_column and catalog.catalog_info.dec_column not in column_names:
+        logging.error(
+            f"Declination coordinate column not found in catalog: {catalog.catalog_info.dec_column}"
+        )
+        is_valid = False
+
+    if catalog.catalog_info.healpix_column and catalog.catalog_info.healpix_column not in column_names:
+        logging.error(
+            f"HEALPix spatial index column not found in catalog: {catalog.catalog_info.healpix_column}"
+        )
+        is_valid = False
+    return is_valid
+
+
+def _check_skymaps(catalog):
+    is_valid = True
     if catalog.catalog_info.skymap_order:
         intended_order = catalog.catalog_info.skymap_order
         if intended_order < 0:
-            logging.warning(f"skymap_order cannot be negative ({intended_order}).")
+            logging.error(f"skymap_order cannot be negative ({intended_order}).")
             is_valid = False
         else:
-            point_map_order = _get_point_map_order(pointer, None)
+            point_map_order = _get_point_map_order(catalog.catalog_path, None)
             if point_map_order is None:
                 logging.warning("skymap.fits file not found")
             elif point_map_order != intended_order:
-                logging.warning(
+                logging.error(
                     f"skymap_order in hat.properties ({intended_order}) "
                     f"does not match order inside skymap.fits file ({point_map_order})."
                 )
@@ -308,26 +335,19 @@ def _is_valid_catalog_strict(pointer):
         available_orders = catalog.catalog_info.skymap_alt_orders
         for intended_order in available_orders:
             if intended_order < 0:
-                logging.warning(f"skymap alternate order cannot be negative ({intended_order}).")
+                logging.error(f"skymap alternate order cannot be negative ({intended_order}).")
                 is_valid = False
             else:
-                point_map_order = _get_point_map_order(pointer, intended_order)
+                point_map_order = _get_point_map_order(catalog.catalog_path, intended_order)
                 if point_map_order is None:
                     logging.warning(f"skymap.{intended_order}.fits file not found")
                 elif point_map_order != intended_order:
-                    logging.warning(
+                    logging.error(
                         f"skymap alternate order in hat.properties ({intended_order}) "
                         f"does not match order inside skymap.{intended_order}.fits file ({point_map_order})."
                     )
                     is_valid = False
-
-    # Print a few more stats
-    logging.info(
-        "Approximate coverage is "
-        f"{catalog.partition_info.calculate_fractional_coverage()*100:0.2f} % of the sky."
-    )
-
-    return (is_valid, catalog)
+    return is_valid
 
 
 def _get_point_map_order(catalog_dir, intended_order):
