@@ -150,7 +150,6 @@ def is_valid_collection(pointer: str | Path | UPath, strict: bool = False) -> bo
     return is_valid
 
 
-# pylint: disable=too-many-statements
 def _is_valid_catalog_strict(pointer):
     """Determine if this is a valid catalog, using strict criteria.
 
@@ -183,7 +182,7 @@ def _is_valid_catalog_strict(pointer):
 
         ## Load as parquet dataset. Allow errors, and check pixel set against _metadata
         # As a side effect, this confirms that we can load the directory as a valid dataset.
-        dataset = pds.parquet_dataset(metadata_file.path, filesystem=metadata_file.fs)
+        pds.parquet_dataset(metadata_file.path, filesystem=metadata_file.fs)
 
         return (is_valid, catalog)
 
@@ -205,6 +204,12 @@ def _is_valid_catalog_strict(pointer):
 
 
 def _check_matching_pixels(catalog):
+    """Check that the partition pixels are the same, regardless of how you find them.
+
+    - pixels in partition_info.csv
+    - file paths from `_metadata` footers
+    - file paths on disk
+    """
     is_valid = True
     expected_pixels = sort_pixels(catalog.get_healpix_pixels())
 
@@ -278,6 +283,13 @@ def _check_matching_pixels(catalog):
 
 
 def _check_columns_in_schema(catalog):
+    """For the special columns found in the `hats.properties` file, make sure that they're in the
+    data schema.
+
+    - default columns
+    - ra and dec column
+    - healpix column
+    """
     is_valid = True
 
     if catalog.schema is None:
@@ -314,6 +326,7 @@ def _check_columns_in_schema(catalog):
 
 
 def _check_skymaps(catalog):
+    """Check that the contents of the skymaps match the expected properties."""
     is_valid = True
     if catalog.catalog_info.skymap_order:
         intended_order = catalog.catalog_info.skymap_order
@@ -351,6 +364,7 @@ def _check_skymaps(catalog):
 
 
 def _get_point_map_order(catalog_dir, intended_order):
+    """Read a single skymap or pointmap, and determine the healpix order of the map."""
     try:
         point_map = file_io.read_fits_image(
             paths.get_skymap_file_pointer(catalog_base_dir=catalog_dir, order=intended_order)
