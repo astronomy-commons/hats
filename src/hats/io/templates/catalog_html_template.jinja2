@@ -90,7 +90,7 @@ catalog = lsdb.open_catalog(
   <tr><th>Default?</th>{% for value in column_table.default %}<td>{{ "Yes" if value else "No" }}</td>{% endfor %}</tr>
   {%- endif %}
   {%- if "nested_into" in column_table %}
-  <tr><th>Nested?</th>{% for value in column_table.nested_into %}<td>{{ value or "—" }}</td>{% endfor %}</tr>
+  <tr><th>Nested?</th>{% for value in column_table.nested_into %}<td>{{ value if value is string else "—" }}</td>{% endfor %}</tr>
   {%- endif %}
   {%- if "rows" in column_table %}
   <tr><th>Value count</th>{% for value in column_table.rows %}<td>{{ value }}</td>{% endfor %}</tr>
@@ -99,7 +99,7 @@ catalog = lsdb.open_catalog(
   <tr><th>Null count</th>{% for value in column_table.nulls %}<td>{{ value }}</td>{% endfor %}</tr>
   {%- endif %}
   {%- if "example" in column_table %}
-  <tr><th>Example row</th>{% for value in column_table.example %}<td>{{ value }}</td>{% endfor %}</tr>
+  <tr><th>Example row</th>{% for value in column_table.example %}<td>{{ value | replace("*NaN*", "<em>NaN</em>") }}</td>{% endfor %}</tr>
   {%- endif %}
   {%- if "min_value" in column_table %}
   <tr><th>Minimum value</th>{% for value in column_table.min_value %}<td>{{ value }}</td>{% endfor %}</tr>

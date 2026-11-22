@@ -455,9 +455,13 @@ def generate_summary(
         # sets jinja_template as a file as a path
     match fmt:
         case "markdown":
-            tmpl_str = jinja2_template or importlib.resources.files(templates).joinpath(md_tmpl).read_text()
+            tmpl_str = jinja2_template or importlib.resources.files(templates).joinpath(md_tmpl).read_text(
+                encoding="utf-8"
+            )
         case "html":
-            tmpl_str = jinja2_template or importlib.resources.files(templates).joinpath(html_tmpl).read_text()
+            tmpl_str = jinja2_template or importlib.resources.files(templates).joinpath(html_tmpl).read_text(
+                encoding="utf-8"
+            )
         case None:
             tmpl_str = jinja2_template
         case _:
@@ -618,7 +622,7 @@ def write_catalog_summary_file(
     output_dir.mkdir(parents=True, exist_ok=True)
     output_path = output_dir / filename
 
-    with output_path.open("w") as f:
+    with output_path.open("w", encoding="utf-8") as f:
         f.write(content)
 
     return output_path
