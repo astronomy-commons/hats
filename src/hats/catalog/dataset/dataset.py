@@ -166,6 +166,10 @@ class Dataset:
         include_columns : list[str]
             if specified, only return statistics for the column
             names provided. Defaults to None, and returns all non-hats columns.
+        only_numeric_columns : bool
+            only include columns that are numeric (integer or
+            floating point) in the statistics. If True, the entire frame should be numeric.
+            (Default value = False)
         include_stats : list[str]
             if specified, only return the kinds of values from list
             (min_value, max_value, null_count, row_count). Defaults to None, and returns all values.
@@ -174,6 +178,9 @@ class Dataset:
             pixel, then on column name? Default is False, and instead indexes on pixel, with
             separate columns per-data-column and stat value combination.
             (Default value = False)
+        per_row_group : bool
+            should the returned data be even more fine-grained and provide
+            per row group (within each pixel) level statistics? Default is currently False.
         warn_on_modified_catalog : bool
             if True, this method will warn if the catalog has been modified from its original on-disk
             state. Defaults to True.

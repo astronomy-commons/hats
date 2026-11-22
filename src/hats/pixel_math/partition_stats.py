@@ -109,6 +109,9 @@ def generate_alignment(
         one-dimensional numpy array of long integers where the value at each index corresponds to
         the memory size (in bytes) of objects found at the healpix pixel. If provided, this will be
         used to determine the thresholding instead of the param `histogram`. (Default value = None)
+    use_lower_order : bool
+        if True, reduce the effective highest order when all pixels at lower orders already satisfy
+        the threshold. (Default value = False)
 
     Returns
     -------
