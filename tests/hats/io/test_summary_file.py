@@ -1,7 +1,9 @@
 """Tests for summary file generation"""
 
+import importlib.resources
 import re
 import shutil
+from types import SimpleNamespace
 
 import jinja2
 import nested_pandas as npd
@@ -10,6 +12,7 @@ import pyarrow as pa
 import pytest
 import yaml
 
+from hats.io import templates
 from hats.io.summary_file import (
     _build_column_table,
     _gen_column_table,
@@ -480,6 +483,45 @@ def test_gen_column_table_nested_columns_empty():
 
     assert list(column_table.index) == ["id", "ra", "photometry.flux"]
     assert "example" not in column_table.columns
+
+
+def test_catalog_html_template_formats_missing_nested_values():
+    """Test missing nested metadata and examples use HTML formatting."""
+    nf = npd.NestedFrame(
+        {
+            "id": pd.array([1], dtype=pd.ArrowDtype(pa.int64())),
+        }
+    )
+    nested = npd.NestedFrame(
+        {
+            "flux": pd.array([float("nan")], dtype=pd.ArrowDtype(pa.float32())),
+        }
+    )
+    nf = nf.join_nested(nested, "photometry")
+    column_table = _build_column_table(nf, default_columns=[])
+
+    env = jinja2.Environment(undefined=jinja2.StrictUndefined)
+    template_text = importlib.resources.files(templates).joinpath("catalog_html_template.jinja2").read_text()
+    template = env.from_string(template_text)
+    rendered = template.render(
+        name="Test Catalog",
+        description="",
+        uri=None,
+        has_default_columns=False,
+        cone_code_example=None,
+        pixel_map_b64=None,
+        density_map_b64=None,
+        catalog_dir_name="test_catalog",
+        has_partition_info=False,
+        cat_props=SimpleNamespace(skymap_order=None),
+        metadata_table={},
+        column_table=column_table,
+    )
+
+    assert "<td>nan</td>" not in rendered
+    assert "<td>-</td>" in rendered
+    assert "[*NaN*]" not in rendered
+    assert "[<em>NaN</em>]" in rendered
 
 
 def test_gen_column_table_nested_catalog(small_sky_nested_dir):
