@@ -504,7 +504,7 @@ def test_catalog_html_template_formats_missing_nested_values():
     template_text = (
         importlib.resources.files(templates)
         .joinpath("catalog_html_template.jinja2")
-        .read_text(encoding="utf-8")
+        .read_text()
     )
     template = env.from_string(template_text)
     rendered = template.render(
@@ -523,7 +523,7 @@ def test_catalog_html_template_formats_missing_nested_values():
     )
 
     assert "<td>nan</td>" not in rendered
-    assert "<td>—</td>" in rendered
+    assert "<td>-</td>" in rendered
     assert "[*NaN*]" not in rendered
     assert "[<em>NaN</em>]" in rendered
 
@@ -633,7 +633,7 @@ def test_write_catalog_summary_file_html(tmp_path, small_sky_collection_dir):
     output_path = write_catalog_summary_file(collection_base_dir, fmt="html")
 
     assert output_path.name == "index.html"
-    assert "<!DOCTYPE html>" in output_path.read_bytes().decode("utf-8")
+    assert "<!DOCTYPE html>" in output_path.read_text()
 
 
 def test_write_catalog_summary_file_html_huggingface_raises(tmp_path, small_sky_collection_dir):
