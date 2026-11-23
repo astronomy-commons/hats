@@ -107,7 +107,7 @@ repos:
         # https://pre-commit.com/#top_level-default_language_version
         # This currently uses the default language version. Uncomment
         # the following line to use the max version.
-        # language_version: python3.14
+        # language_version: python3.15
   - repo: https://github.com/lincc-frameworks/pre-commit-hooks
     rev: 439dda8bd784f4aa721851ecec03877df286f6b5  # v0.2.2
     hooks:
