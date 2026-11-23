@@ -501,11 +501,7 @@ def test_catalog_html_template_formats_missing_nested_values():
     column_table = _build_column_table(nf, default_columns=[])
 
     env = jinja2.Environment(undefined=jinja2.StrictUndefined)
-    template_text = (
-        importlib.resources.files(templates)
-        .joinpath("catalog_html_template.jinja2")
-        .read_text()
-    )
+    template_text = importlib.resources.files(templates).joinpath("catalog_html_template.jinja2").read_text()
     template = env.from_string(template_text)
     rendered = template.render(
         name="Test Catalog",
