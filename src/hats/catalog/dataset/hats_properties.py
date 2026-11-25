@@ -240,6 +240,8 @@ class HatsProperties(BaseModel):
         ----------
         file_path: UPath
             path to properties file.
+        **kwargs
+            Additional keyword arguments passed to ``Properties.store``.
         """
         # pylint: disable=protected-access
         parameters = self.model_dump(by_alias=True, exclude_none=True)
