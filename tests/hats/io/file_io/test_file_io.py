@@ -22,7 +22,11 @@ from hats.io.file_io import (
     write_fits_image,
     write_string_to_file,
 )
-from hats.io.file_io.file_io import _parquet_precache_all_bytes, get_parquet_write_table_kwargs
+from hats.io.file_io.file_io import (
+    _parquet_precache_all_bytes,
+    _split_url_query,
+    get_parquet_write_table_kwargs,
+)
 from hats.pixel_math.spatial_index import SPATIAL_INDEX_COLUMN
 
 
@@ -136,6 +140,27 @@ def test_read_parquet_data(tmp_path):
     dataframe_from_dir = read_parquet_file_to_pandas(test_dir)
     dataframe_from_dir = dataframe_from_dir.sort_values(list("ABCD")).reset_index(drop=True)
     pd.testing.assert_frame_equal(dataframe_from_dir, random_dfs)
+
+
+def test_read_parquet_data_from_remote_dir():
+    """A remote directory is read from a single listing of its files, skipping subdirectories.
+    A directory without files fails, instead of reading as an empty frame."""
+    pixel_dir = UPath("memory://remote_dir/Npix=11")
+    write_dataframe_to_parquet(pd.DataFrame({"A": [1, 2]}), pixel_dir / "part0.parquet")
+    write_dataframe_to_parquet(pd.DataFrame({"A": [5, 6]}), pixel_dir / "part1.parquet")
+    (pixel_dir / "subdir").mkdir()
+
+    dataframe = read_parquet_file_to_pandas(pixel_dir, is_dir=True)
+    assert dataframe["A"].tolist() == [1, 2, 5, 6]
+
+    with pytest.raises(FileNotFoundError, match="No files found"):
+        read_parquet_file_to_pandas(pixel_dir / "subdir", is_dir=True)
+
+
+def test_split_url_query():
+    dir_pointer, url_query = _split_url_query(UPath("http://example.com/Npix=11?columns=ra,dec"))
+    assert str(dir_pointer) == "http://example.com/Npix=11"
+    assert url_query == "?columns=ra,dec"
 
 
 def test_read_parquet_data_remote_keeps_protocol(mocker):

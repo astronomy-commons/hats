@@ -294,6 +294,24 @@ def _parquet_precache_all_bytes(file_pointer):  # pragma: no cover
     return cache_options["parquet_precache_all_bytes"]
 
 
+def _split_url_query(file_pointer: UPath) -> tuple[UPath, str]:
+    """Split an HTTP pointer into the pointer without its query, and the query"""
+    if not isinstance(file_pointer, upath.implementations.http.HTTPPath):
+        return file_pointer, ""
+    url, question_mark, query = file_pointer.path.partition("?")
+    return file_pointer.with_segments(url), question_mark + query
+
+
+def _list_remote_directory_files(dir_pointer: UPath) -> list[str]:
+    """Get the sorted paths of the files in a remote directory, from a single listing"""
+    entries = dir_pointer.fs.ls(dir_pointer.path, detail=True)
+    # Extract file references. Ignores Apache's column sorting (?C=N;O=D).
+    files = sorted(entry["name"] for entry in entries if entry["type"] == "file" and "?" not in entry["name"])
+    if not files:
+        raise FileNotFoundError(f"No files found in directory {dir_pointer}")
+    return files
+
+
 def read_parquet_metadata(file_pointer: str | Path | UPath, **kwargs) -> pq.FileMetaData:
     """Read FileMetaData from footer of a single Parquet file.
 
@@ -500,8 +518,9 @@ def read_parquet_file_to_pandas(
     # We don't want to get the list unnecessarily because it can be expensive.
     if is_dir is None:
         is_dir = file_pointer.is_dir()
-    if file_pointer.protocol not in ("", "file") and is_dir:  # pragma: no cover
-        file_pointers = [f.path for f in file_pointer.iterdir() if not f.is_dir()]
+    if file_pointer.protocol not in ("", "file") and is_dir:
+        dir_pointer, url_query = _split_url_query(file_pointer)
+        file_pointers = [path + url_query for path in _list_remote_directory_files(dir_pointer)]
         return npd.read_parquet(
             file_pointers,
             filesystem=file_pointer.fs,
